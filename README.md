@@ -9,10 +9,21 @@ A Next.js app with [Convex](https://convex.dev) and [Clerk](https://clerk.com).
 - **Backend**: Convex
 - **Styling**: Tailwind CSS (dark theme)
 
+## Convex deployments
+
+| Environment | URL |
+|-------------|-----|
+| Dev | https://reminiscent-akita-721.convex.cloud |
+| Prod | https://little-ocelot-267.convex.cloud |
+| Preview | per-branch (via Vercel + preview deploy key) |
+
+See **[docs/convex-deployments.md](./docs/convex-deployments.md)** for Vercel setup, deploy keys, and env vars.
+
 ## Getting started
 
 ```bash
 cp .env.example .env.local
+npm install
 ```
 
 ### 1. Clerk
@@ -21,18 +32,15 @@ cp .env.example .env.local
 2. Copy your **Publishable** and **Secret** keys into `.env.local`
 3. Activate the **Convex** integration in Clerk and copy your Frontend API URL
 4. Set `CLERK_JWT_ISSUER_DOMAIN` to that URL (e.g. `https://your-app.clerk.accounts.dev`)
+5. Sync to Convex: `./scripts/convex-sync-auth-env.sh`
 
 ### 2. Convex
 
 ```bash
-npx convex dev
+npm run convex:dev
 ```
 
-This links your project, writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`, and syncs your backend (including `convex/auth.config.ts`).
-
 ### 3. Run the app
-
-In a second terminal:
 
 ```bash
 npm run dev
@@ -46,5 +54,5 @@ Open [http://localhost:3000](http://localhost:3000).
 |---------|-------------|
 | `npm run dev` | Start Next.js dev server |
 | `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npx convex dev` | Start Convex dev deployment |
+| `npm run convex:dev` | Watch and push to Convex dev |
+| `npm run convex:deploy` | Deploy Convex functions to prod |

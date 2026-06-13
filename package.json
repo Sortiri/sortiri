@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "convex:dev": "convex dev",
+    "convex:dev:once": "convex dev --once",
+    "convex:deploy": "convex deploy --yes",
+    "convex:deploy:preview": "convex deploy --yes"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.2",
