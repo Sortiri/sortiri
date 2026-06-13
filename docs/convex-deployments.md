@@ -49,6 +49,10 @@ npm run convex:deploy
 
 Preview deployments are created automatically when Vercel builds a PR/branch with a **preview deploy key**.
 
+**Current setup:** Vercel preview uses the **dev deploy key** (shared dev backend at `reminiscent-akita-721`). This is simpler for the `dev` branch staging environment.
+
+For **isolated per-PR** Convex backends:
+
 1. Open [project settings → Preview Deploy Keys](https://dashboard.convex.dev/t/clayton-7de15/sortiri-timeline/settings)
 2. Click **Generate Preview Deploy Key**
 3. In Vercel → **Environment Variables**:

@@ -17,7 +17,7 @@ A Next.js app with [Convex](https://convex.dev) and [Clerk](https://clerk.com).
 | Prod | https://little-ocelot-267.convex.cloud |
 | Preview | per-branch (via Vercel + preview deploy key) |
 
-See **[docs/convex-deployments.md](./docs/convex-deployments.md)** for Vercel setup, deploy keys, and env vars.
+See **[docs/convex-deployments.md](./docs/convex-deployments.md)** for Convex setup and **[docs/infrastructure.md](./docs/infrastructure.md)** for Vercel + GitHub CI.
 
 ## Getting started
 
