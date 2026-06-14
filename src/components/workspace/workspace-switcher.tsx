@@ -43,12 +43,11 @@ export function WorkspaceSwitcher({
   const [editName, setEditName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!collapsed) return;
+  if (collapsed && (open || creating || editingId !== null)) {
     setOpen(false);
     setCreating(false);
     setEditingId(null);
-  }, [collapsed]);
+  }
 
   useEffect(() => {
     if (!open) return;

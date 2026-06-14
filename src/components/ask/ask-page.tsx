@@ -2,7 +2,7 @@
 
 import { useAction, useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { AskAnswer } from "@/components/ask/ask-answer";
@@ -27,7 +27,7 @@ export function AskPage() {
   const projectIdParam = searchParams.get("projectId");
   const viewIdParam = searchParams.get("viewId");
 
-  const [question, setQuestion] = useState(initialQuestion);
+  const [questionDraft, setQuestionDraft] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [localAnswer, setLocalAnswer] = useState<string | null>(null);
@@ -63,17 +63,30 @@ export function AskPage() {
       : "skip",
   );
 
-  useEffect(() => {
-    if (initialQuestion) {
-      setQuestion(initialQuestion);
-    } else if (viewIdParam) {
-      setQuestion(`What happened in the ${selectedView?.name ?? "selected"} view recently?`);
-    } else if (projectIdParam) {
-      setQuestion(PROJECT_FOCUS_QUESTION);
-    } else if (workstreamIdParam) {
-      setQuestion(WORKSTREAM_FOCUS_QUESTION);
+  const suggestedQuestion = useMemo(() => {
+    if (initialQuestion) return initialQuestion;
+    if (viewIdParam) {
+      return `What happened in the ${selectedView?.name ?? "selected"} view recently?`;
     }
-  }, [initialQuestion, projectIdParam, viewIdParam, workstreamIdParam, selectedView?.name]);
+    if (projectIdParam) return PROJECT_FOCUS_QUESTION;
+    if (workstreamIdParam) return WORKSTREAM_FOCUS_QUESTION;
+    return "";
+  }, [
+    initialQuestion,
+    projectIdParam,
+    viewIdParam,
+    workstreamIdParam,
+    selectedView?.name,
+  ]);
+
+  const focusKey = `${initialQuestion}|${viewIdParam}|${projectIdParam}|${workstreamIdParam}|${selectedView?.name ?? ""}`;
+  const [lastFocusKey, setLastFocusKey] = useState(focusKey);
+  if (focusKey !== lastFocusKey) {
+    setLastFocusKey(focusKey);
+    setQuestionDraft(null);
+  }
+
+  const question = questionDraft ?? suggestedQuestion;
 
   const askAction = useAction(api.ask.ask);
 
@@ -129,7 +142,7 @@ export function AskPage() {
     (sessionId: string) => {
       const session = sessions?.find((item) => item.id === sessionId);
       if (session) {
-        setQuestion(session.question);
+        setQuestionDraft(session.question);
       }
       setActiveSessionId(sessionId);
       setPendingQuestion(null);
@@ -189,7 +202,7 @@ export function AskPage() {
 
           <AskInput
             value={question}
-            onChange={setQuestion}
+            onChange={(value) => setQuestionDraft(value)}
             onSubmit={() => void handleSubmit()}
             disabled={!activeWorkspaceId}
             submitting={submitting}

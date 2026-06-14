@@ -103,7 +103,7 @@ export const complete = mutation({
   handler: async (ctx): Promise<OnboardingProfile> => {
     const userId = await requireUserId(ctx);
     const now = new Date().toISOString();
-    let existing = await getProfileDoc(ctx, userId);
+    const existing = await getProfileDoc(ctx, userId);
 
     if (!existing) {
       throw new Error("Complete your onboarding before continuing.");

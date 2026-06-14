@@ -158,11 +158,6 @@ export function OnboardingWizard({ profile }: OnboardingWizardProps) {
     redirectAfterAuth(POST_SIGN_IN_PATH);
   }, [profile]);
 
-  useEffect(() => {
-    if (state.currentStep !== ONBOARDING_STEP_COUNT - 1 || !isReady) return;
-    void handleFinish();
-  }, [handleFinish, isReady, state.currentStep]);
-
   async function handleContinue(patch: Partial<WizardState> = {}) {
     const merged = { ...state, ...patch };
     const validationError = validateStep(merged);
@@ -172,7 +167,10 @@ export function OnboardingWizard({ profile }: OnboardingWizardProps) {
     }
 
     const nextStep = Math.min(state.currentStep + 1, ONBOARDING_STEP_COUNT - 1);
-    await saveProgress(nextStep, patch);
+    const saved = await saveProgress(nextStep, patch);
+    if (saved && nextStep === ONBOARDING_STEP_COUNT - 1) {
+      await handleFinish();
+    }
   }
 
   async function handleBack() {

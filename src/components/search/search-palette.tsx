@@ -63,14 +63,17 @@ export function SearchPalette() {
   useEffect(() => {
     if (open) {
       inputRef.current?.focus();
-    } else {
-      setQuery("");
     }
   }, [open]);
 
   if (!open) {
     return null;
   }
+
+  const close = () => {
+    setQuery("");
+    setOpen(false);
+  };
 
   const eventList = (events ?? []) as TimelineEvent[];
   const workstreamList = (workstreams ?? []) as Workstream[];
@@ -81,8 +84,6 @@ export function SearchPalette() {
     (events === undefined || workstreams === undefined || entities === undefined);
   const hasResults =
     eventList.length > 0 || workstreamList.length > 0 || entityList.length > 0;
-
-  const close = () => setOpen(false);
 
   const handleEventClick = (event: TimelineEvent) => {
     if (event.workstreamId) {

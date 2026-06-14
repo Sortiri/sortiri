@@ -3,7 +3,7 @@
 import { UserButton } from "@clerk/nextjs";
 import { Menu } from "pixelarticons/react/Menu";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { DashboardMobileNavDrawer } from "@/components/dashboard-mobile-nav-drawer";
 import { getDashboardPageTitle } from "@/config/dashboard-nav";
@@ -14,10 +14,14 @@ export function DashboardMobileHeader() {
   const router = useRouter();
   const title = getDashboardPageTitle(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [trackedPathname, setTrackedPathname] = useState(pathname);
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
+  if (pathname !== trackedPathname) {
+    setTrackedPathname(pathname);
+    if (menuOpen) {
+      setMenuOpen(false);
+    }
+  }
 
   return (
     <>
