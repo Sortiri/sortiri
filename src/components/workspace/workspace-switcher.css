@@ -1,0 +1,249 @@
+.workspace-switcher {
+  position: relative;
+  width: 100%;
+}
+
+.workspace-switcher-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ca-space-2, 0.5rem);
+  padding: var(--ca-space-2, 0.5rem) 0.625rem;
+  border: 1px solid var(--ca-hairline);
+  border-radius: 0;
+  background: var(--ca-surface);
+  color: var(--ca-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.workspace-switcher-trigger:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+}
+
+.workspace-switcher-trigger:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.workspace-switcher-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.workspace-switcher-chevron {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--ca-muted);
+  transition: transform 150ms ease;
+}
+
+.workspace-switcher-chevron-open {
+  transform: rotate(180deg);
+}
+
+.workspace-switcher-error {
+  margin-top: var(--ca-space-2, 0.5rem);
+  font-size: 0.75rem;
+  color: var(--ca-danger);
+}
+
+.workspace-switcher-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  right: 0;
+  padding: var(--ca-space-2, 0.5rem);
+  border: 1px solid var(--ca-hairline);
+  border-radius: 0;
+  background: var(--ca-surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+.workspace-switcher-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.workspace-switcher-item + .workspace-switcher-item {
+  margin-top: var(--ca-space-1, 0.25rem);
+}
+
+.workspace-switcher-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ca-space-1, 0.25rem);
+}
+
+.workspace-switcher-select {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ca-space-2, 0.5rem);
+  min-width: 0;
+  padding: var(--ca-space-2, 0.5rem);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ca-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.workspace-switcher-select:hover {
+  background: var(--ca-surface-hover);
+}
+
+.workspace-switcher-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.workspace-switcher-check {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: var(--ca-brand);
+}
+
+.workspace-switcher-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.workspace-switcher-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ca-muted);
+  cursor: pointer;
+}
+
+.workspace-switcher-icon-btn:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+  color: var(--ca-ink);
+}
+
+.workspace-switcher-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.workspace-switcher-icon-btn svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.workspace-switcher-icon-btn-danger:hover:not(:disabled) {
+  color: var(--ca-danger);
+}
+
+.workspace-switcher-create,
+.workspace-switcher-edit {
+  padding: var(--ca-space-2, 0.5rem) var(--ca-space-1, 0.25rem);
+}
+
+.workspace-switcher-input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--ca-hairline);
+  border-radius: 0;
+  background: var(--ca-canvas);
+  color: var(--ca-ink);
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.workspace-switcher-input:focus {
+  outline: 2px solid var(--ca-ink);
+  outline-offset: 1px;
+}
+
+.workspace-switcher-edit-actions {
+  display: flex;
+  gap: var(--ca-space-2, 0.5rem);
+  margin-top: var(--ca-space-2, 0.5rem);
+}
+
+.workspace-switcher-action {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--ca-hairline);
+  border-radius: 0;
+  background: var(--ca-surface-2);
+  color: var(--ca-ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.workspace-switcher-action:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+}
+
+.workspace-switcher-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.workspace-switcher-action--primary {
+  background: var(--ca-brand);
+  border-color: var(--ca-brand);
+  color: var(--ca-on-brand);
+}
+
+.workspace-switcher-action--primary:hover:not(:disabled) {
+  background: var(--ca-brand-hover);
+  border-color: var(--ca-brand-hover);
+}
+
+.workspace-switcher-action--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.workspace-switcher-action--ghost:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+  border-color: var(--ca-hairline);
+}
+
+.workspace-switcher-add {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--ca-space-2, 0.5rem);
+  margin-top: var(--ca-space-2, 0.5rem);
+  padding: var(--ca-space-2, 0.5rem);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ca-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.workspace-switcher-add:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+  color: var(--ca-ink);
+}
+
+.workspace-switcher-add svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}

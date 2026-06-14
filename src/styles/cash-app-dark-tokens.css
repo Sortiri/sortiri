@@ -1,0 +1,53 @@
+/**
+ * Refined Cash App–inspired dark tokens.
+ * Marketing/auth stay high-contrast; dashboard overrides live in dashboard-dark-theme.css.
+ */
+:root {
+  /* Brand */
+  --ca-brand: #00e013;
+  --ca-brand-hover: #00c810;
+  --ca-brand-text: #00e013;
+  --ca-brand-text-muted: #00a60e;
+  --ca-on-brand: #041204;
+
+  /* Ink */
+  --ca-ink: #fafafa;
+  --ca-ink-secondary: #d4d4d4;
+  --ca-muted: #737373;
+  --ca-muted-strong: #8a8a8a;
+
+  /* Surfaces — marketing / auth (can use true black) */
+  --ca-canvas: #000000;
+  --ca-surface-1: #141414;
+  --ca-surface-2: #1a1a1a;
+  --ca-surface-3: #222222;
+
+  /* Borders */
+  --ca-border: #2a2a2a;
+  --ca-border-soft: #1f1f1f;
+  --ca-border-strong: #333333;
+
+  /* Semantic */
+  --ca-danger: #ff5c5c;
+  --ca-danger-muted: #ff8a8a;
+  --ca-warning: #f5a524;
+  --ca-success: var(--ca-brand);
+  --ca-focus-ring: rgb(0 224 19 / 0.4);
+
+  /* Spacing — 4px grid */
+  --ca-space-1: 0.25rem;
+  --ca-space-2: 0.5rem;
+  --ca-space-3: 0.75rem;
+  --ca-space-4: 1rem;
+  --ca-space-5: 1.25rem;
+  --ca-space-6: 1.5rem;
+  --ca-space-8: 2rem;
+  --ca-space-10: 2.5rem;
+  --ca-space-12: 3rem;
+
+  /* App aliases */
+  --background: var(--ca-canvas);
+  --foreground: var(--ca-ink);
+  --sortiri-green: var(--ca-brand);
+  --sortiri-green-text: var(--ca-brand-text-muted);
+}

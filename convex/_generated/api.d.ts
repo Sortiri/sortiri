@@ -8,13 +8,25 @@
  * @module
  */
 
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_onboardingDoc from "../lib/onboardingDoc.js";
+import type * as lib_workspacesLib from "../lib/workspacesLib.js";
+import type * as onboarding from "../onboarding.js";
+import type * as workspaces from "../workspaces.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  "lib/auth": typeof lib_auth;
+  "lib/onboardingDoc": typeof lib_onboardingDoc;
+  "lib/workspacesLib": typeof lib_workspacesLib;
+  onboarding: typeof onboarding;
+  workspaces: typeof workspaces;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

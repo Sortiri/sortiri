@@ -1,0 +1,199 @@
+.onboarding-page :where(*, *::before, *::after) {
+  border-radius: 0 !important;
+}
+
+.onboarding-page {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-synthesis: none;
+  background: var(--ca-canvas);
+  color: var(--ca-ink);
+}
+
+.onboarding-page h1 {
+  font-weight: 400;
+}
+
+.onboarding-field-label {
+  display: block;
+  font-family: var(--font-departure-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ca-muted);
+}
+
+.onboarding-input {
+  width: 100%;
+  border: 1px solid var(--ca-border);
+  background: var(--ca-surface-2);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--ca-ink);
+  outline: none;
+}
+
+.onboarding-input:focus {
+  border-color: var(--ca-brand);
+}
+
+.onboarding-input::placeholder {
+  color: var(--ca-muted);
+}
+
+.onboarding-hint {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ca-muted);
+}
+
+.onboarding-example {
+  margin-top: 0.75rem;
+  border: 1px solid var(--ca-border);
+  background: var(--ca-surface-1);
+  padding: 1rem 1.25rem;
+}
+
+.onboarding-example__label {
+  margin: 0 0 0.375rem;
+  font-family: var(--font-departure-mono), ui-monospace, monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ca-muted);
+}
+
+.onboarding-example__value {
+  margin: 0;
+  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: var(--ca-brand);
+}
+
+.onboarding-error {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  color: #fecaca;
+}
+
+.onboarding-choice {
+  width: 100%;
+  border: 1px solid var(--ca-border);
+  background: transparent;
+  padding: 1rem 1.25rem;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+  cursor: pointer;
+}
+
+.onboarding-choice:hover:not(:disabled) {
+  border-color: var(--ca-surface-3);
+  background: var(--ca-surface-1);
+}
+
+.onboarding-choice--selected {
+  border-color: var(--ca-brand);
+  background: rgba(0, 224, 19, 0.12);
+}
+
+.onboarding-choice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.onboarding-choice__label {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ca-ink);
+}
+
+.onboarding-choice__hint {
+  margin-top: 0.375rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ca-muted);
+}
+
+.onboarding-choice-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.onboarding-choice-grid--multi {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .onboarding-choice-grid--multi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.onboarding-create {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.onboarding-create__message {
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  color: var(--ca-ink-secondary);
+}
+
+.onboarding-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--ca-border);
+  border-top-color: var(--ca-brand);
+  animation: onboarding-spin 0.7s linear infinite;
+}
+
+@keyframes onboarding-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.convex-auth-error {
+  margin: 2rem auto;
+  max-width: 36rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #7f1d1d;
+  background: #2a1212;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #fecaca;
+}
+
+.convex-auth-error strong {
+  color: #fecaca;
+}
+
+.convex-auth-error p {
+  margin: 0.75rem 0 0;
+}
+
+.convex-auth-error code {
+  font-size: 0.85em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-spinner {
+    animation: none;
+  }
+}

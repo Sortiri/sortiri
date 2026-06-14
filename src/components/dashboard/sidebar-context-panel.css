@@ -1,0 +1,29 @@
+.sidebar-context-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ca-hairline);
+  border-radius: 0;
+  background: var(--ca-surface);
+  overflow: visible;
+}
+
+.sidebar-context-panel .workspace-switcher {
+  width: 100%;
+}
+
+.sidebar-context-panel .workspace-switcher-trigger--context {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.5625rem 0.625rem 0.5rem;
+}
+
+.sidebar-context-panel .workspace-switcher-trigger--context:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+}
+
+.sidebar-context-panel .workspace-switcher-error {
+  padding-inline: 0.625rem;
+  padding-bottom: 0.375rem;
+}

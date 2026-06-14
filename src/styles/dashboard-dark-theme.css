@@ -1,0 +1,115 @@
+/**
+ * Dashboard shell — refined Cash dark without pure black.
+ * Main: soft charcoal · Sidebar: one step lighter · Clear elevation ladder.
+ */
+
+.dashboard-app {
+  /* Dashboard neutrals (override marketing black) */
+  --ca-canvas: #0c0c0c;
+  --ca-surface-1: #111111;
+  --ca-surface-2: #161616;
+  --ca-surface-3: #1c1c1c;
+
+  --ca-sidebar-bg: var(--ca-surface-1);
+  --ca-main-bg: var(--ca-canvas);
+  --ca-panel-bg: var(--ca-surface-2);
+  --ca-surface: var(--ca-surface-2);
+  --ca-surface-hover: #1c1c1c;
+  --ca-surface-active: #242424;
+  --ca-hairline: var(--ca-border);
+  --ca-hairline-soft: var(--ca-border-soft);
+  --dashboard-content-max-width: 72rem;
+
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  color: var(--ca-ink);
+}
+
+.dashboard-app :where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-app .app-icon {
+  shape-rendering: crispEdges;
+  image-rendering: pixelated;
+}
+
+.dashboard-app .dashboard-sidebar {
+  background: var(--ca-sidebar-bg);
+}
+
+.dashboard-app .dashboard-sidebar-panel {
+  height: 100%;
+  border-inline-end: 1px solid var(--ca-hairline);
+  background: var(--ca-sidebar-bg);
+}
+
+.dashboard-app .dashboard-sidebar-inner {
+  height: 100%;
+  padding: var(--ca-space-2);
+  box-sizing: border-box;
+  background: var(--ca-sidebar-bg);
+}
+
+.dashboard-app .dashboard-sidebar-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--ca-space-2);
+  flex-shrink: 1;
+  min-width: 0;
+  width: auto;
+  height: 2rem;
+  padding-inline: var(--ca-space-2);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dashboard-app .dashboard-sidebar-brand:hover {
+  background: var(--ca-surface-hover);
+}
+
+.dashboard-app .dashboard-sidebar-account {
+  padding-block-start: var(--ca-space-2);
+}
+
+.dashboard-app .dashboard-main,
+.dashboard-app .dashboard-main-inner {
+  background: var(--ca-main-bg);
+}
+
+.dashboard-app .dashboard-page {
+  padding: var(--ca-space-4) var(--ca-space-4) var(--ca-space-8);
+}
+
+@media (min-width: 48rem) {
+  .dashboard-app .dashboard-page {
+    padding-inline: var(--ca-space-8);
+  }
+}
+
+.dashboard-app .dashboard-main {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ca-border-strong) var(--ca-main-bg);
+}
+
+.dashboard-app .dashboard-main::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: var(--ca-main-bg);
+}
+
+.dashboard-app .dashboard-main::-webkit-scrollbar-thumb {
+  background-color: var(--ca-border-strong);
+  border: 2px solid var(--ca-main-bg);
+  background-clip: padding-box;
+}
+
+.dashboard-app .dashboard-main::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ca-muted-strong);
+}

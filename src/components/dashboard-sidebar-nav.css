@@ -1,0 +1,92 @@
+.dashboard-sidebar-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-1, 0.25rem);
+}
+
+.dashboard-sidebar-nav-section + .dashboard-sidebar-nav-section {
+  margin-top: var(--ca-space-4, 1rem);
+}
+
+.dashboard-sidebar-nav-separator {
+  margin-block: var(--ca-space-4, 1rem) var(--ca-space-2, 0.5rem);
+}
+
+.dashboard-sidebar-nav-separator + .dashboard-sidebar-nav-section {
+  margin-top: 0;
+}
+
+.dashboard-sidebar-nav-section-header {
+  margin: 0;
+  padding: 0 var(--ca-space-2, 0.5rem) var(--ca-space-1, 0.25rem);
+  font-family: var(--font-departure-mono), ui-monospace, monospace;
+  font-size: 0.625rem;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ca-muted);
+}
+
+.dashboard-sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ca-space-2, 0.5rem);
+  width: 100%;
+  margin: 0;
+  padding: var(--ca-space-2, 0.5rem);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  color: var(--ca-muted);
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.dashboard-sidebar-nav-item:hover {
+  background: var(--ca-surface-hover);
+  color: var(--ca-ink);
+}
+
+.dashboard-sidebar-nav-item:focus-visible {
+  outline: 2px solid var(--ca-ink);
+  outline-offset: 1px;
+}
+
+.dashboard-sidebar-nav-item:active {
+  background: var(--ca-surface-active);
+}
+
+.dashboard-sidebar-nav-item.is-active {
+  background: var(--ca-surface);
+  border-color: var(--ca-hairline);
+  color: var(--ca-brand);
+}
+
+.dashboard-sidebar-nav-item.is-active .app-icon {
+  color: var(--ca-brand);
+}
+
+.dashboard-sidebar-nav-item.is-active:hover {
+  background: var(--ca-surface-hover);
+}
+
+.dashboard-sidebar-nav-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: opacity 120ms ease, width 120ms ease;
+}
+
+.dashboard-sidebar-nav-item.is-active .dashboard-sidebar-nav-label {
+  font-weight: 600;
+}

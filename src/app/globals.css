@@ -1,19 +1,24 @@
 @import "tailwindcss";
-
-:root {
-  --background: #09090b;
-  --foreground: #fafafa;
-}
+@import "../styles/cash-app-dark-tokens.css";
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-sortiri-green: var(--sortiri-green);
+  --color-sortiri-green-text: var(--sortiri-green-text);
+  --color-ca-surface-1: var(--ca-surface-1);
+  --color-ca-surface-2: var(--ca-surface-2);
+  --color-ca-surface-3: var(--ca-surface-3);
+  --color-ca-muted: var(--ca-muted);
+  --color-ca-border: var(--ca-border);
+  --color-ca-danger: var(--ca-danger);
+  --color-ca-brand: var(--ca-brand);
+  --font-sans: var(--font-pp-mondwest);
+  --font-display: var(--font-pp-mondwest);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--ca-canvas);
+  color: var(--ca-ink);
+  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
 }

@@ -1,0 +1,162 @@
+.dashboard-shell {
+  --dashboard-sidebar-width-expanded: 15rem;
+  --dashboard-sidebar-width-collapsed: 3.5rem;
+  --dashboard-sidebar-width: var(--dashboard-sidebar-width-expanded);
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] {
+  --dashboard-sidebar-width: var(--dashboard-sidebar-width-collapsed);
+}
+
+/* Collapse by clipping the right edge — inner layout stays left-anchored */
+.dashboard-sidebar {
+  width: var(--dashboard-sidebar-width);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 180ms ease;
+}
+
+.dashboard-sidebar-panel,
+.dashboard-sidebar-inner {
+  width: var(--dashboard-sidebar-width-expanded);
+  min-width: var(--dashboard-sidebar-width-expanded);
+  box-sizing: border-box;
+}
+
+.dashboard-shell:not([data-sidebar-collapsed="true"]) .dashboard-sidebar-inner {
+  padding-inline: var(--ca-space-3);
+}
+
+.dashboard-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ca-space-2);
+  min-height: 2rem;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-header {
+  justify-content: flex-start;
+}
+
+.dashboard-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ca-hairline);
+  border-radius: 0;
+  background: var(--ca-surface);
+  color: var(--ca-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.dashboard-sidebar-toggle:hover {
+  background: var(--ca-surface-hover);
+  color: var(--ca-ink);
+}
+
+.dashboard-sidebar-toggle:focus-visible {
+  outline: 2px solid var(--ca-ink);
+  outline-offset: 1px;
+}
+
+/* Hide text chrome when clipped — icons stay on the left */
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-nav-separator,
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-nav-section--replays {
+  display: none;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-nav-section-header {
+  display: none;
+}
+.dashboard-shell[data-sidebar-collapsed="true"] .workspace-switcher-label,
+.dashboard-shell[data-sidebar-collapsed="true"] .workspace-switcher-chevron,
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-footer .dashboard-sidebar-separator {
+  display: none;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-nav-label {
+  opacity: 0;
+  visibility: hidden;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-nav-item {
+  gap: 0;
+  width: 2rem;
+  max-width: 2rem;
+  min-width: 2rem;
+  padding-inline: 0.375rem;
+  box-sizing: border-box;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-context-panel {
+  width: 2rem;
+  max-width: 2rem;
+  border-color: transparent;
+  display: flex;
+  justify-content: center;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .workspace-switcher,
+.dashboard-shell[data-sidebar-collapsed="true"] .workspace-switcher-trigger--context {
+  width: 2rem;
+  max-width: 2rem;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .workspace-switcher-trigger--context {
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-nav-section + .dashboard-sidebar-nav-section {
+  margin-top: var(--ca-space-2);
+  padding-top: var(--ca-space-2);
+  border-top: 1px solid var(--ca-hairline);
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .workspace-switcher-initial {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.dashboard-shell:not([data-sidebar-collapsed="true"]) .workspace-switcher-initial {
+  display: none;
+}
+
+.workspace-switcher-initial {
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ca-ink);
+}
+
+.dashboard-shell[data-sidebar-collapsed="true"] .workspace-switcher-menu {
+  left: calc(100% + 0.5rem);
+  right: auto;
+  z-index: 30;
+  width: min(16rem, calc(100vw - var(--dashboard-sidebar-width-collapsed) - 1.5rem));
+}
