@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, type MouseEvent } from "react";
 import { Stack } from "@/components/ui/stack";
 import { SidebarContextPanel } from "@/components/dashboard/sidebar-context-panel";
 import { DashboardNavSections } from "@/components/dashboard-nav-sections";
+import { usePinnedReplayNavItems } from "@/hooks/use-pinned-replay-nav";
 import "./dashboard-mobile.css";
 
 type DashboardMobileNavDrawerProps = {
@@ -17,6 +18,7 @@ export function DashboardMobileNavDrawer({
   onClose,
 }: DashboardMobileNavDrawerProps) {
   const titleId = useId();
+  const replayItems = usePinnedReplayNavItems();
 
   const handleBackdropClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -78,7 +80,7 @@ export function DashboardMobileNavDrawer({
         <div className="dashboard-mobile-nav-drawer-body">
           <SidebarContextPanel />
           <Stack direction="block" gap="small-100">
-            <DashboardNavSections onItemSelect={onClose} />
+            <DashboardNavSections onItemSelect={onClose} replayItems={replayItems} />
           </Stack>
         </div>
       </aside>

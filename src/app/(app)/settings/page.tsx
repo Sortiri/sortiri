@@ -1,5 +1,5 @@
-import { DashboardEmptyPage } from "@/components/dashboard/dashboard-empty-page";
+import { SettingsPage } from "@/components/settings/settings-page";
 
-export default function SettingsPage() {
-  return <DashboardEmptyPage />;
+export default function Page() {
+  return <SettingsPage />;
 }

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { SidebarTooltip } from "@/components/dashboard/sidebar-tooltip";
 import { useSidebar } from "@/components/dashboard/sidebar-context";
 import { useWorkspace } from "./workspace-context";
+import { WorkspaceRoleBadge } from "./workspace-role-badge";
 import "./workspace-switcher.css";
 
 type WorkspaceSwitcherProps = {
@@ -174,6 +175,7 @@ export function WorkspaceSwitcher({
             {workspaces.map((workspace) => {
               const isActive = workspace.id === activeWorkspace?.id;
               const isEditing = editingId === workspace.id;
+              const canManageWorkspace = workspace.role === "owner";
 
               return (
                 <li key={workspace.id} className="workspace-switcher-item">
@@ -222,6 +224,9 @@ export function WorkspaceSwitcher({
                         onClick={() => void handleSwitch(workspace.id)}
                       >
                         <span className="workspace-switcher-name">{workspace.name}</span>
+                        {workspace.role ? (
+                          <WorkspaceRoleBadge role={workspace.role} />
+                        ) : null}
                         {isActive ? (
                           <Check
                             width={14}
@@ -232,28 +237,32 @@ export function WorkspaceSwitcher({
                         ) : null}
                       </button>
                       <div className="workspace-switcher-actions">
-                        <button
-                          type="button"
-                          className="workspace-switcher-icon-btn"
-                          aria-label={`Rename ${workspace.name}`}
-                          disabled={busy}
-                          onClick={() => {
-                            setEditingId(workspace.id);
-                            setEditName(workspace.name);
-                            setCreating(false);
-                          }}
-                        >
-                          <PenSquare width={14} height={14} className="app-icon" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          className="workspace-switcher-icon-btn workspace-switcher-icon-btn-danger"
-                          aria-label={`Delete ${workspace.name}`}
-                          disabled={busy || workspaces.length <= 1}
-                          onClick={() => void handleDelete(workspace.id)}
-                        >
-                          <Trash width={14} height={14} className="app-icon" aria-hidden />
-                        </button>
+                        {canManageWorkspace ? (
+                          <>
+                            <button
+                              type="button"
+                              className="workspace-switcher-icon-btn"
+                              aria-label={`Rename ${workspace.name}`}
+                              disabled={busy}
+                              onClick={() => {
+                                setEditingId(workspace.id);
+                                setEditName(workspace.name);
+                                setCreating(false);
+                              }}
+                            >
+                              <PenSquare width={14} height={14} className="app-icon" aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              className="workspace-switcher-icon-btn workspace-switcher-icon-btn-danger"
+                              aria-label={`Delete ${workspace.name}`}
+                              disabled={busy || workspaces.length <= 1}
+                              onClick={() => void handleDelete(workspace.id)}
+                            >
+                              <Trash width={14} height={14} className="app-icon" aria-hidden />
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   )}

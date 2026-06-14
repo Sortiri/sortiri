@@ -1,10 +1,9 @@
-import { AuthPageShell } from "@/components/auth/auth-page-shell";
-import { PolarisSignUpFormShell } from "@/components/auth/polaris-sign-up-form-shell";
+import { SignUp } from "@clerk/nextjs";
 
 export default function SignUpPage() {
   return (
-    <AuthPageShell legal="sign-up">
-      <PolarisSignUpFormShell />
-    </AuthPageShell>
+    <main className="flex min-h-dvh items-center justify-center bg-black px-6 py-12">
+      <SignUp />
+    </main>
   );
 }

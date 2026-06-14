@@ -8,15 +8,20 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Separator } from "@/components/ui/separator";
 import { Stack } from "@/components/ui/stack";
 import { SidebarTooltip } from "@/components/dashboard/sidebar-tooltip";
+import { useSearch } from "@/components/search/search-provider";
 import { useSidebar } from "@/components/dashboard/sidebar-context";
 import { SidebarContextPanel } from "@/components/dashboard/sidebar-context-panel";
 import { DashboardNavItem } from "@/components/dashboard-nav-item";
 import { DashboardNavSections } from "@/components/dashboard-nav-sections";
 import { dashboardSettingsNavItem } from "@/config/dashboard-nav";
+import { usePinnedReplayNavItems } from "@/hooks/use-pinned-replay-nav";
+import "@/components/search/search.css";
 
 export function DashboardSidebar() {
   const router = useRouter();
   const { collapsed, toggle } = useSidebar();
+  const { setOpen } = useSearch();
+  const replayItems = usePinnedReplayNavItems();
 
   return (
     <div className="dashboard-sidebar-panel">
@@ -60,8 +65,22 @@ export function DashboardSidebar() {
 
           <SidebarContextPanel />
 
+          <SidebarTooltip label="Search">
+            <button
+              type="button"
+              className={`dashboard-sidebar-search${collapsed ? " dashboard-sidebar-search--collapsed" : ""}`}
+              onClick={() => setOpen(true)}
+              aria-label="Search"
+            >
+              <span className="dashboard-sidebar-search__label">Search</span>
+              {!collapsed ? (
+                <span className="dashboard-sidebar-search__shortcut">⌘K</span>
+              ) : null}
+            </button>
+          </SidebarTooltip>
+
           <Stack direction="block" gap="small-100" className="dashboard-sidebar-primary-nav">
-            <DashboardNavSections />
+            <DashboardNavSections replayItems={replayItems} />
           </Stack>
 
           <div className="dashboard-sidebar-footer">

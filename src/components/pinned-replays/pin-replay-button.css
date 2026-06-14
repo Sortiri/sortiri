@@ -1,0 +1,55 @@
+.pin-replay-button-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--ca-space-1);
+}
+
+.pin-replay-button {
+  flex-shrink: 0;
+  padding: var(--ca-space-1) var(--ca-space-3);
+  border: 1px solid var(--ca-hairline);
+  background: transparent;
+  color: var(--ca-muted);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.pin-replay-button:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+  color: var(--ca-ink);
+  border-color: var(--ca-brand);
+}
+
+.pin-replay-button--pinned {
+  color: var(--ca-brand);
+  border-color: var(--ca-brand);
+}
+
+.pin-replay-button--compact {
+  font-size: 0.75rem;
+  padding: var(--ca-space-1) var(--ca-space-2);
+}
+
+.pin-replay-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pin-replay-button__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ca-danger);
+}
+
+.workstream-detail-header__actions {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ca-space-2);
+  flex-shrink: 0;
+}

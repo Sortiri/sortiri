@@ -2,19 +2,44 @@
   "name": "sortiri-timeline",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "npm run test:unit && npm run test:ui",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:ui": "playwright test",
+    "test:ui:headed": "playwright test --headed",
+    "test:all": "npm run typecheck && npm run lint && npm run test",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.packages.json",
+    "mcp:dev": "tsx packages/mcp/src/server.ts",
     "convex:dev": "convex dev",
     "convex:dev:once": "convex dev --once",
     "convex:deploy": "convex deploy --yes",
-    "convex:deploy:preview": "convex deploy --yes"
+    "convex:deploy:preview": "convex deploy --yes",
+    "smoke:enrich": "tsx scripts/enrich-mcp-smoke-test.ts",
+    "sortiri:init": "tsx packages/cli/src/index.ts init",
+    "sortiri:dev": "tsx packages/cli/src/index.ts dev",
+    "sdk:example": "tsx packages/sdk/examples/basic.ts",
+    "test:github-webhook": "vitest run tests/api/github-webhook-signature.test.ts",
+    "test:cli-setup": "tsx scripts/test-cli-setup.ts",
+    "test:cli-run": "tsx scripts/test-cli-run.ts",
+    "test:event-display": "vitest run tests/unit/event-display.test.ts",
+    "test:entity-extraction": "vitest run tests/unit/entity-extraction.test.ts",
+    "test:project-scoping": "vitest run tests/unit/project-scoping.test.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.71",
     "@clerk/nextjs": "^7.5.2",
+    "@convex-dev/agent": "^0.6.3",
     "@radix-ui/react-tooltip": "^1.2.9",
+    "@sortiri/sdk": "*",
+    "ai": "^6.0.204",
     "convex": "^1.41.0",
     "motion": "^12.40.0",
     "next": "16.2.9",
@@ -23,13 +48,20 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "playwright": "^1.60.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.22.4",
+    "typescript": "^5",
+    "vitest": "^4.1.8",
+    "zod": "^4.4.3"
   }
 }

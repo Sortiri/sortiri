@@ -1,6 +1,10 @@
 export type DashboardNavIcon =
   | "home"
   | "timeline"
+  | "projects"
+  | "workstreams"
+  | "entities"
+  | "ask"
   | "insights"
   | "sources"
   | "settings";
@@ -20,6 +24,10 @@ export type DashboardNavSection = {
 export const dashboardPrimaryNavItems: DashboardNavItem[] = [
   { href: "/home", label: "Home", icon: "home" },
   { href: "/timeline", label: "Timeline", icon: "timeline" },
+  { href: "/projects", label: "Projects", icon: "projects" },
+  { href: "/workstreams", label: "Workstreams", icon: "workstreams" },
+  { href: "/entities", label: "Entities", icon: "entities" },
+  { href: "/ask", label: "Ask Sortiri", icon: "ask" },
   { href: "/insights", label: "Insights", icon: "insights" },
   { href: "/sources", label: "Sources", icon: "sources" },
 ];
@@ -47,6 +55,8 @@ export function isDashboardNavItemActive(pathname: string, href: string): boolea
 }
 
 export function getDashboardPageTitle(pathname: string): string {
+  if (pathname === "/home") return "Company Pulse";
+  if (pathname.startsWith("/settings")) return "Settings";
   const match = dashboardNavItems.find((item) =>
     isDashboardNavItemActive(pathname, item.href),
   );

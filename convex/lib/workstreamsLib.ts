@@ -1,0 +1,161 @@
+import type { Doc, Id } from "../_generated/dataModel";
+import type { QueryCtx } from "../_generated/server";
+import { getWorkspaceMembership } from "./authz";
+import type { WorkstreamStatus } from "./eventTypes";
+import { buildWorkstreamSearchText } from "./search";
+
+export type WorkstreamRecord = {
+  id: string;
+  workspaceId: string;
+  projectId?: string;
+  title: string;
+  summary?: string;
+  status: WorkstreamStatus;
+  createdBy?: Doc<"workstreams">["createdBy"];
+  startedAt: number;
+  endedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+};
+
+type DbReadCtx = Pick<QueryCtx, "db">;
+
+type ListWorkstreamsOptions = {
+  status?: WorkstreamStatus;
+  projectId?: Id<"projects">;
+  limit?: number;
+};
+
+export function docToWorkstream(doc: Doc<"workstreams">): WorkstreamRecord {
+  return {
+    id: doc._id,
+    workspaceId: doc.workspaceId,
+    projectId: doc.projectId,
+    title: doc.title,
+    summary: doc.summary,
+    status: doc.status,
+    createdBy: doc.createdBy,
+    startedAt: doc.startedAt,
+    endedAt: doc.endedAt,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+}
+
+export async function listWorkstreamsForWorkspace(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  options: ListWorkstreamsOptions = {},
+): Promise<WorkstreamRecord[]> {
+  const limit = options.limit ?? 50;
+  const { status, projectId } = options;
+
+  let docs: Doc<"workstreams">[];
+
+  if (projectId) {
+    docs = await ctx.db
+      .query("workstreams")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .collect();
+    if (status) {
+      docs = docs.filter((doc) => doc.status === status);
+    }
+  } else if (status) {
+    docs = await ctx.db
+      .query("workstreams")
+      .withIndex("by_workspace_status", (q) =>
+        q.eq("workspaceId", workspaceDocId).eq("status", status),
+      )
+      .collect();
+  } else {
+    docs = await ctx.db
+      .query("workstreams")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceDocId))
+      .collect();
+  }
+
+  return docs
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, limit)
+    .map(docToWorkstream);
+}
+
+type SearchWorkstreamsOptions = {
+  query: string;
+  limit?: number;
+  scanLimit?: number;
+  status?: WorkstreamStatus;
+  projectId?: Id<"projects">;
+};
+
+export async function searchWorkstreamsForWorkspace(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  options: SearchWorkstreamsOptions,
+): Promise<WorkstreamRecord[]> {
+  const limit = options.limit ?? 20;
+  const scanLimit = options.scanLimit ?? 100;
+  const normalizedQuery = options.query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return listWorkstreamsForWorkspace(ctx, workspaceDocId, {
+      limit,
+      status: options.status,
+      projectId: options.projectId,
+    });
+  }
+
+  let docs: Doc<"workstreams">[];
+
+  if (options.projectId) {
+    docs = await ctx.db
+      .query("workstreams")
+      .withIndex("by_project", (q) => q.eq("projectId", options.projectId!))
+      .collect();
+  } else {
+    docs = await ctx.db
+      .query("workstreams")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceDocId))
+      .collect();
+  }
+
+  if (options.status) {
+    docs = docs.filter((doc) => doc.status === options.status);
+  }
+
+  return docs
+    .filter((doc) => {
+      const searchText =
+        doc.searchText ??
+        buildWorkstreamSearchText({
+          title: doc.title,
+          summary: doc.summary,
+          status: doc.status,
+          createdBy: doc.createdBy,
+        });
+      return searchText.includes(normalizedQuery);
+    })
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, Math.min(limit, scanLimit))
+    .map(docToWorkstream);
+}
+
+export async function assertWorkstreamAccess(
+  ctx: DbReadCtx,
+  workstreamId: Id<"workstreams">,
+  userId: string,
+): Promise<Doc<"workstreams">> {
+  const workstream = await ctx.db.get(workstreamId);
+  if (!workstream) {
+    throw new Error("Workstream not found");
+  }
+  const workspace = await ctx.db.get(workstream.workspaceId);
+  if (!workspace) {
+    throw new Error("Workstream not found");
+  }
+  const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+  if (!membership) {
+    throw new Error("Workstream not found");
+  }
+  return workstream;
+}

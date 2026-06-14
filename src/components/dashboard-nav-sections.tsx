@@ -1,19 +1,28 @@
 "use client";
 
+import { dashboardNavSections } from "@/config/dashboard-nav";
+import type { DashboardNavItem } from "@/config/dashboard-nav";
+import { DashboardNavItem as DashboardNavItemComponent } from "@/components/dashboard-nav-item";
 import { Fragment } from "react";
 import { Stack } from "@/components/ui/stack";
 import { Separator } from "@/components/ui/separator";
-import { dashboardNavSections } from "@/config/dashboard-nav";
-import { DashboardNavItem } from "@/components/dashboard-nav-item";
 
 type DashboardNavSectionsProps = {
   onItemSelect?: () => void;
+  replayItems?: DashboardNavItem[];
 };
 
-export function DashboardNavSections({ onItemSelect }: DashboardNavSectionsProps) {
+export function DashboardNavSections({
+  onItemSelect,
+  replayItems = [],
+}: DashboardNavSectionsProps) {
+  const sections = dashboardNavSections.map((section) =>
+    section.id === "replays" ? { ...section, items: replayItems } : section,
+  );
+
   return (
     <>
-      {dashboardNavSections.map((section, index) => (
+      {sections.map((section, index) => (
         <Fragment key={section.id}>
           {section.title && index > 0 ? (
             <Separator className="dashboard-sidebar-nav-separator" />
@@ -24,10 +33,13 @@ export function DashboardNavSections({ onItemSelect }: DashboardNavSectionsProps
             {section.title ? (
               <p className="dashboard-sidebar-nav-section-header">{section.title}</p>
             ) : null}
+            {section.id === "replays" && section.items.length === 0 ? (
+              <p className="dashboard-sidebar-nav-section-empty">No pinned replays</p>
+            ) : null}
             {section.items.length > 0 ? (
               <Stack direction="block" gap="small-100">
                 {section.items.map((item) => (
-                  <DashboardNavItem
+                  <DashboardNavItemComponent
                     key={item.href}
                     item={item}
                     onNavigate={onItemSelect}

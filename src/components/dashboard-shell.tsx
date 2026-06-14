@@ -5,6 +5,10 @@ import { DashboardMobileHeader } from "@/components/dashboard-mobile-header";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { SidebarProvider, useSidebar } from "@/components/dashboard/sidebar-context";
 import { OnboardingGuard } from "@/components/onboarding/onboarding-guard";
+import { SearchPalette } from "@/components/search/search-palette";
+import { SearchProvider } from "@/components/search/search-provider";
+import { ArtifactDrawer } from "@/components/artifacts/artifact-drawer";
+import { ArtifactProvider } from "@/components/artifacts/artifact-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceProvider } from "@/components/workspace/workspace-context";
 
@@ -37,11 +41,17 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceProvider>
-      <SidebarProvider>
-        <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-          <DashboardShellInner>{children}</DashboardShellInner>
-        </TooltipProvider>
-      </SidebarProvider>
+      <SearchProvider>
+        <SidebarProvider>
+          <ArtifactProvider>
+            <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+              <DashboardShellInner>{children}</DashboardShellInner>
+              <SearchPalette />
+              <ArtifactDrawer />
+            </TooltipProvider>
+          </ArtifactProvider>
+        </SidebarProvider>
+      </SearchProvider>
     </WorkspaceProvider>
   );
 }

@@ -1,5 +1,7 @@
+import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { buildTimelineName } from "./onboardingDoc";
+import { ensureOwnerForWorkspace } from "./workspaceMembersLib";
 
 export const DEFAULT_WORKSPACE_NAME = "My Timeline";
 
@@ -11,8 +13,39 @@ export type Workspace = {
   updatedAt: string;
 };
 
+export function resolveActiveWorkspaceId(
+  storedId: string | null,
+  workspaces: Array<{ id: string }>,
+): string | null {
+  if (workspaces.length === 0) {
+    return null;
+  }
+  if (storedId && workspaces.some((ws) => ws.id === storedId)) {
+    return storedId;
+  }
+  return workspaces[0]!.id;
+}
+
 type DbReadCtx = Pick<QueryCtx, "db">;
 type DbWriteCtx = Pick<MutationCtx, "db">;
+
+export async function getWorkspaceDocByExternalId(
+  ctx: DbReadCtx,
+  externalId: string,
+  userId?: string,
+): Promise<Doc<"workspaces">> {
+  const doc = await ctx.db
+    .query("workspaces")
+    .withIndex("by_externalId", (q) => q.eq("externalId", externalId))
+    .unique();
+  if (!doc) {
+    throw new Error("Workspace not found");
+  }
+  if (userId !== undefined && doc.userId !== userId) {
+    throw new Error("Workspace not found");
+  }
+  return doc;
+}
 
 export function docToWorkspace(doc: {
   externalId: string;
@@ -87,13 +120,14 @@ export async function ensureDefaultWorkspace(
 
   const now = new Date().toISOString();
   const externalId = crypto.randomUUID();
-  await ctx.db.insert("workspaces", {
+  const workspaceId = await ctx.db.insert("workspaces", {
     externalId,
     userId,
     name: DEFAULT_WORKSPACE_NAME,
     createdAt: now,
     updatedAt: now,
   });
+  await ensureOwnerForWorkspace(ctx, workspaceId, { clerkUserId: userId });
   await setActiveId(ctx, userId, externalId);
   return {
     id: externalId,
@@ -115,13 +149,14 @@ export async function ensureOnboardingWorkspace(
 
   if (existing.length === 0) {
     const externalId = crypto.randomUUID();
-    await ctx.db.insert("workspaces", {
+    const workspaceId = await ctx.db.insert("workspaces", {
       externalId,
       userId,
       name: timelineName,
       createdAt: now,
       updatedAt: now,
     });
+    await ensureOwnerForWorkspace(ctx, workspaceId, { clerkUserId: userId });
     await setActiveId(ctx, userId, externalId);
     return {
       id: externalId,

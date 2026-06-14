@@ -1,0 +1,23 @@
+{
+  "name": "@sortiri/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "sortiri": "./src/index.ts"
+  },
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@sortiri/local": "*",
+    "chokidar": "^4.0.3",
+    "commander": "^13.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3",
+    "typescript": "^5"
+  }
+}

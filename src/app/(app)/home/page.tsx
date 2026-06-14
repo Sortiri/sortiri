@@ -1,5 +1,15 @@
-import { DashboardEmptyPage } from "@/components/dashboard/dashboard-empty-page";
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { HomePage } from "@/components/home/home-page";
 
-export default function HomePage() {
-  return <DashboardEmptyPage />;
+export const metadata: Metadata = {
+  title: "Company Pulse — Sortiri Timeline",
+};
+
+export default function HomeRoutePage() {
+  return (
+    <Suspense fallback={<p className="home-page__loading">Loading company pulse…</p>}>
+      <HomePage />
+    </Suspense>
+  );
 }

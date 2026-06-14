@@ -28,6 +28,14 @@
   color: var(--ca-muted);
 }
 
+.dashboard-sidebar-nav-section-empty {
+  margin: 0;
+  padding: 0 var(--ca-space-2, 0.5rem);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--ca-muted);
+}
+
 .dashboard-sidebar-nav-item {
   display: flex;
   align-items: center;

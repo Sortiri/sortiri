@@ -1,5 +1,10 @@
-import { DashboardEmptyPage } from "@/components/dashboard/dashboard-empty-page";
+import type { Metadata } from "next";
+import { WorkstreamsPage } from "@/components/workstreams/workstreams-page";
 
-export default function WorkstreamsPage() {
-  return <DashboardEmptyPage />;
+export const metadata: Metadata = {
+  title: "Workstreams — Sortiri Timeline",
+};
+
+export default function WorkstreamsRoutePage() {
+  return <WorkstreamsPage />;
 }

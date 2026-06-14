@@ -1,5 +1,10 @@
-import { DashboardEmptyPage } from "@/components/dashboard/dashboard-empty-page";
+import type { Metadata } from "next";
+import { InsightsPage } from "@/components/insights/insights-page";
 
-export default function InsightsPage() {
-  return <DashboardEmptyPage />;
+export const metadata: Metadata = {
+  title: "Insights — Sortiri Timeline",
+};
+
+export default function InsightsRoutePage() {
+  return <InsightsPage />;
 }

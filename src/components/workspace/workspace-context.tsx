@@ -33,7 +33,12 @@ function applyState(
   state: WorkspaceState,
 ) {
   setWorkspaces(state.workspaces);
-  setActiveWorkspaceId(state.activeWorkspaceId);
+  const validActiveId =
+    state.activeWorkspaceId &&
+    state.workspaces.some((ws) => ws.id === state.activeWorkspaceId)
+      ? state.activeWorkspaceId
+      : (state.workspaces[0]?.id ?? null);
+  setActiveWorkspaceId(validActiveId);
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
@@ -66,6 +71,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || remoteState === undefined) return;
     if (remoteState.workspaces.length === 0) {
+      setWorkspaces([]);
+      setActiveWorkspaceId(null);
       void bootstrapMutation({}).catch((err) => {
         setError(err instanceof Error ? err.message : "Could not load workspaces");
       });
@@ -136,13 +143,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [workspaces, activeWorkspaceId],
   );
 
+  const effectiveActiveWorkspaceId = activeWorkspace?.id ?? null;
+
   const value = useMemo(
     () => ({
       loading,
       error,
       workspaces,
       activeWorkspace,
-      activeWorkspaceId,
+      activeWorkspaceId: effectiveActiveWorkspaceId,
       createWorkspace,
       renameWorkspace,
       deleteWorkspace,
@@ -153,7 +162,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       error,
       workspaces,
       activeWorkspace,
-      activeWorkspaceId,
+      effectiveActiveWorkspaceId,
       createWorkspace,
       renameWorkspace,
       deleteWorkspace,
