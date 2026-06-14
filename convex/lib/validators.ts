@@ -194,3 +194,43 @@ export const insightWindowValidator = v.union(
   v.literal("7d"),
   v.literal("30d"),
 );
+
+export const savedViewTypeValidator = v.union(
+  v.literal("engineering"),
+  v.literal("product"),
+  v.literal("revenue"),
+  v.literal("growth"),
+  v.literal("support"),
+  v.literal("executive"),
+  v.literal("custom"),
+);
+
+export const savedViewSharingValidator = v.union(
+  v.literal("workspace"),
+  v.literal("private"),
+);
+
+export const workspaceRoleValidator = v.union(
+  v.literal("owner"),
+  v.literal("admin"),
+  v.literal("member"),
+  v.literal("viewer"),
+);
+
+export const eventVisibilityFilterValidator = v.union(
+  v.literal("primary"),
+  v.literal("debug"),
+  v.literal("all"),
+);
+
+export const savedViewFiltersValidator = v.object({
+  projectIds: v.optional(v.array(v.id("projects"))),
+  categories: v.optional(v.array(eventCategoryValidator)),
+  sources: v.optional(v.array(v.string())),
+  entityTypes: v.optional(v.array(v.string())),
+  entityIds: v.optional(v.array(v.id("entities"))),
+  actorTypes: v.optional(v.array(v.string())),
+  importance: v.optional(v.array(importanceValidator)),
+  visibility: v.optional(eventVisibilityFilterValidator),
+  query: v.optional(v.string()),
+});

@@ -1,3 +1,4 @@
+import { Bookmark } from "pixelarticons/react/Bookmark";
 import { Box } from "pixelarticons/react/Box";
 import { Folder } from "pixelarticons/react/Folder";
 import { FolderSharp } from "pixelarticons/react/FolderSharp";
@@ -41,6 +42,7 @@ const iconOutlineMap = {
   projects: Folder,
   workstreams: Play,
   entities: Box,
+  views: Bookmark,
   ask: PixelMessageOutline,
   insights: Chart,
   sources: Database,
@@ -53,6 +55,7 @@ const iconSolidMap: Record<keyof typeof iconOutlineMap, PixelIconComponent> = {
   projects: FolderSharp,
   workstreams: Play,
   entities: Box,
+  views: Bookmark,
   ask: PixelSolidMessage,
   insights: ChartSharp,
   sources: Grid3x3,

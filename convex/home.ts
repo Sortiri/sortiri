@@ -11,7 +11,7 @@ export const getPulse = query({
   handler: async (ctx, args): Promise<CompanyPulseResult> => {
     const userId = await requireUserId(ctx);
     const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
-    return buildCompanyPulse(ctx, workspace._id);
+    return buildCompanyPulse(ctx, workspace._id, userId);
   },
 });
 

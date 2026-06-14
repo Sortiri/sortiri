@@ -7,6 +7,7 @@ import { ActiveWorkstreamsSection } from "@/components/home/active-workstreams-s
 import { HomeEmptyState } from "@/components/home/home-empty-state";
 import { LatestInsightsSection } from "@/components/home/latest-insights-section";
 import { PinnedReplaysSection } from "@/components/home/pinned-replays-section";
+import { PinnedViewsSection } from "@/components/home/pinned-views-section";
 import { PulseSummaryCards } from "@/components/home/pulse-summary-cards";
 import { QuickActions } from "@/components/home/quick-actions";
 import { RecentHistorySection } from "@/components/home/recent-history-section";
@@ -16,6 +17,7 @@ import type { CompanyPulse, PulseCounts, SourceHealthItem } from "@/types/home";
 import type { TimelineEvent, Workstream } from "@/types/events";
 import type { InsightFindingDetail } from "@/types/insights";
 import type { PinnedReplayWithWorkstream } from "@/types/pinned-replays";
+import type { PinnedViewSummary } from "@/types/saved-views";
 import "./home.css";
 
 export function HomePage() {
@@ -75,6 +77,9 @@ export function HomePage() {
           <PinnedReplaysSection
             pinnedReplays={data.pinnedReplays as PinnedReplayWithWorkstream[]}
             workspaceId={activeWorkspaceId}
+          />
+          <PinnedViewsSection
+            pinnedViews={data.pinnedViews as PinnedViewSummary[]}
           />
           <LatestInsightsSection
             findings={data.latestFindings as InsightFindingDetail[]}

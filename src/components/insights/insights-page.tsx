@@ -12,7 +12,9 @@ import { InsightsReport } from "@/components/insights/insights-report";
 import { InsightsWindowFilter } from "@/components/insights/insights-window-filter";
 import { GenerateRelatedHistoryButton } from "@/components/links/generate-related-history-button";
 import { ProjectFilter } from "@/components/projects/project-filter";
+import { ViewFilter } from "@/components/views/view-filter";
 import { useProjectFilter } from "@/hooks/use-project-filter";
+import { useViewFilter } from "@/hooks/use-view-filter";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { InsightWindow } from "@/types/insights";
@@ -26,6 +28,7 @@ export function InsightsPage() {
   const { capabilities } = useWorkspaceMembership(activeWorkspaceId);
   const canWrite = capabilities?.canWriteWorkspaceData ?? false;
   const { projectId, projectList, setProjectId } = useProjectFilter(activeWorkspaceId);
+  const { viewId, setViewId } = useViewFilter();
   const [window, setWindow] = useState<InsightWindow>("7d");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +36,9 @@ export function InsightsPage() {
 
   const overview = useQuery(
     api.insights.getOverview,
-    activeWorkspaceId ? { workspaceId: activeWorkspaceId, window, projectId } : "skip",
+    activeWorkspaceId
+      ? { workspaceId: activeWorkspaceId, window, projectId, viewId }
+      : "skip",
   );
 
   const runs = useQuery(
@@ -65,6 +70,7 @@ export function InsightsPage() {
         workspaceId: activeWorkspaceId,
         window,
         projectId,
+        viewId,
       });
       setActiveRunId(result.runId);
     } catch (err) {
@@ -72,7 +78,7 @@ export function InsightsPage() {
     } finally {
       setGenerating(false);
     }
-  }, [activeWorkspaceId, generateRun, window, projectId]);
+  }, [activeWorkspaceId, generateRun, window, projectId, viewId]);
 
   const loading =
     wsLoading ||
@@ -121,6 +127,7 @@ export function InsightsPage() {
           onChange={setProjectId}
         />
       ) : null}
+      <ViewFilter value={viewId ?? null} onChange={setViewId} />
 
       {overview ? <InsightsOverviewCards overview={overview} /> : null}
 

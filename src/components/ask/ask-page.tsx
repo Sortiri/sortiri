@@ -25,6 +25,7 @@ export function AskPage() {
   const entityIdParam = searchParams.get("entityId");
 
   const projectIdParam = searchParams.get("projectId");
+  const viewIdParam = searchParams.get("viewId");
 
   const [question, setQuestion] = useState(initialQuestion);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -46,6 +47,15 @@ export function AskPage() {
     ? (projectIdParam as Id<"projects">)
     : undefined;
 
+  const viewId = viewIdParam ? (viewIdParam as Id<"savedViews">) : undefined;
+
+  const selectedView = useQuery(
+    api.savedViews.getById,
+    activeWorkspaceId && viewId
+      ? { workspaceId: activeWorkspaceId, viewId }
+      : "skip",
+  );
+
   const selectedProject = useQuery(
     api.projects.getById,
     activeWorkspaceId && projectId
@@ -56,12 +66,14 @@ export function AskPage() {
   useEffect(() => {
     if (initialQuestion) {
       setQuestion(initialQuestion);
+    } else if (viewIdParam) {
+      setQuestion(`What happened in the ${selectedView?.name ?? "selected"} view recently?`);
     } else if (projectIdParam) {
       setQuestion(PROJECT_FOCUS_QUESTION);
     } else if (workstreamIdParam) {
       setQuestion(WORKSTREAM_FOCUS_QUESTION);
     }
-  }, [initialQuestion, projectIdParam, workstreamIdParam]);
+  }, [initialQuestion, projectIdParam, viewIdParam, workstreamIdParam, selectedView?.name]);
 
   const askAction = useAction(api.ask.ask);
 
@@ -100,6 +112,7 @@ export function AskPage() {
         workstreamId,
         entityId,
         projectId,
+        viewId,
       });
       setActiveSessionId(result.sessionId);
       setLocalAnswer(result.answer);
@@ -110,7 +123,7 @@ export function AskPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [activeWorkspaceId, askAction, question, workstreamId, entityId, projectId]);
+  }, [activeWorkspaceId, askAction, question, workstreamId, entityId, projectId, viewId]);
 
   const handleSelectSession = useCallback(
     (sessionId: string) => {

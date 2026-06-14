@@ -26,6 +26,7 @@ export const retrieveContext = internalQuery({
     workstreamId: v.optional(v.id("workstreams")),
     entityId: v.optional(v.id("entities")),
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
   },
   handler: async (ctx, args) => {
     const workspace = await assertWorkspaceAccess(
@@ -37,6 +38,8 @@ export const retrieveContext = internalQuery({
       workstreamId: args.workstreamId,
       entityId: args.entityId,
       projectId: args.projectId,
+      viewId: args.viewId,
+      clerkUserId: args.userId,
     });
   },
 });
@@ -125,6 +128,7 @@ export const ask = action({
     workstreamId: v.optional(v.id("workstreams")),
     entityId: v.optional(v.id("entities")),
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
   },
   handler: async (ctx, args): Promise<{
     sessionId: Id<"askSessions">;
@@ -146,6 +150,7 @@ export const ask = action({
       workstreamId: args.workstreamId,
       entityId: args.entityId,
       projectId: args.projectId,
+      viewId: args.viewId,
     });
 
     let threadId = args.threadId;
