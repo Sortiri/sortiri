@@ -29,6 +29,9 @@ import {
 } from "./workstreamsLib";
 import { listEntitiesByProject } from "./projectPulse";
 import { docToProjectRecord } from "./projectsLib";
+import { applySavedViewFilters } from "./savedViewEvents";
+import { assertSavedViewAccess } from "./savedViewsLib";
+import { getWorkspaceMembership } from "./authz";
 
 type DbReadCtx = Pick<QueryCtx, "db">;
 
@@ -36,6 +39,8 @@ type RetrieveAskContextOptions = {
   workstreamId?: Id<"workstreams">;
   entityId?: Id<"entities">;
   projectId?: Id<"projects">;
+  viewId?: Id<"savedViews">;
+  clerkUserId?: string;
 };
 
 export type AskContextResult = {
@@ -77,6 +82,8 @@ export function formatAskContext(args: {
   relatedLinks?: LinkWithEvents[];
   entityContexts?: Array<{ entity: EntityRecord; events: EventRecord[] }>;
   projectName?: string;
+  viewName?: string;
+  viewDescription?: string;
 }): string {
   const eventLines = args.events.map((event) => {
     const lines = [
@@ -145,6 +152,14 @@ export function formatAskContext(args: {
     }) ?? [];
 
   return [
+    ...(args.viewName
+      ? [
+          "VIEW CONTEXT",
+          `View: ${args.viewName}`,
+          ...(args.viewDescription ? [`Description: ${args.viewDescription}`] : []),
+          "",
+        ]
+      : []),
     ...(args.projectName ? [`PROJECT: ${args.projectName}`, ""] : []),
     "EVENTS",
     "",
@@ -172,6 +187,92 @@ export async function retrieveAskContext(
 ): Promise<AskContextResult> {
   const includeDebug = questionRequestsDebugEvents(question);
   let projectName: string | undefined;
+  let viewName: string | undefined;
+  let viewDescription: string | undefined;
+
+  if (options.viewId && options.clerkUserId) {
+    const membership = await getWorkspaceMembership(
+      ctx,
+      workspaceDocId,
+      options.clerkUserId,
+    );
+    if (membership) {
+      const view = await assertSavedViewAccess(ctx, options.viewId, membership);
+      viewName = view.name;
+      viewDescription = view.description;
+
+      const viewEvents = await applySavedViewFilters(ctx, workspaceDocId, view.filters, {
+        limit: 40,
+      });
+
+      const workstreamMap = new Map<string, WorkstreamRecord>();
+      for (const event of viewEvents) {
+        if (event.workstreamId) {
+          const workstreamDoc = await ctx.db.get(event.workstreamId as Id<"workstreams">);
+          if (workstreamDoc && workstreamDoc.workspaceId === workspaceDocId) {
+            workstreamMap.set(workstreamDoc._id, docToWorkstream(workstreamDoc));
+          }
+        }
+      }
+
+      const entityContexts: Array<{ entity: EntityRecord; events: EventRecord[] }> = [];
+      const entityKeys = new Set<string>();
+      for (const event of viewEvents) {
+        if (!event.entity?.type) continue;
+        const key = `${event.entity.type}:${event.entity.id ?? event.entity.name ?? ""}`;
+        if (entityKeys.has(key)) continue;
+        entityKeys.add(key);
+
+        const entityDoc = await ctx.db
+          .query("entities")
+          .withIndex("by_workspace_type_key", (q) =>
+            q
+              .eq("workspaceId", workspaceDocId)
+              .eq("type", event.entity!.type as EntityRecord["type"])
+              .eq("key", event.entity!.id ?? event.entity!.name ?? ""),
+          )
+          .unique();
+
+        if (entityDoc) {
+          const record = docToEntity(entityDoc);
+          entityContexts.push({
+            entity: record,
+            events: viewEvents.filter(
+              (item) =>
+                item.entity?.type === record.type &&
+                (item.entity.id === record.key || item.entity.name === record.name),
+            ),
+          });
+        }
+      }
+
+      let events = filterAskContextEvents(viewEvents);
+      if (!includeDebug) {
+        events = filterPrimaryEventRecords(events);
+      }
+      const workstreams = Array.from(workstreamMap.values()).sort(
+        (a, b) => b.startedAt - a.startedAt,
+      );
+
+      const primaryEventIds = events.slice(0, 10).map((event) => event.id as Id<"events">);
+      const relatedLinks = await listLinksForEventIds(ctx, primaryEventIds, 3);
+
+      return {
+        contextText: formatAskContext({
+          events,
+          workstreams,
+          relatedLinks,
+          entityContexts,
+          viewName,
+          viewDescription,
+        }),
+        eventIds: events.map((event) => event.id as Id<"events">),
+        workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
+        events,
+        workstreams,
+      };
+    }
+  }
 
   if (options.projectId) {
     const projectDoc = await ctx.db.get(options.projectId);
@@ -243,6 +344,8 @@ export async function retrieveAskContext(
           relatedLinks,
           entityContexts,
           projectName,
+          viewName,
+          viewDescription,
         }),
         eventIds: events.map((event) => event.id as Id<"events">),
         workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
@@ -377,6 +480,8 @@ export async function retrieveAskContext(
       workstreams,
       relatedLinks,
       entityContexts,
+      viewName,
+      viewDescription,
     }),
     eventIds: allEvents.map((event) => event.id as Id<"events">),
     workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),

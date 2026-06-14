@@ -286,6 +286,7 @@ export default defineSchema({
   insightRuns: defineTable({
     workspaceId: v.id("workspaces"),
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
     title: v.string(),
     summary: v.optional(v.string()),
     status: insightRunStatusValidator,
@@ -305,6 +306,7 @@ export default defineSchema({
   insightFindings: defineTable({
     workspaceId: v.id("workspaces"),
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
     runId: v.id("insightRuns"),
     type: insightFindingTypeValidator,
     severity: insightFindingSeverityValidator,
@@ -411,4 +413,72 @@ export default defineSchema({
     .index("by_workspace", ["workspaceId"])
     .index("by_workstream", ["workstreamId"])
     .index("by_workspace_workstream", ["workspaceId", "workstreamId"]),
+
+  savedViews: defineTable({
+    workspaceId: v.id("workspaces"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    type: v.union(
+      v.literal("engineering"),
+      v.literal("product"),
+      v.literal("revenue"),
+      v.literal("growth"),
+      v.literal("support"),
+      v.literal("executive"),
+      v.literal("custom"),
+    ),
+    visibility: v.union(v.literal("workspace"), v.literal("private")),
+    ownerUserId: v.optional(v.string()),
+    allowedRoles: v.optional(
+      v.array(
+        v.union(
+          v.literal("owner"),
+          v.literal("admin"),
+          v.literal("member"),
+          v.literal("viewer"),
+        ),
+      ),
+    ),
+    filters: v.object({
+      projectIds: v.optional(v.array(v.id("projects"))),
+      categories: v.optional(
+        v.array(
+          v.union(
+            v.literal("agent_action"),
+            v.literal("code_change"),
+            v.literal("product_event"),
+            v.literal("company_decision"),
+            v.literal("revenue_event"),
+            v.literal("system_event"),
+          ),
+        ),
+      ),
+      sources: v.optional(v.array(v.string())),
+      entityTypes: v.optional(v.array(v.string())),
+      entityIds: v.optional(v.array(v.id("entities"))),
+      actorTypes: v.optional(v.array(v.string())),
+      importance: v.optional(
+        v.array(
+          v.union(
+            v.literal("low"),
+            v.literal("normal"),
+            v.literal("high"),
+            v.literal("critical"),
+          ),
+        ),
+      ),
+      visibility: v.optional(
+        v.union(v.literal("primary"), v.literal("debug"), v.literal("all")),
+      ),
+      query: v.optional(v.string()),
+    }),
+    isDefault: v.optional(v.boolean()),
+    isPinned: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_type", ["workspaceId", "type"])
+    .index("by_workspace_pinned", ["workspaceId", "isPinned"])
+    .index("by_owner", ["ownerUserId"]),
 });

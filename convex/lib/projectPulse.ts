@@ -15,6 +15,8 @@ import {
   listInsightRunsForWorkspace,
   type InsightFindingDetail,
 } from "./insightRunsLib";
+import { getStartOfUtcDay } from "./homePulse";
+import { getProjectEventStats } from "./projectsLib";
 import {
   listWorkstreamsForWorkspace,
   type WorkstreamRecord,
@@ -242,8 +244,6 @@ export async function getActiveProjectsForWorkspace(
   workspaceId: Id<"workspaces">,
   limit = 3,
 ): Promise<ActiveProjectSummary[]> {
-  const { getStartOfUtcDay } = await import("./homePulse");
-  const { getProjectEventStats } = await import("./projectsLib");
   const startOfToday = getStartOfUtcDay();
 
   const projectDocs = await ctx.db

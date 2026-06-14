@@ -22,23 +22,21 @@ export function CliSetupSection({ workspaceId }: CliSetupSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [rawToken, setRawToken] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!expiresAt) {
-      setSecondsLeft(null);
       return;
     }
 
-    const tick = () => {
-      const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-      setSecondsLeft(remaining);
-    };
-
-    tick();
-    const id = window.setInterval(tick, 1000);
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [expiresAt]);
+
+  const secondsLeft =
+    expiresAt === null
+      ? null
+      : Math.max(0, Math.floor((expiresAt - now) / 1000));
 
   const handleCreate = useCallback(async () => {
     setError(null);

@@ -9,16 +9,20 @@ import { Separator } from "@/components/ui/separator";
 
 type DashboardNavSectionsProps = {
   onItemSelect?: () => void;
+  viewItems?: DashboardNavItem[];
   replayItems?: DashboardNavItem[];
 };
 
 export function DashboardNavSections({
   onItemSelect,
+  viewItems = [],
   replayItems = [],
 }: DashboardNavSectionsProps) {
-  const sections = dashboardNavSections.map((section) =>
-    section.id === "replays" ? { ...section, items: replayItems } : section,
-  );
+  const sections = dashboardNavSections.map((section) => {
+    if (section.id === "replays") return { ...section, items: replayItems };
+    if (section.id === "views") return { ...section, items: viewItems };
+    return section;
+  });
 
   return (
     <>
@@ -32,6 +36,9 @@ export function DashboardNavSections({
           >
             {section.title ? (
               <p className="dashboard-sidebar-nav-section-header">{section.title}</p>
+            ) : null}
+            {section.id === "views" && section.items.length === 0 ? (
+              <p className="dashboard-sidebar-nav-section-empty">No pinned views</p>
             ) : null}
             {section.id === "replays" && section.items.length === 0 ? (
               <p className="dashboard-sidebar-nav-section-empty">No pinned replays</p>

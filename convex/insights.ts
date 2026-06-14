@@ -45,6 +45,8 @@ import {
 import { insightWindowValidator } from "./lib/validators";
 import { assertWorkspaceAccess } from "./lib/eventsLib";
 import { requireWorkspaceRole } from "./lib/authz";
+import { loadSavedViewFilters } from "./lib/savedViewEvents";
+import { applyViewFilters } from "./lib/viewFilters";
 import type { EventRecord } from "./lib/eventsLib";
 import type { WorkstreamRecord } from "./lib/workstreamsLib";
 
@@ -56,12 +58,36 @@ type RunDataResult = {
   windowEnd: number;
 };
 
+async function loadScopedInsightEvents(
+  ctx: Parameters<typeof listEventsInWindow>[0],
+  workspaceId: Id<"workspaces">,
+  windowStart: number,
+  options: {
+    projectId?: Id<"projects">;
+    viewId?: Id<"savedViews">;
+  },
+): Promise<EventRecord[]> {
+  let events = await listEventsInWindow(ctx, workspaceId, windowStart, {
+    projectId: options.projectId,
+  });
+
+  if (options.viewId) {
+    const viewFilters = await loadSavedViewFilters(ctx, options.viewId, workspaceId);
+    if (viewFilters) {
+      events = applyViewFilters(events, viewFilters);
+    }
+  }
+
+  return filterEventsForInsights(events);
+}
+
 export const fetchRunData = internalQuery({
   args: {
     workspaceExternalId: v.string(),
     userId: v.string(),
     window: insightWindowValidator,
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
   },
   handler: async (ctx, args): Promise<RunDataResult> => {
     const workspace = await assertWorkspaceAccess(
@@ -71,11 +97,10 @@ export const fetchRunData = internalQuery({
     );
     const { windowStart, windowEnd } = getWindowBounds(args.window);
 
-    const events = filterEventsForInsights(
-      await listEventsInWindow(ctx, workspace._id, windowStart, {
-        projectId: args.projectId,
-      }),
-    );
+    const events = await loadScopedInsightEvents(ctx, workspace._id, windowStart, {
+      projectId: args.projectId,
+      viewId: args.viewId,
+    });
     const workstreams = await listWorkstreamsForInsight(ctx, workspace._id, {
       projectId: args.projectId,
     });
@@ -97,6 +122,7 @@ export const createRun = internalMutation({
     userId: v.string(),
     window: insightWindowValidator,
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
     generatedByName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -110,6 +136,7 @@ export const createRun = internalMutation({
     return createInsightRunDoc(ctx, {
       workspaceId: workspace._id,
       projectId: args.projectId,
+      viewId: args.viewId,
       title: formatRunTitle(args.window),
       windowStart,
       windowEnd,
@@ -151,6 +178,7 @@ export const saveFindings = internalMutation({
     userId: v.string(),
     runId: v.id("insightRuns"),
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
     findings: v.array(
       v.object({
         type: v.string(),
@@ -175,6 +203,7 @@ export const saveFindings = internalMutation({
       await insertInsightFindingDoc(ctx, {
         workspaceId: workspace._id,
         projectId: args.projectId,
+        viewId: args.viewId,
         runId: args.runId,
         finding: finding as InsightFindingInput,
       });
@@ -187,6 +216,7 @@ export const getOverview = query({
     workspaceId: v.string(),
     window: v.optional(insightWindowValidator),
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
   },
   handler: async (ctx, args): Promise<InsightOverviewResult> => {
     const userId = await requireUserId(ctx);
@@ -194,11 +224,10 @@ export const getOverview = query({
     const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
     const { windowStart } = getWindowBounds(window);
 
-    const events = filterEventsForInsights(
-      await listEventsInWindow(ctx, workspace._id, windowStart, {
-        projectId: args.projectId,
-      }),
-    );
+    const events = await loadScopedInsightEvents(ctx, workspace._id, windowStart, {
+      projectId: args.projectId,
+      viewId: args.viewId,
+    });
     const workstreams = await listWorkstreamsForInsight(ctx, workspace._id, {
       projectId: args.projectId,
     });
@@ -250,6 +279,7 @@ export const generateRun = action({
     workspaceId: v.string(),
     window: v.optional(insightWindowValidator),
     projectId: v.optional(v.id("projects")),
+    viewId: v.optional(v.id("savedViews")),
   },
   handler: async (ctx, args): Promise<{ runId: Id<"insightRuns"> }> => {
     const userId = await requireUserId(ctx);
@@ -260,6 +290,7 @@ export const generateRun = action({
       userId,
       window,
       projectId: args.projectId,
+      viewId: args.viewId,
     });
 
     try {
@@ -268,6 +299,7 @@ export const generateRun = action({
         userId,
         window,
         projectId: args.projectId,
+        viewId: args.viewId,
       });
 
       const findings = generateDeterministicFindings({
@@ -318,6 +350,7 @@ Write a 2-4 sentence operational summary for a founder. Only use the context abo
         userId,
         runId,
         projectId: args.projectId,
+        viewId: args.viewId,
         findings,
       });
 

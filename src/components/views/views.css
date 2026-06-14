@@ -1,0 +1,227 @@
+.views-page,
+.view-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-6);
+  max-width: 42rem;
+}
+
+.views-page__header,
+.view-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-2);
+}
+
+.views-page__header-row,
+.view-detail-header__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ca-space-4);
+  flex-wrap: wrap;
+}
+
+.views-page__title,
+.view-detail-header__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ca-ink);
+}
+
+.views-page__subtitle,
+.view-detail-header__description {
+  color: var(--ca-muted);
+  font-size: 0.9375rem;
+}
+
+.views-page__actions {
+  display: flex;
+  gap: var(--ca-space-2);
+  flex-wrap: wrap;
+}
+
+.views-page__action,
+.view-detail-header__action {
+  padding: var(--ca-space-2) var(--ca-space-3);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+  color: var(--ca-ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.views-page__action:hover:not(:disabled),
+.view-detail-header__action:hover:not(:disabled) {
+  background: var(--ca-surface-hover);
+}
+
+.views-page__action:disabled,
+.view-detail-header__action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.views-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-3);
+}
+
+.views-section__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ca-muted);
+}
+
+.views-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-3);
+}
+
+.view-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-2);
+  padding: var(--ca-space-4);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.view-card:hover {
+  border-color: var(--ca-brand);
+  background: var(--ca-surface-hover);
+}
+
+.view-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ca-space-2);
+}
+
+.view-card__name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ca-ink);
+}
+
+.view-card__badges {
+  display: flex;
+  gap: var(--ca-space-2);
+  flex-wrap: wrap;
+}
+
+.view-card__badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid var(--ca-hairline);
+  color: var(--ca-muted);
+}
+
+.view-card__description,
+.view-card__meta {
+  font-size: 0.875rem;
+  color: var(--ca-muted);
+}
+
+.view-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-4);
+  padding: var(--ca-space-4);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+}
+
+.view-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-2);
+}
+
+.view-form__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ca-muted);
+}
+
+.view-form__input,
+.view-form__textarea,
+.view-form__select {
+  width: 100%;
+  padding: var(--ca-space-2) var(--ca-space-3);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-background);
+  color: var(--ca-ink);
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.view-form__checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ca-space-2);
+}
+
+.view-form__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ca-space-1);
+  font-size: 0.8125rem;
+  color: var(--ca-ink);
+}
+
+.view-form__actions {
+  display: flex;
+  gap: var(--ca-space-2);
+}
+
+.view-form__error {
+  color: var(--ca-danger, #f87171);
+  font-size: 0.875rem;
+}
+
+.view-detail-page__back {
+  font-size: 0.875rem;
+  color: var(--ca-muted);
+  text-decoration: none;
+}
+
+.view-detail-page__back:hover {
+  color: var(--ca-ink);
+}
+
+.view-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-3);
+}
+
+.view-detail-section__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ca-ink);
+}
+
+.view-filter-select {
+  min-width: 12rem;
+  padding: var(--ca-space-2) var(--ca-space-3);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+  color: var(--ca-ink);
+  font-family: inherit;
+  font-size: 0.875rem;
+}

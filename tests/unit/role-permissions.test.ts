@@ -36,7 +36,15 @@ describe("role permissions", () => {
     expect(caps.canWriteWorkspaceData).toBe(false);
     expect(caps.canCreateApiKeys).toBe(false);
     expect(caps.canManageMembers).toBe(false);
+    expect(caps.canManageViews).toBe(false);
+    expect(caps.canCreatePrivateViews).toBe(false);
     expect(canWriteWorkspaceData("viewer")).toBe(false);
+  });
+
+  it("member can create private views but not manage workspace views", () => {
+    const caps = buildMembershipCapabilities("member", "active");
+    expect(caps.canManageViews).toBe(false);
+    expect(caps.canCreatePrivateViews).toBe(true);
   });
 
   it("removed members have no capabilities", () => {

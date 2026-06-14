@@ -15,6 +15,7 @@ import { DashboardNavItem } from "@/components/dashboard-nav-item";
 import { DashboardNavSections } from "@/components/dashboard-nav-sections";
 import { dashboardSettingsNavItem } from "@/config/dashboard-nav";
 import { usePinnedReplayNavItems } from "@/hooks/use-pinned-replay-nav";
+import { usePinnedViewNavItems } from "@/hooks/use-pinned-view-nav";
 import "@/components/search/search.css";
 
 export function DashboardSidebar() {
@@ -22,6 +23,7 @@ export function DashboardSidebar() {
   const { collapsed, toggle } = useSidebar();
   const { setOpen } = useSearch();
   const replayItems = usePinnedReplayNavItems();
+  const viewItems = usePinnedViewNavItems();
 
   return (
     <div className="dashboard-sidebar-panel">
@@ -80,7 +82,7 @@ export function DashboardSidebar() {
           </SidebarTooltip>
 
           <Stack direction="block" gap="small-100" className="dashboard-sidebar-primary-nav">
-            <DashboardNavSections replayItems={replayItems} />
+            <DashboardNavSections viewItems={viewItems} replayItems={replayItems} />
           </Stack>
 
           <div className="dashboard-sidebar-footer">

@@ -43,6 +43,12 @@ export function WorkstreamDetailPage({ workstreamId }: WorkstreamDetailPageProps
     workstream ? { workstreamId: id, limit: 30 } : "skip",
   );
 
+  const eventList = (events ?? []) as TimelineEvent[];
+  const replayEvents = useMemo(
+    () => filterReplayEvents(eventList, showRawEvents),
+    [eventList, showRawEvents],
+  );
+
   useEffect(() => {
     if (!focusEventId || events === undefined) return;
     const element = document.getElementById(getTimelineEventDomId(focusEventId));
@@ -75,11 +81,6 @@ export function WorkstreamDetailPage({ workstreamId }: WorkstreamDetailPageProps
   }
 
   const ws = workstream as Workstream;
-  const eventList = (events ?? []) as TimelineEvent[];
-  const replayEvents = useMemo(
-    () => filterReplayEvents(eventList, showRawEvents),
-    [eventList, showRawEvents],
-  );
   const createdBy = getCreatedByLabel(ws.createdBy);
   const started = formatWorkstreamDateTime(ws.startedAt);
   const ended = ws.endedAt ? formatWorkstreamDateTime(ws.endedAt) : null;

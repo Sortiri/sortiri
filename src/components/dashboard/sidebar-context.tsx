@@ -12,6 +12,17 @@ import {
 
 const STORAGE_KEY = "sortiri-sidebar-collapsed";
 
+function readCollapsedPreference(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 type SidebarContextValue = {
   collapsed: boolean;
   toggle: () => void;
@@ -21,26 +32,15 @@ type SidebarContextValue = {
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsedState] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [collapsed, setCollapsedState] = useState(readCollapsedPreference);
 
   useEffect(() => {
-    try {
-      setCollapsedState(localStorage.getItem(STORAGE_KEY) === "true");
-    } catch {
-      // ignore
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
     try {
       localStorage.setItem(STORAGE_KEY, String(collapsed));
     } catch {
       // ignore
     }
-  }, [collapsed, hydrated]);
+  }, [collapsed]);
 
   const setCollapsed = useCallback((value: boolean) => {
     setCollapsedState(value);

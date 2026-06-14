@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -27,18 +28,17 @@ type WorkspaceContextValue = {
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
-function applyState(
-  setWorkspaces: (workspaces: Workspace[]) => void,
-  setActiveWorkspaceId: (id: string | null) => void,
-  state: WorkspaceState,
-) {
-  setWorkspaces(state.workspaces);
-  const validActiveId =
+function resolveActiveWorkspaceId(state: WorkspaceState | null | undefined): string | null {
+  if (!state || state.workspaces.length === 0) {
+    return null;
+  }
+  if (
     state.activeWorkspaceId &&
-    state.workspaces.some((ws) => ws.id === state.activeWorkspaceId)
-      ? state.activeWorkspaceId
-      : (state.workspaces[0]?.id ?? null);
-  setActiveWorkspaceId(validActiveId);
+    state.workspaces.some((workspace) => workspace.id === state.activeWorkspaceId)
+  ) {
+    return state.activeWorkspaceId;
+  }
+  return state.workspaces[0]?.id ?? null;
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
@@ -54,40 +54,39 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const setActiveMutation = useMutation(api.workspaces.setActive);
 
   const [error, setError] = useState<string | null>(null);
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const bootstrapRequested = useRef(false);
 
   const loading =
     convexAuthLoading || (isAuthenticated && remoteState === undefined);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setWorkspaces([]);
-      setActiveWorkspaceId(null);
-      setError(null);
-    }
-  }, [isAuthenticated]);
+  const workspaces = isAuthenticated ? (remoteState?.workspaces ?? []) : [];
+  const activeWorkspaceId = isAuthenticated
+    ? resolveActiveWorkspaceId(remoteState)
+    : null;
 
   useEffect(() => {
-    if (!isAuthenticated || remoteState === undefined) return;
-    if (remoteState.workspaces.length === 0) {
-      setWorkspaces([]);
-      setActiveWorkspaceId(null);
-      void bootstrapMutation({}).catch((err) => {
-        setError(err instanceof Error ? err.message : "Could not load workspaces");
-      });
+    if (!isAuthenticated) {
+      bootstrapRequested.current = false;
       return;
     }
-    applyState(setWorkspaces, setActiveWorkspaceId, remoteState);
-    setError(null);
-  }, [isAuthenticated, remoteState, bootstrapMutation]);
+    if (remoteState === undefined || remoteState.workspaces.length > 0) {
+      return;
+    }
+    if (bootstrapRequested.current) {
+      return;
+    }
+    bootstrapRequested.current = true;
+    void bootstrapMutation({}).catch((err) => {
+      bootstrapRequested.current = false;
+      setError(err instanceof Error ? err.message : "Could not load workspaces");
+    });
+  }, [bootstrapMutation, isAuthenticated, remoteState]);
 
   const createWorkspace = useCallback(
     async (name: string) => {
       setError(null);
       try {
-        const state = await createMutation({ name });
-        applyState(setWorkspaces, setActiveWorkspaceId, state);
+        await createMutation({ name });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not create workspace");
         throw err;
@@ -100,8 +99,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (workspaceId: string, name: string) => {
       setError(null);
       try {
-        const state = await updateMutation({ workspaceId, name });
-        applyState(setWorkspaces, setActiveWorkspaceId, state);
+        await updateMutation({ workspaceId, name });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not rename workspace");
         throw err;
@@ -114,8 +112,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (workspaceId: string) => {
       setError(null);
       try {
-        const state = await removeMutation({ workspaceId });
-        applyState(setWorkspaces, setActiveWorkspaceId, state);
+        await removeMutation({ workspaceId });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not delete workspace");
         throw err;
@@ -128,8 +125,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (workspaceId: string) => {
       setError(null);
       try {
-        const state = await setActiveMutation({ workspaceId });
-        applyState(setWorkspaces, setActiveWorkspaceId, state);
+        await setActiveMutation({ workspaceId });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not switch workspace");
         throw err;
@@ -139,11 +135,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const activeWorkspace = useMemo(
-    () => workspaces.find((ws) => ws.id === activeWorkspaceId) ?? null,
+    () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
     [workspaces, activeWorkspaceId],
   );
-
-  const effectiveActiveWorkspaceId = activeWorkspace?.id ?? null;
 
   const value = useMemo(
     () => ({
@@ -151,7 +145,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       error,
       workspaces,
       activeWorkspace,
-      activeWorkspaceId: effectiveActiveWorkspaceId,
+      activeWorkspaceId: activeWorkspace?.id ?? null,
       createWorkspace,
       renameWorkspace,
       deleteWorkspace,
@@ -162,7 +156,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       error,
       workspaces,
       activeWorkspace,
-      effectiveActiveWorkspaceId,
       createWorkspace,
       renameWorkspace,
       deleteWorkspace,

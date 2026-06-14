@@ -135,6 +135,7 @@ export async function createInsightRunDoc(
   input: {
     workspaceId: Id<"workspaces">;
     projectId?: Id<"projects">;
+    viewId?: Id<"savedViews">;
     title: string;
     windowStart: number;
     windowEnd: number;
@@ -145,6 +146,7 @@ export async function createInsightRunDoc(
   return ctx.db.insert("insightRuns", {
     workspaceId: input.workspaceId,
     projectId: input.projectId,
+    viewId: input.viewId,
     title: input.title,
     status: "pending",
     windowStart: input.windowStart,
@@ -194,6 +196,7 @@ export async function insertInsightFindingDoc(
   input: {
     workspaceId: Id<"workspaces">;
     projectId?: Id<"projects">;
+    viewId?: Id<"savedViews">;
     runId: Id<"insightRuns">;
     finding: InsightFindingInput;
   },
@@ -201,6 +204,7 @@ export async function insertInsightFindingDoc(
   return ctx.db.insert("insightFindings", {
     workspaceId: input.workspaceId,
     projectId: input.projectId,
+    viewId: input.viewId,
     runId: input.runId,
     type: input.finding.type,
     severity: input.finding.severity,

@@ -29,6 +29,8 @@ export type WorkspaceMembershipCapabilities = {
   canCreateApiKeys: boolean;
   canManageWorkspace: boolean;
   canWriteWorkspaceData: boolean;
+  canManageViews: boolean;
+  canCreatePrivateViews: boolean;
 };
 
 export function buildMembershipCapabilities(
@@ -45,5 +47,16 @@ export function buildMembershipCapabilities(
     canManageWorkspace: active && role === "owner",
     canWriteWorkspaceData:
       active && (role === "owner" || role === "admin" || role === "member"),
+    canManageViews: active && (role === "owner" || role === "admin"),
+    canCreatePrivateViews:
+      active && (role === "owner" || role === "admin" || role === "member"),
   };
+}
+
+export function canCreateWorkspaceView(role: WorkspaceRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
+export function canCreatePrivateView(role: WorkspaceRole): boolean {
+  return role === "owner" || role === "admin" || role === "member";
 }

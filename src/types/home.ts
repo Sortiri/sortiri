@@ -1,6 +1,7 @@
 import type { TimelineEvent, Workstream } from "@/types/events";
 import type { InsightFindingDetail, InsightRun } from "@/types/insights";
 import type { PinnedReplayWithWorkstream } from "@/types/pinned-replays";
+import type { PinnedViewSummary } from "@/types/saved-views";
 
 export type PulseCounts = {
   eventsToday: number;
@@ -23,6 +24,7 @@ export type CompanyPulse = {
   recentEvents: TimelineEvent[];
   activeWorkstreams: Workstream[];
   pinnedReplays: PinnedReplayWithWorkstream[];
+  pinnedViews: PinnedViewSummary[];
   latestFindings: InsightFindingDetail[];
   latestInsightRun?: InsightRun;
   sourceStatus: SourceHealthItem[];

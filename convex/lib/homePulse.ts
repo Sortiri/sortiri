@@ -12,6 +12,10 @@ import {
   type InsightRunRecord,
 } from "./insightRunsLib";
 import { listPinnedForWorkspace, type PinnedReplayWithWorkstream } from "./pinnedReplaysLib";
+import { listViewsForWorkspace, type SavedViewRecord } from "./savedViewsLib";
+import { applySavedViewFilters } from "./savedViewEvents";
+import { buildViewPulseCounts, getViewWindowStart } from "./viewFilters";
+import { getWorkspaceMembership } from "./authz";
 import {
   listWorkstreamsForWorkspace,
   type WorkstreamRecord,
@@ -45,11 +49,18 @@ export type PulseCounts = {
   connectedSources: number;
 };
 
+export type PinnedViewSummary = {
+  view: SavedViewRecord;
+  eventsToday: number;
+  summary: string;
+};
+
 export type CompanyPulseResult = {
   counts: PulseCounts;
   recentEvents: EventRecord[];
   activeWorkstreams: WorkstreamRecord[];
   pinnedReplays: PinnedReplayWithWorkstream[];
+  pinnedViews: PinnedViewSummary[];
   latestFindings: InsightFindingDetail[];
   latestInsightRun?: InsightRunRecord;
   sourceStatus: SourceHealthItem[];
@@ -114,6 +125,7 @@ export async function getSourceStatusForWorkspace(
 export async function buildCompanyPulse(
   ctx: DbReadCtx,
   workspaceId: Id<"workspaces">,
+  clerkUserId?: string,
 ): Promise<CompanyPulseResult> {
   const startOfToday = getStartOfUtcDay();
 
@@ -134,6 +146,46 @@ export async function buildCompanyPulse(
   });
 
   const pinnedReplays = await listPinnedForWorkspace(ctx, workspaceId, 10);
+
+  let pinnedViews: PinnedViewSummary[] = [];
+  if (clerkUserId) {
+    const membership = await getWorkspaceMembership(ctx, workspaceId, clerkUserId);
+    if (membership) {
+      const views = (await listViewsForWorkspace(ctx, workspaceId, membership)).filter(
+        (view) => view.isPinned,
+      );
+      const windowStart = getViewWindowStart("24h");
+      pinnedViews = await Promise.all(
+        views.slice(0, 5).map(async (view) => {
+          const events = await applySavedViewFilters(ctx, workspaceId, view.filters, {
+            windowStart,
+          });
+          const counts = buildViewPulseCounts(events);
+          const parts: string[] = [];
+          if (counts.totalEvents > 0) {
+            parts.push(`${counts.totalEvents} event${counts.totalEvents === 1 ? "" : "s"} today`);
+          }
+          if (counts.codeChanges > 0) {
+            parts.push(`${counts.codeChanges} code change${counts.codeChanges === 1 ? "" : "s"}`);
+          }
+          if (counts.productEvents > 0) {
+            parts.push(`${counts.productEvents} product event${counts.productEvents === 1 ? "" : "s"}`);
+          }
+          if (counts.revenueEvents > 0) {
+            parts.push(`${counts.revenueEvents} revenue event${counts.revenueEvents === 1 ? "" : "s"}`);
+          }
+          if (counts.decisions > 0) {
+            parts.push(`${counts.decisions} decision${counts.decisions === 1 ? "" : "s"}`);
+          }
+          return {
+            view,
+            eventsToday: counts.totalEvents,
+            summary: parts.length > 0 ? parts.join(" · ") : "No matching events today",
+          };
+        }),
+      );
+    }
+  }
 
   const sourceStatus = await getSourceStatusForWorkspace(ctx, workspaceId);
 
@@ -158,6 +210,7 @@ export async function buildCompanyPulse(
     recentEvents,
     activeWorkstreams,
     pinnedReplays,
+    pinnedViews,
     latestFindings,
     latestInsightRun,
     sourceStatus,

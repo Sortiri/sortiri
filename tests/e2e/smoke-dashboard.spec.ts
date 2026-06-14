@@ -7,6 +7,7 @@ const pages = [
   { path: "/projects", heading: /Projects/i },
   { path: "/workstreams", heading: /Workstreams/i },
   { path: "/entities", heading: /Entities/i },
+  { path: "/views", heading: /Views/i },
   { path: "/ask", heading: /Ask/i },
   { path: "/insights", heading: /Insights/i },
   { path: "/sources", heading: /Sources/i },
