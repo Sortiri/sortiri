@@ -24,7 +24,7 @@ export function LandingSiteCtaSection() {
           </h2>
 
           <Link href={SIGN_UP_HREF} className={landing.buttonPrimary}>
-            Start recording history
+            Start your company timeline
             <span aria-hidden className="ml-1">
               →
             </span>

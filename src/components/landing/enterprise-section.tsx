@@ -1,0 +1,20 @@
+import { LandingAnimatedCopySection } from "@/components/landing/animated-copy-section";
+
+export function LandingEnterpriseSection() {
+  return (
+    <LandingAnimatedCopySection
+      kicker="Enterprise"
+      followsDiagram
+      lines={[
+        {
+          text: "When every employee has agents,",
+          accent: "every employee has agents",
+        },
+        {
+          text: "someone needs the black box.",
+          accent: "black box",
+        },
+      ]}
+    />
+  );
+}

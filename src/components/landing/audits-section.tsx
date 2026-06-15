@@ -1,13 +1,13 @@
 import { LandingAnimatedCopySection } from "@/components/landing/animated-copy-section";
 
-export function LandingReplaySection() {
+export function LandingAuditsSection() {
   return (
     <LandingAnimatedCopySection
-      kicker="Replay"
+      kicker="Audits"
       followsDiagram
       lines={[
-        { text: "Ask your company what happened." },
-        { text: "Get the replay, not the guess.", accent: "replay" },
+        { text: "Find what everyone else misses." },
+        { text: "Prove it with evidence.", accent: "evidence" },
       ]}
     />
   );

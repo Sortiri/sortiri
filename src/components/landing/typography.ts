@@ -4,7 +4,9 @@ import { departureMono, ppMondwest } from "@/lib/landing-fonts";
 /** Landing typography — aligned with sortiri-content (dark theme). */
 export const landing = {
   section: "py-20 sm:py-28",
+  diagramBlock: "pt-20 pb-6 sm:pt-28 sm:pb-8",
   copyBlock: "pt-8 pb-14 sm:pt-10 sm:pb-16",
+  copyBlockPaired: "pb-14 sm:pb-16",
   sectionKicker: "mx-auto mb-3 w-full max-w-2xl text-center sm:mb-4",
 
   displayHero: `${ppMondwest.className} text-[clamp(2.5rem,5.5vw+0.75rem,4.25rem)] font-normal tracking-[-0.02em] leading-[1.08] text-white`,

@@ -46,6 +46,7 @@ type LandingAnimatedCopySectionProps = {
   lines: AnimatedCopyLine[];
   className?: string;
   inViewAmount?: number;
+  followsDiagram?: boolean;
 };
 
 function stripTrailingPunctuation(word: string) {
@@ -88,6 +89,7 @@ export function LandingAnimatedCopySection({
   lines,
   className = "",
   inViewAmount = 0.32,
+  followsDiagram = false,
 }: LandingAnimatedCopySectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
@@ -113,7 +115,7 @@ export function LandingAnimatedCopySection({
   return (
     <section
       ref={sectionRef}
-      className={`${landing.copyBlock} min-w-0 overflow-x-clip ${className}`}
+      className={`${followsDiagram ? landing.copyBlockPaired : landing.copyBlock} min-w-0 overflow-x-clip ${className}`}
     >
       <p className={`${landing.sectionKicker} ${landing.labelAccent}`}>
         {kicker}

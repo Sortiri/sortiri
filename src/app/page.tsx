@@ -1,5 +1,11 @@
-import { LandingCapabilitiesSection } from "@/components/landing/capabilities-section";
-import { LandingEmptySection } from "@/components/landing/empty-section";
+import { LandingEnterpriseDiagramSection } from "@/components/landing/enterprise-diagram-section";
+import { LandingEnterpriseSection } from "@/components/landing/enterprise-section";
+import { LandingAuditDiagramSection } from "@/components/landing/audit-diagram-section";
+import { LandingAuditsSection } from "@/components/landing/audits-section";
+import { LandingDecisionTimelineDiagramSection } from "@/components/landing/decision-timeline-diagram-section";
+import { LandingTimelineReplaySection } from "@/components/landing/timeline-replay-section";
+import { LandingReplayDiagramSection } from "@/components/landing/replay-diagram-section";
+import { LandingTimelineDiagramSection } from "@/components/landing/timeline-diagram-section";
 import { LandingHeader } from "@/components/landing/header";
 import { LandingPageShell } from "@/components/landing/page-shell";
 import { LandingReplaySection } from "@/components/landing/replay-section";
@@ -36,24 +42,31 @@ export default function Home() {
 
           <LandingSectionSeparator />
 
-          <LandingEmptySection />
-          <LandingSectionSeparator />
+          <LandingTimelineDiagramSection />
           <LandingWhySection />
 
           <LandingSectionSeparator />
 
-          <LandingEmptySection />
-          <LandingSectionSeparator />
+          <LandingReplayDiagramSection />
           <LandingReplaySection />
 
           <LandingSectionSeparator />
 
-          <LandingCapabilitiesSection />
+          <LandingEnterpriseDiagramSection />
+          <LandingEnterpriseSection />
 
           <LandingSectionSeparator />
 
-          <LandingEmptySection />
+          <LandingAuditDiagramSection />
+          <LandingAuditsSection />
+
           <LandingSectionSeparator />
+
+          <LandingDecisionTimelineDiagramSection />
+          <LandingTimelineReplaySection />
+
+          <LandingSectionSeparator />
+
           <LandingTestimonialsSection />
 
           <LandingSiteCtaSection />
