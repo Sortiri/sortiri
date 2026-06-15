@@ -5,7 +5,7 @@ import { requireWorkspaceRole } from "./lib/authz";
 import { listEventsInWindow, listWorkstreamsForInsight } from "./lib/insightData";
 import {
   assertEventAccess,
-  assertWorkspaceAccess,
+  assertWorkspaceBrowseAccess,
   listEventsByWorkstream,
 } from "./lib/eventsLib";
 import {
@@ -36,7 +36,7 @@ export const create = mutation({
   },
   handler: async (ctx, args): Promise<{ linkId: Id<"eventLinks">; duplicate: boolean }> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
 
     if (args.fromEventId && args.toEventId) {
       const duplicate = await findDuplicateLink(
@@ -108,7 +108,7 @@ export const countForEvents = query({
   },
   handler: async (ctx, args): Promise<Record<string, number>> => {
     const userId = await requireUserId(ctx);
-    await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     return countLinksForEventIds(ctx, args.eventIds);
   },
 });
@@ -174,7 +174,7 @@ export const deleteLink = mutation({
   },
   handler: async (ctx, args): Promise<void> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const link = await ctx.db.get(args.linkId);
     if (!link || link.workspaceId !== workspace._id) {
       throw new Error("Link not found");

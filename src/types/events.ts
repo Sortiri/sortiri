@@ -1,3 +1,10 @@
+import type {
+  EvidenceReviewer,
+  RedactionStatus,
+  SensitiveFinding,
+  SensitivityLevel,
+} from "./evidence-safety";
+
 export type EventSource =
   | "cursor"
   | "claude_code"
@@ -96,6 +103,12 @@ export type TimelineEvent = {
   displayReason?: string;
   isUserPinned?: boolean;
   isUserHidden?: boolean;
+  sensitivity?: SensitivityLevel;
+  redactionStatus?: RedactionStatus;
+  safeForAudit?: boolean;
+  sensitiveFindings?: SensitiveFinding[];
+  reviewedBy?: EvidenceReviewer;
+  reviewedAt?: number;
   occurredAt: number;
   createdAt: number;
 };
@@ -134,6 +147,12 @@ export type Artifact = {
   language?: string;
   filePath?: string;
   truncated?: boolean;
+  sensitivity?: SensitivityLevel;
+  redactionStatus?: RedactionStatus;
+  safeForAudit?: boolean;
+  sensitiveFindings?: SensitiveFinding[];
+  reviewedBy?: EvidenceReviewer;
+  reviewedAt?: number;
   createdAt: number;
 };
 

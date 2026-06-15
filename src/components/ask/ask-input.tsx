@@ -13,7 +13,17 @@ const EXAMPLE_PROMPTS = [
   "Show me recent code changes.",
   "Did validation pass recently?",
   "What commands failed?",
+  "What did we learn recently?",
+  "What playbook should I use for webhook work?",
+  "What validation should I run?",
   "What tests did the agent run?",
+  "What revenue events happened recently?",
+  "Which Stripe customers had activity?",
+  "Did any payments fail?",
+  "What product events happened recently?",
+  "Which features are active?",
+  "Did any users complete onboarding?",
+  "What happened before recent Stripe payments?",
 ] as const;
 
 type AskInputProps = {

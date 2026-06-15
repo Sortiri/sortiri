@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { describeE2E } from "./helpers/auth";
+import { describeE2E, skipForAuditor } from "./helpers/auth";
 
 describeE2E("team settings", () => {
-  test("shows members section", async ({ page }) => {
+  test("shows members section", async ({ page }, testInfo) => {
+    skipForAuditor(testInfo);
     await page.goto("/settings/team");
     await expect(page.getByRole("heading", { name: /Team/i })).toBeVisible();
     await expect(page.getByText(/Members/i).first()).toBeVisible();

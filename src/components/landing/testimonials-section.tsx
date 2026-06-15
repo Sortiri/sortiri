@@ -1,4 +1,3 @@
-import { LearnMoreButton } from "@/components/landing/learn-more-button";
 import { landing } from "@/components/landing/typography";
 
 const testimonials = [
@@ -50,10 +49,6 @@ export function LandingTestimonialsSection() {
             </div>
           </article>
         ))}
-      </div>
-
-      <div className="mt-10 flex justify-center sm:mt-14">
-        <LearnMoreButton />
       </div>
     </section>
   );

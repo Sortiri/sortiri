@@ -1,3 +1,5 @@
+import type { WorkspaceRole } from "@/types/workspace-members";
+
 export type DashboardNavIcon =
   | "home"
   | "timeline"
@@ -5,8 +7,9 @@ export type DashboardNavIcon =
   | "workstreams"
   | "entities"
   | "views"
+  | "intelligence"
   | "ask"
-  | "insights"
+  | "audits"
   | "sources"
   | "settings";
 
@@ -22,6 +25,34 @@ export type DashboardNavSection = {
   items: DashboardNavItem[];
 };
 
+export const INTELLIGENCE_NAV_HREF = "/intelligence";
+
+export const INTELLIGENCE_CHILD_PREFIXES = [
+  "/intelligence",
+  "/insights",
+  "/impact",
+  "/lessons",
+  "/playbooks",
+  "/recommendations",
+  "/intelligence/evals",
+] as const;
+
+const INTELLIGENCE_CHILD_LABELS: { prefix: string; label: string }[] = [
+  { prefix: "/intelligence/queue", label: "Autonomy Queue" },
+  { prefix: "/intelligence/evals", label: "Private Evals" },
+  { prefix: "/recommendations", label: "Recommendation" },
+  { prefix: "/insights", label: "Insights" },
+  { prefix: "/impact", label: "Impact" },
+  { prefix: "/lessons", label: "Lessons" },
+  { prefix: "/playbooks", label: "Playbooks" },
+];
+
+export function isIntelligenceRoute(pathname: string): boolean {
+  return INTELLIGENCE_CHILD_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export const dashboardPrimaryNavItems: DashboardNavItem[] = [
   { href: "/home", label: "Home", icon: "home" },
   { href: "/timeline", label: "Timeline", icon: "timeline" },
@@ -29,10 +60,22 @@ export const dashboardPrimaryNavItems: DashboardNavItem[] = [
   { href: "/workstreams", label: "Workstreams", icon: "workstreams" },
   { href: "/entities", label: "Entities", icon: "entities" },
   { href: "/views", label: "Views", icon: "views" },
+  { href: "/intelligence", label: "Intelligence", icon: "intelligence" },
   { href: "/ask", label: "Ask Sortiri", icon: "ask" },
-  { href: "/insights", label: "Insights", icon: "insights" },
+  { href: "/audits", label: "Audits", icon: "audits" },
   { href: "/sources", label: "Sources", icon: "sources" },
 ];
+
+export const auditorNavItems: DashboardNavItem[] = [
+  { href: "/audits", label: "Audits", icon: "audits" },
+];
+
+export function getNavItemsForRole(role: WorkspaceRole | null | undefined): DashboardNavItem[] {
+  if (role === "auditor") {
+    return auditorNavItems;
+  }
+  return dashboardPrimaryNavItems;
+}
 
 export const dashboardSettingsNavItem: DashboardNavItem = {
   href: "/settings",
@@ -54,6 +97,9 @@ export const dashboardNavItems: DashboardNavItem[] = [
 export const dashboardBottomNavItems = dashboardPrimaryNavItems;
 
 export function isDashboardNavItemActive(pathname: string, href: string): boolean {
+  if (href === INTELLIGENCE_NAV_HREF) {
+    return isIntelligenceRoute(pathname);
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -61,6 +107,15 @@ export function getDashboardPageTitle(pathname: string): string {
   if (pathname === "/home") return "Company Pulse";
   if (pathname.startsWith("/views")) return "Views";
   if (pathname.startsWith("/settings")) return "Settings";
+  if (pathname.startsWith("/audits")) return "Audits";
+  if (pathname === INTELLIGENCE_NAV_HREF || pathname.startsWith(`${INTELLIGENCE_NAV_HREF}/`)) {
+    return "Intelligence";
+  }
+  for (const child of INTELLIGENCE_CHILD_LABELS) {
+    if (pathname === child.prefix || pathname.startsWith(`${child.prefix}/`)) {
+      return child.label;
+    }
+  }
   const match = dashboardNavItems.find((item) =>
     isDashboardNavItemActive(pathname, item.href),
   );

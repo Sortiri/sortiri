@@ -1,4 +1,4 @@
-export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+export type WorkspaceRole = "owner" | "admin" | "member" | "viewer" | "auditor";
 
 export type MemberStatus = "active" | "removed";
 
@@ -31,6 +31,9 @@ export type WorkspaceMembershipCapabilities = {
   canWriteWorkspaceData: boolean;
   canManageViews: boolean;
   canCreatePrivateViews: boolean;
+  canManageProjectAssignments: boolean;
+  canAccessWorkspaceNav: boolean;
+  canManageAuditReports: boolean;
 };
 
 export function buildMembershipCapabilities(
@@ -50,6 +53,9 @@ export function buildMembershipCapabilities(
     canManageViews: active && (role === "owner" || role === "admin"),
     canCreatePrivateViews:
       active && (role === "owner" || role === "admin" || role === "member"),
+    canManageProjectAssignments: active && (role === "owner" || role === "admin"),
+    canAccessWorkspaceNav: active && role !== "auditor",
+    canManageAuditReports: active && (role === "owner" || role === "admin"),
   };
 }
 

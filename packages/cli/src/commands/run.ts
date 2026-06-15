@@ -4,7 +4,7 @@ import {
   formatDurationMs,
   loadConfig,
   loadSession,
-  redactSecrets,
+  redactSensitiveContent,
   truncateCommandOutput,
 } from "@sortiri/local";
 import {
@@ -73,7 +73,7 @@ export async function runRun(argv: string[]): Promise<void> {
 
   const result = await runCommandWithCapture(command, repoRoot);
   const mergedOutput = mergeCommandOutput(result.stdout, result.stderr);
-  const redacted = redactSecrets(mergedOutput);
+  const redacted = redactSensitiveContent(mergedOutput).redacted;
   const { content, truncated } = truncateCommandOutput(redacted);
 
   const artifact = await client.createArtifact({

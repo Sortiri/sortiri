@@ -24,6 +24,10 @@ import {
 } from "./lib/insightOverview";
 import { generateDeterministicFindings } from "./lib/insightRules";
 import {
+  buildSensitiveEvidenceFinding,
+  countSensitiveEvidenceNeedingReview,
+} from "./lib/evidenceInsight";
+import {
   assertInsightRunAccess,
   completeInsightRunDoc,
   createInsightRunDoc,
@@ -43,10 +47,16 @@ import {
   type InsightWindow,
 } from "./lib/insightWindow";
 import { insightWindowValidator } from "./lib/validators";
-import { assertWorkspaceAccess } from "./lib/eventsLib";
-import { requireWorkspaceRole } from "./lib/authz";
-import { loadSavedViewFilters } from "./lib/savedViewEvents";
-import { applyViewFilters } from "./lib/viewFilters";
+import { assertWorkspaceBrowseAccess } from "./lib/eventsLib";
+import {
+  getAccessibleProjectIds,
+  getMembershipAndAccessible,
+  getWorkspaceMembership,
+  requireWorkspaceRole,
+  canViewEvent,
+} from "./lib/authz";
+import { filterInsightFindingEvidence } from "./lib/projectAccessLib";
+import { loadSavedViewFilters, applySavedViewFilters } from "./lib/savedViewEvents";
 import type { EventRecord } from "./lib/eventsLib";
 import type { WorkstreamRecord } from "./lib/workstreamsLib";
 
@@ -65,17 +75,37 @@ async function loadScopedInsightEvents(
   options: {
     projectId?: Id<"projects">;
     viewId?: Id<"savedViews">;
+    userId?: string;
   },
 ): Promise<EventRecord[]> {
+  let accessible: Awaited<ReturnType<typeof getMembershipAndAccessible>>["accessible"] =
+    "all";
+  if (options.userId) {
+    const membership = await getWorkspaceMembership(ctx, workspaceId, options.userId);
+    if (membership) {
+      accessible = await getAccessibleProjectIds(ctx, workspaceId, membership);
+    }
+  }
+
   let events = await listEventsInWindow(ctx, workspaceId, windowStart, {
     projectId: options.projectId,
   });
 
-  if (options.viewId) {
-    const viewFilters = await loadSavedViewFilters(ctx, options.viewId, workspaceId);
+  if (options.viewId && options.userId) {
+    const viewFilters = await loadSavedViewFilters(
+      ctx,
+      options.viewId,
+      workspaceId,
+      options.userId,
+    );
     if (viewFilters) {
-      events = applyViewFilters(events, viewFilters);
+      events = await applySavedViewFilters(ctx, workspaceId, viewFilters, {
+        windowStart,
+        accessibleProjects: accessible,
+      });
     }
+  } else {
+    events = events.filter((event) => canViewEvent(event, accessible));
   }
 
   return filterEventsForInsights(events);
@@ -90,7 +120,7 @@ export const fetchRunData = internalQuery({
     viewId: v.optional(v.id("savedViews")),
   },
   handler: async (ctx, args): Promise<RunDataResult> => {
-    const workspace = await assertWorkspaceAccess(
+    const workspace = await assertWorkspaceBrowseAccess(
       ctx,
       args.workspaceExternalId,
       args.userId,
@@ -100,9 +130,18 @@ export const fetchRunData = internalQuery({
     const events = await loadScopedInsightEvents(ctx, workspace._id, windowStart, {
       projectId: args.projectId,
       viewId: args.viewId,
+      userId: args.userId,
     });
-    const workstreams = await listWorkstreamsForInsight(ctx, workspace._id, {
-      projectId: args.projectId,
+    const membership = await getWorkspaceMembership(ctx, workspace._id, args.userId);
+    const accessible =
+      membership ? await getAccessibleProjectIds(ctx, workspace._id, membership) : new Set();
+    const workstreams = (
+      await listWorkstreamsForInsight(ctx, workspace._id, {
+        projectId: args.projectId,
+      })
+    ).filter((workstream) => {
+      if (!workstream.projectId) return true;
+      return accessible === "all" || accessible.has(workstream.projectId as Id<"projects">);
     });
     const overview = buildInsightOverview(events, workstreams);
 
@@ -113,6 +152,21 @@ export const fetchRunData = internalQuery({
       windowStart,
       windowEnd,
     };
+  },
+});
+
+export const countSensitiveEvidence = internalQuery({
+  args: {
+    workspaceExternalId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await assertWorkspaceBrowseAccess(
+      ctx,
+      args.workspaceExternalId,
+      args.userId,
+    );
+    return countSensitiveEvidenceNeedingReview(ctx, workspace._id);
   },
 });
 
@@ -193,7 +247,7 @@ export const saveFindings = internalMutation({
     ),
   },
   handler: async (ctx, args) => {
-    const workspace = await assertWorkspaceAccess(
+    const workspace = await assertWorkspaceBrowseAccess(
       ctx,
       args.workspaceExternalId,
       args.userId,
@@ -221,15 +275,22 @@ export const getOverview = query({
   handler: async (ctx, args): Promise<InsightOverviewResult> => {
     const userId = await requireUserId(ctx);
     const window = args.window ?? "7d";
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const { windowStart } = getWindowBounds(window);
 
     const events = await loadScopedInsightEvents(ctx, workspace._id, windowStart, {
       projectId: args.projectId,
       viewId: args.viewId,
+      userId,
     });
-    const workstreams = await listWorkstreamsForInsight(ctx, workspace._id, {
-      projectId: args.projectId,
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
+    const workstreams = (
+      await listWorkstreamsForInsight(ctx, workspace._id, {
+        projectId: args.projectId,
+      })
+    ).filter((workstream) => {
+      if (!workstream.projectId) return true;
+      return accessible === "all" || accessible.has(workstream.projectId as Id<"projects">);
     });
 
     return buildInsightOverview(events, workstreams);
@@ -243,7 +304,7 @@ export const listRuns = query({
   },
   handler: async (ctx, args): Promise<InsightRunRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     return listInsightRunsForWorkspace(ctx, workspace._id, args.limit ?? 10);
   },
 });
@@ -265,12 +326,48 @@ export const listFindingsByRun = query({
   },
   handler: async (ctx, args): Promise<InsightFindingDetail[]> => {
     const userId = await requireUserId(ctx);
-    await assertInsightRunAccess(ctx, args.runId, userId);
-
+    const run = await assertInsightRunAccess(ctx, args.runId, userId);
     const findings = await listFindingsForRun(ctx, args.runId);
-    return Promise.all(
-      findings.map((finding) => hydrateFindingEvidence(ctx, finding)),
-    );
+    const { accessible } = await getMembershipAndAccessible(ctx, run.workspaceId, userId);
+
+    if (accessible === "all") {
+      return Promise.all(findings.map((finding) => hydrateFindingEvidence(ctx, finding)));
+    }
+
+    const accessibleEventIds = new Set<Id<"events">>();
+    const accessibleWorkstreamIds = new Set<Id<"workstreams">>();
+    const events = await listEventsInWindow(ctx, run.workspaceId, 0, {});
+    for (const event of events) {
+      if (canViewEvent(event, accessible)) {
+        accessibleEventIds.add(event.id as Id<"events">);
+        if (event.workstreamId) {
+          accessibleWorkstreamIds.add(event.workstreamId as Id<"workstreams">);
+        }
+      }
+    }
+
+    const hydrated: InsightFindingDetail[] = [];
+    for (const finding of findings) {
+      const detail = await hydrateFindingEvidence(ctx, finding);
+      const filtered = filterInsightFindingEvidence(
+        {
+          evidenceEventIds: detail.evidenceEventIds as Id<"events">[] | undefined,
+          evidenceWorkstreamIds: detail.evidenceWorkstreamIds as
+            | Id<"workstreams">[]
+            | undefined,
+        },
+        accessibleEventIds,
+        accessibleWorkstreamIds,
+      );
+      if (filtered) {
+        hydrated.push({
+          ...detail,
+          evidenceEventIds: filtered.evidenceEventIds as string[] | undefined,
+          evidenceWorkstreamIds: filtered.evidenceWorkstreamIds as string[] | undefined,
+        });
+      }
+    }
+    return hydrated;
   },
 });
 
@@ -308,6 +405,15 @@ export const generateRun = action({
         windowStart: data.windowStart,
         windowEnd: data.windowEnd,
       });
+
+      const sensitiveCount = await ctx.runQuery(internal.insights.countSensitiveEvidence, {
+        workspaceExternalId: args.workspaceId,
+        userId,
+      });
+      const sensitiveFinding = buildSensitiveEvidenceFinding(sensitiveCount);
+      if (sensitiveFinding) {
+        findings.push(sensitiveFinding);
+      }
 
       let summary: string | undefined;
       let summaryError: string | undefined;

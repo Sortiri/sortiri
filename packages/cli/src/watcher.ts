@@ -7,7 +7,7 @@ import {
   isSensitiveArtifactPath,
   loadSession,
   findRepoRoot,
-  redactSecrets,
+  redactSensitiveContent,
   truncateArtifactContent,
 } from "@sortiri/local";
 import type { SortiriConfig } from "@sortiri/local";
@@ -154,7 +154,7 @@ async function createDiffArtifact(
     return null;
   }
 
-  const redacted = redactSecrets(rawDiff);
+  const redacted = redactSensitiveContent(rawDiff).redacted;
   const { content, truncated } = truncateArtifactContent(redacted);
 
   const artifact = await client.createArtifact({

@@ -1,8 +1,15 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib/auth";
-import { requireWorkspaceRole } from "./lib/authz";
-import { assertWorkspaceAccess } from "./lib/eventsLib";
+import {
+  canWriteWorkspaceData,
+  getAccessibleProjectIds,
+  getWorkspaceMembership,
+  requireProjectAccess,
+  requireWorkspaceRole,
+} from "./lib/authz";
+import { assertWorkspaceBrowseAccess } from "./lib/eventsLib";
+import { upsertProjectAccess } from "./lib/projectAccessLib";
 import {
   assertProjectInWorkspace,
   backfillProjectScopeForWorkspace,
@@ -40,7 +47,11 @@ export const create = mutation({
   },
   handler: async (ctx, args): Promise<ProjectRecord> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+    if (!membership || !canWriteWorkspaceData(membership.role)) {
+      throw new Error("Insufficient permissions");
+    }
 
     const projectId = await createProjectDoc(ctx, {
       workspaceId: workspace._id,
@@ -50,6 +61,15 @@ export const create = mutation({
       slug: args.slug,
       description: args.description,
     });
+
+    if (membership.role === "member") {
+      await upsertProjectAccess(ctx, {
+        workspaceId: workspace._id,
+        projectId,
+        memberId: membership._id,
+        accessLevel: "owner",
+      });
+    }
 
     const doc = await ctx.db.get(projectId);
     if (!doc) {
@@ -66,13 +86,22 @@ export const listByWorkspace = query({
   },
   handler: async (ctx, args): Promise<ProjectRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+    if (!membership) {
+      return [];
+    }
+    const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
     const statusFilter = args.status ?? "active";
 
     let docs = await ctx.db
       .query("projects")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
       .collect();
+
+    if (accessible !== "all") {
+      docs = docs.filter((doc) => accessible.has(doc._id));
+    }
 
     if (statusFilter !== "all") {
       docs = docs.filter((doc) => (doc.status ?? "active") === statusFilter);
@@ -107,9 +136,10 @@ export const getById = query({
   },
   handler: async (ctx, args): Promise<ProjectRecord | null> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
 
     try {
+      await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
       const doc = await assertProjectInWorkspace(ctx, args.projectId, workspace._id);
       return enrichProjectRecord(ctx, doc, workspace.externalId, workspace._id);
     } catch {
@@ -129,7 +159,10 @@ export const update = mutation({
   },
   handler: async (ctx, args): Promise<ProjectRecord> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    await requireProjectAccess(ctx, workspace._id, args.projectId, userId, {
+      minWrite: true,
+    });
     await assertProjectInWorkspace(ctx, args.projectId, workspace._id);
 
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
@@ -153,7 +186,10 @@ export const archive = mutation({
   },
   handler: async (ctx, args): Promise<ProjectRecord> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    await requireProjectAccess(ctx, workspace._id, args.projectId, userId, {
+      minWrite: true,
+    });
     await assertProjectInWorkspace(ctx, args.projectId, workspace._id);
 
     await ctx.db.patch(args.projectId, {
@@ -175,7 +211,8 @@ export const getProjectPulse = query({
   },
   handler: async (ctx, args): Promise<ProjectPulseResult> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
     await assertProjectInWorkspace(ctx, args.projectId, workspace._id);
 
     return buildProjectPulse(
@@ -194,8 +231,19 @@ export const getActiveProjects = query({
   },
   handler: async (ctx, args): Promise<ActiveProjectSummary[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
-    return getActiveProjectsForWorkspace(ctx, workspace._id, args.limit ?? 3);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+    if (!membership) {
+      return [];
+    }
+    const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
+    const summaries = await getActiveProjectsForWorkspace(ctx, workspace._id, args.limit ?? 3);
+    if (accessible === "all") {
+      return summaries;
+    }
+    return summaries.filter((summary) =>
+      accessible.has(summary.projectId as Id<"projects">),
+    );
   },
 });
 
@@ -236,7 +284,7 @@ export const getCliSetupStatus = query({
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
 
     const doctorEvent = await ctx.db
       .query("events")
@@ -267,13 +315,19 @@ export const resolveMany = query({
   },
   handler: async (ctx, args): Promise<ProjectRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+
+    const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+    const accessible =
+      membership ? await getAccessibleProjectIds(ctx, workspace._id, membership) : new Set();
 
     const results: ProjectRecord[] = [];
     for (const projectId of args.projectIds) {
       const doc = await ctx.db.get(projectId);
       if (doc && doc.workspaceId === workspace._id) {
-        results.push(docToProjectRecord(doc, workspace.externalId));
+        if (accessible === "all" || accessible.has(doc._id)) {
+          results.push(docToProjectRecord(doc, workspace.externalId));
+        }
       }
     }
     return results;
@@ -288,7 +342,7 @@ export const resolveForEntity = query({
   },
   handler: async (ctx, args): Promise<string | null> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
 
     try {
       const byId = await ctx.db.get(args.key as Id<"projects">);
@@ -326,7 +380,7 @@ export const getProjectsForSource = query({
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const limit = args.limit ?? 5;
 
     const eventDocs = await ctx.db
@@ -343,8 +397,15 @@ export const getProjectsForSource = query({
       if (projectIds.size >= limit) break;
     }
 
+    const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+    const accessible =
+      membership ? await getAccessibleProjectIds(ctx, workspace._id, membership) : new Set();
+
     const projects: ProjectRecord[] = [];
     for (const projectId of projectIds) {
+      if (accessible !== "all" && !accessible.has(projectId)) {
+        continue;
+      }
       const doc = await ctx.db.get(projectId);
       if (doc) {
         projects.push(docToProjectRecord(doc, workspace.externalId));

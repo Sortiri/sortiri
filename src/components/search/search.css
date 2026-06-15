@@ -163,6 +163,23 @@
   gap: var(--ca-space-2);
 }
 
+.search-palette__nav-shortcut {
+  width: 100%;
+  padding: var(--ca-space-3);
+  border: 1px solid var(--ca-hairline);
+  background: transparent;
+  text-align: left;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.search-palette__nav-shortcut:hover {
+  border-color: var(--ca-brand);
+  background: var(--ca-surface-hover);
+}
+
 .search-palette__empty,
 .search-palette__loading {
   margin: 0;

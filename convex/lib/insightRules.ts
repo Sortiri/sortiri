@@ -49,6 +49,8 @@ function sourceLabel(source: string): string {
     sdk: "SDK",
     system: "System",
     github: "GitHub",
+    stripe: "Stripe",
+    posthog: "PostHog",
   };
   return labels[source] ?? source;
 }
@@ -321,6 +323,365 @@ function addTeamChangeFindings(
   });
 }
 
+const LARGE_REVENUE_THRESHOLD = 500;
+
+function stripeEventData(event: EventRecord): Record<string, unknown> {
+  if (event.data && typeof event.data === "object" && !Array.isArray(event.data)) {
+    return event.data as Record<string, unknown>;
+  }
+  return {};
+}
+
+function stripeRevenueAmount(event: EventRecord): number | undefined {
+  const data = stripeEventData(event);
+  if (typeof data.amount === "number") return data.amount;
+  if (typeof data.amountTotal === "number") return data.amountTotal;
+  if (typeof data.amountPaid === "number") return data.amountPaid;
+  if (typeof data.amountRefunded === "number") return data.amountRefunded;
+  return undefined;
+}
+
+function addStripeRevenueFindings(
+  events: EventRecord[],
+  findings: InsightFindingInput[],
+): void {
+  const stripeEvents = events.filter((event) => event.source === "stripe");
+  if (stripeEvents.length === 0) return;
+
+  const paymentFailures = stripeEvents.filter((event) =>
+    event.type === "stripe.payment_intent.payment_failed" ||
+    event.type === "stripe.invoice.payment_failed",
+  );
+  if (paymentFailures.length > 0) {
+    findings.push({
+      type: "other",
+      severity: "warning",
+      title: "Payment failures detected",
+      summary: `${paymentFailures.length} Stripe payment${paymentFailures.length === 1 ? "" : "s"} failed in the last 7 days.`,
+      recommendation: "Review failed payments and follow up with affected customers.",
+      evidenceEventIds: takeEventIds(paymentFailures),
+      data: { count: paymentFailures.length, source: "stripe" },
+    });
+  }
+
+  const refunds = stripeEvents.filter((event) => event.type === "stripe.charge.refunded");
+  if (refunds.length > 0) {
+    findings.push({
+      type: "other",
+      severity: "warning",
+      title: "Refunds detected",
+      summary: `${refunds.length} Stripe refund${refunds.length === 1 ? "" : "s"} were recorded recently.`,
+      recommendation: "Confirm whether refunds were expected and document the reason.",
+      evidenceEventIds: takeEventIds(refunds),
+      data: { count: refunds.length, source: "stripe" },
+    });
+  }
+
+  const cancellations = stripeEvents.filter(
+    (event) => event.type === "stripe.customer.subscription.deleted",
+  );
+  if (cancellations.length > 0) {
+    findings.push({
+      type: "other",
+      severity: "warning",
+      title: "Subscription canceled",
+      summary:
+        cancellations.length === 1
+          ? "A customer subscription was canceled after recent product activity."
+          : `${cancellations.length} customer subscriptions were canceled recently.`,
+      recommendation: "Review churn signals and recent product changes.",
+      evidenceEventIds: takeEventIds(cancellations),
+      data: { count: cancellations.length, source: "stripe" },
+    });
+  }
+
+  const revenueWins = stripeEvents.filter(
+    (event) =>
+      event.category === "revenue_event" &&
+      (event.type === "stripe.payment_intent.succeeded" ||
+        event.type === "stripe.invoice.paid" ||
+        event.type === "stripe.checkout.session.completed"),
+  );
+  if (revenueWins.length > 0) {
+    const largest = revenueWins.reduce((max, event) => {
+      const amount = stripeRevenueAmount(event) ?? 0;
+      const maxAmount = stripeRevenueAmount(max) ?? 0;
+      return amount > maxAmount ? event : max;
+    }, revenueWins[0]!);
+    const largestAmount = stripeRevenueAmount(largest) ?? 0;
+
+    findings.push({
+      type: "other",
+      severity: largestAmount >= LARGE_REVENUE_THRESHOLD ? "critical" : "info",
+      title: "Revenue movement detected",
+      summary: `${revenueWins.length} Stripe revenue event${revenueWins.length === 1 ? "" : "s"} were recorded recently.`,
+      recommendation: "Connect revenue events to the product and agent work that drove them.",
+      evidenceEventIds: takeEventIds(revenueWins),
+      data: { count: revenueWins.length, source: "stripe", largestAmount },
+    });
+  }
+
+  const byCustomer = new Map<string, EventRecord[]>();
+  for (const event of stripeEvents) {
+    const customerId = stripeEventData(event).customerId;
+    if (typeof customerId !== "string") continue;
+    const list = byCustomer.get(customerId) ?? [];
+    list.push(event);
+    byCustomer.set(customerId, list);
+  }
+
+  const activeCustomers = Array.from(byCustomer.entries()).filter(([, list]) => list.length >= 2);
+  if (activeCustomers.length > 0) {
+    const [customerId, customerEvents] = activeCustomers[0]!;
+    findings.push({
+      type: "other",
+      severity: "info",
+      title: "Customer revenue activity",
+      summary: `Customer ${customerId} had ${customerEvents.length} Stripe events recently.`,
+      recommendation: "Review this customer's payment and subscription timeline.",
+      evidenceEventIds: takeEventIds(customerEvents),
+      data: { customerId, count: customerEvents.length, source: "stripe" },
+    });
+  }
+}
+
+function posthogEventData(event: EventRecord): Record<string, unknown> {
+  if (event.data && typeof event.data === "object" && !Array.isArray(event.data)) {
+    return event.data as Record<string, unknown>;
+  }
+  return {};
+}
+
+function addPostHogProductFindings(
+  events: EventRecord[],
+  findings: InsightFindingInput[],
+): void {
+  const posthogEvents = events.filter((event) => event.source === "posthog");
+  if (posthogEvents.length === 0) return;
+
+  findings.push({
+    type: "product_movement",
+    severity: "info",
+    title: "PostHog product activity detected",
+    summary: `${posthogEvents.length} PostHog product event${posthogEvents.length === 1 ? "" : "s"} were recorded recently.`,
+    recommendation: "Review product usage alongside agent and engineering work.",
+    evidenceEventIds: takeEventIds(posthogEvents),
+    data: { count: posthogEvents.length, source: "posthog" },
+  });
+
+  const signups = posthogEvents.filter((event) => event.type === "posthog.user.signed_up");
+  if (signups.length >= 2) {
+    findings.push({
+      type: "product_movement",
+      severity: "info",
+      title: "Signup spike detected",
+      summary: `${signups.length} user signups were recorded via PostHog.`,
+      recommendation: "Connect signup activity to growth and onboarding workstreams.",
+      evidenceEventIds: takeEventIds(signups),
+      data: { count: signups.length, source: "posthog" },
+    });
+  }
+
+  const activations = posthogEvents.filter(
+    (event) => event.type === "posthog.activation.completed",
+  );
+  if (activations.length > 0) {
+    findings.push({
+      type: "product_movement",
+      severity: "info",
+      title: "Activation movement detected",
+      summary: `${activations.length} activation milestone${activations.length === 1 ? "" : "s"} completed.`,
+      recommendation: "Track which work preceded successful activation.",
+      evidenceEventIds: takeEventIds(activations),
+      data: { count: activations.length, source: "posthog" },
+    });
+  }
+
+  const featureUsage = posthogEvents.filter((event) => event.type === "posthog.feature.used");
+  const featureCounts = new Map<string, number>();
+  for (const event of featureUsage) {
+    const data = posthogEventData(event);
+    const featureKey =
+      (typeof data.feature === "string" && data.feature) ||
+      (typeof data.feature_key === "string" && data.feature_key) ||
+      (typeof data.$pathname === "string" && data.$pathname) ||
+      (typeof data.pathname === "string" && data.pathname) ||
+      "unknown";
+    featureCounts.set(featureKey, (featureCounts.get(featureKey) ?? 0) + 1);
+  }
+  const topFeature = Array.from(featureCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+  if (topFeature && topFeature[1] >= 2) {
+    const [featureKey, count] = topFeature;
+    const related = featureUsage.filter((event) => {
+      const data = posthogEventData(event);
+      return (
+        data.feature === featureKey ||
+        data.feature_key === featureKey ||
+        data.$pathname === featureKey ||
+        data.pathname === featureKey
+      );
+    });
+    findings.push({
+      type: "product_movement",
+      severity: "info",
+      title: "Feature usage hotspot",
+      summary: `Feature "${featureKey}" was used ${count} times recently.`,
+      recommendation: "Investigate what drove repeated usage of this feature.",
+      evidenceEventIds: takeEventIds(related),
+      data: { featureKey, count, source: "posthog" },
+    });
+  }
+
+  const revenueIntent = posthogEvents.filter(
+    (event) =>
+      event.type === "posthog.checkout.clicked" ||
+      /pricing|checkout/i.test(event.type),
+  );
+  const stripeRevenue = events.filter(
+    (event) => event.source === "stripe" && event.category === "revenue_event",
+  );
+  if (revenueIntent.length > 0 && stripeRevenue.length === 0) {
+    findings.push({
+      type: "product_movement",
+      severity: "warning",
+      title: "Revenue intent without payment",
+      summary: `${revenueIntent.length} checkout or pricing interaction${revenueIntent.length === 1 ? "" : "s"} had no matching Stripe revenue event.`,
+      recommendation: "Follow up on users who viewed pricing or checkout without paying.",
+      evidenceEventIds: takeEventIds(revenueIntent),
+      data: {
+        posthogCount: revenueIntent.length,
+        stripeRevenueCount: stripeRevenue.length,
+        source: "posthog",
+      },
+    });
+  }
+}
+
+function addImpactOpportunityFindings(
+  events: EventRecord[],
+  workstreams: WorkstreamRecord[],
+  findings: InsightFindingInput[],
+): void {
+  const prMerged = events.find((event) => event.type === "github.pull_request.merged");
+  const prOpened = events.find((event) => event.type === "github.pull_request.opened");
+  const decision = events.find((event) => event.category === "company_decision");
+  const completedWorkstream = workstreams.find((ws) => ws.status === "completed");
+
+  if (prMerged) {
+    findings.push({
+      type: "impact_opportunity",
+      severity: "info",
+      title: "Run impact analysis after PR merge",
+      summary:
+        "A pull request was merged recently. An impact analysis may reveal product or revenue movement in the window after this change.",
+      recommendation: "Analyze impact anchored to this PR merge event.",
+      evidenceEventIds: [prMerged.id as Id<"events">],
+      data: { anchorType: "event", anchorId: prMerged.id, anchorTitle: prMerged.title },
+    });
+    return;
+  }
+
+  if (prOpened) {
+    findings.push({
+      type: "impact_opportunity",
+      severity: "info",
+      title: "Consider impact analysis for this PR",
+      summary:
+        "A pull request was opened recently. After merge, run impact analysis to compare baseline vs impact windows.",
+      recommendation: "Analyze impact after the PR merges.",
+      evidenceEventIds: [prOpened.id as Id<"events">],
+      data: { anchorType: "event", anchorId: prOpened.id, anchorTitle: prOpened.title },
+    });
+    return;
+  }
+
+  if (decision) {
+    findings.push({
+      type: "impact_opportunity",
+      severity: "info",
+      title: "Analyze impact around this decision",
+      summary:
+        "A company decision was recorded. Impact analysis can compare activity before and after this anchor.",
+      recommendation: "Run impact analysis anchored to this decision.",
+      evidenceEventIds: [decision.id as Id<"events">],
+      data: { anchorType: "event", anchorId: decision.id, anchorTitle: decision.title },
+    });
+    return;
+  }
+
+  if (completedWorkstream) {
+    findings.push({
+      type: "impact_opportunity",
+      severity: "info",
+      title: "Analyze workstream impact",
+      summary:
+        "A workstream completed recently. Impact analysis may show related product, revenue, or engineering movement.",
+      recommendation: "Run impact analysis anchored to this workstream.",
+      evidenceWorkstreamIds: [completedWorkstream.id as Id<"workstreams">],
+      data: {
+        anchorType: "workstream",
+        anchorId: completedWorkstream.id,
+        anchorTitle: completedWorkstream.title,
+      },
+    });
+  }
+}
+
+function addLessonOpportunityFindings(
+  events: EventRecord[],
+  findings: InsightFindingInput[],
+): void {
+  const impactGenerated = events.filter(
+    (event) => event.type === "impact_analysis.generated",
+  );
+  if (impactGenerated.length > 0) {
+    const latest = impactGenerated[0]!;
+    findings.push({
+      type: "lesson_opportunity",
+      severity: "info",
+      title: "Generate lessons from impact analysis",
+      summary:
+        "An impact analysis was generated recently. Lessons may capture repeatable patterns from its findings.",
+      recommendation: "Generate lessons from the impact analysis findings.",
+      evidenceEventIds: [latest.id as Id<"events">],
+      data: {
+        cta: "generate_lesson",
+        impactAnalysisId: latest.entity?.id,
+      },
+    });
+  }
+
+  const commandFailures = events.filter((event) => event.type === "command.failed");
+  if (commandFailures.length >= 3) {
+    findings.push({
+      type: "lesson_opportunity",
+      severity: "warning",
+      title: "Repeated command failures",
+      summary: `${commandFailures.length} command failures appeared recently. A validation lesson may help prevent repeats.`,
+      recommendation: "Generate a lesson from failure patterns and run validation scripts.",
+      evidenceEventIds: takeEventIds(commandFailures),
+      data: { cta: "generate_failure_lesson" },
+    });
+  }
+
+  const webhookFailures = events.filter(
+    (event) =>
+      event.type.includes("webhook") &&
+      (event.type.includes("fail") || event.type.includes("signature")),
+  );
+  if (webhookFailures.length >= 3) {
+    findings.push({
+      type: "lesson_opportunity",
+      severity: "warning",
+      title: "Webhook validation failures",
+      summary: `${webhookFailures.length} webhook-related failures detected. Consider a validation lesson.`,
+      recommendation: "Run webhook test scripts and capture a validation lesson.",
+      evidenceEventIds: takeEventIds(webhookFailures),
+      data: { cta: "generate_failure_lesson" },
+    });
+  }
+}
+
 export function generateDeterministicFindings(
   args: GenerateFindingsArgs,
 ): InsightFindingInput[] {
@@ -335,8 +696,12 @@ export function generateDeterministicFindings(
   addStaleWorkstreamFindings(args.workstreams, findings, now);
   addDuplicateWorkFindings(args.events, args.workstreams, findings);
   addProductMovementFindings(args.events, findings);
+  addPostHogProductFindings(args.events, findings);
   addDecisionFindings(args.events, findings);
   addTeamChangeFindings(args.events, findings);
+  addStripeRevenueFindings(args.events, findings);
+  addImpactOpportunityFindings(args.events, args.workstreams, findings);
+  addLessonOpportunityFindings(args.events, findings);
 
   return findings.slice(0, MAX_FINDINGS);
 }

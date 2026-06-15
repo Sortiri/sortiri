@@ -1,5 +1,5 @@
-import { DashboardEmptyPage } from "@/components/dashboard/dashboard-empty-page";
+import { AuditsPage } from "@/components/audits/audits-page";
 
-export default function AuditsPage() {
-  return <DashboardEmptyPage />;
+export default function Page() {
+  return <AuditsPage />;
 }

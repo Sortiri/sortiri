@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { requireUserId } from "./lib/auth";
 import {
   getCurrentUser,
+  getAccessibleProjectIds,
   getWorkspaceMembership,
   requireWorkspaceMember,
 } from "./lib/authz";
@@ -28,12 +29,13 @@ import {
   buildViewPulseCounts,
   getViewWindowStart,
 } from "./lib/viewFilters";
-import { assertWorkspaceAccess } from "./lib/eventsLib";
+import { assertWorkspaceBrowseAccess } from "./lib/eventsLib";
 import {
   savedViewFiltersValidator,
   savedViewSharingValidator,
   savedViewTypeValidator,
   workspaceRoleValidator,
+  viewAllowedRoleValidator,
   insightWindowValidator,
 } from "./lib/validators";
 import type { InsightWindow } from "./lib/insightWindow";
@@ -120,7 +122,7 @@ export const create = mutation({
     description: v.optional(v.string()),
     type: v.optional(savedViewTypeValidator),
     visibility: savedViewSharingValidator,
-    allowedRoles: v.optional(v.array(workspaceRoleValidator)),
+    allowedRoles: v.optional(v.array(viewAllowedRoleValidator)),
     filters: savedViewFiltersValidator,
   },
   handler: async (ctx, args): Promise<SavedViewRecord> => {
@@ -174,7 +176,7 @@ export const update = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     visibility: v.optional(savedViewSharingValidator),
-    allowedRoles: v.optional(v.array(workspaceRoleValidator)),
+    allowedRoles: v.optional(v.array(viewAllowedRoleValidator)),
     filters: v.optional(savedViewFiltersValidator),
   },
   handler: async (ctx, args): Promise<SavedViewRecord> => {
@@ -329,7 +331,7 @@ export const listByWorkspace = query({
   },
   handler: async (ctx, args): Promise<SavedViewRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
     if (!membership) {
       throw new Error("Workspace not found");
@@ -345,7 +347,7 @@ export const getById = query({
   },
   handler: async (ctx, args): Promise<SavedViewRecord | null> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
     if (!membership) {
       return null;
@@ -370,15 +372,17 @@ export const applyViewToEvents = query({
   },
   handler: async (ctx, args): Promise<EventRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
     if (!membership) {
       throw new Error("Workspace not found");
     }
 
     const view = await assertSavedViewAccess(ctx, args.viewId, membership);
+    const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
     return applySavedViewFilters(ctx, workspace._id, view.filters, {
       limit: args.limit ?? 50,
+      accessibleProjects: accessible,
     });
   },
 });
@@ -398,18 +402,20 @@ export const getViewPulse = query({
   },
   handler: async (ctx, args): Promise<ViewPulseResult> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
     if (!membership) {
       throw new Error("Workspace not found");
     }
 
     const view = await assertSavedViewAccess(ctx, args.viewId, membership);
+    const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
     const window = (args.window ?? "24h") as InsightWindow;
     const windowStart = getViewWindowStart(window);
 
     const events = await applySavedViewFilters(ctx, workspace._id, view.filters, {
       windowStart,
+      accessibleProjects: accessible,
     });
 
     const counts = buildViewPulseCounts(events);
@@ -480,7 +486,7 @@ export const getPinnedSummaries = query({
     }>
   > => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
     if (!membership) {
       return [];

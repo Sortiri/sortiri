@@ -5,6 +5,7 @@ import { DashboardMobileHeader } from "@/components/dashboard-mobile-header";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { SidebarProvider, useSidebar } from "@/components/dashboard/sidebar-context";
 import { OnboardingGuard } from "@/components/onboarding/onboarding-guard";
+import { AuditorRouteGuard } from "@/components/audits/auditor-route-guard";
 import { SearchPalette } from "@/components/search/search-palette";
 import { SearchProvider } from "@/components/search/search-provider";
 import { ArtifactDrawer } from "@/components/artifacts/artifact-drawer";
@@ -28,7 +29,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         <main className="dashboard-main" id="dashboard-main">
           <div className="dashboard-main-inner">
             <div className="dashboard-page">
-              <OnboardingGuard>{children}</OnboardingGuard>
+              <OnboardingGuard>
+                <AuditorRouteGuard>{children}</AuditorRouteGuard>
+              </OnboardingGuard>
             </div>
           </div>
         </main>

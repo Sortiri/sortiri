@@ -23,6 +23,7 @@ export {
   COMMAND_TRUNCATION_SUFFIX,
   formatDurationMs,
   redactSecrets,
+  redactSensitiveContent,
   truncateArtifactContent,
   truncateCommandOutput,
   TRUNCATION_SUFFIX,

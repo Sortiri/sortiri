@@ -15,7 +15,7 @@ import { listPinnedForWorkspace, type PinnedReplayWithWorkstream } from "./pinne
 import { listViewsForWorkspace, type SavedViewRecord } from "./savedViewsLib";
 import { applySavedViewFilters } from "./savedViewEvents";
 import { buildViewPulseCounts, getViewWindowStart } from "./viewFilters";
-import { getWorkspaceMembership } from "./authz";
+import { getWorkspaceMembership, getAccessibleProjectIds, canViewEvent, canViewWorkstream } from "./authz";
 import {
   listWorkstreamsForWorkspace,
   type WorkstreamRecord,
@@ -65,6 +65,7 @@ export type CompanyPulseResult = {
   latestInsightRun?: InsightRunRecord;
   sourceStatus: SourceHealthItem[];
   isEmpty: boolean;
+  scopedAccess?: boolean;
 };
 
 /** UTC midnight for V1 "today" window. Local timezone support is a future enhancement. */
@@ -129,23 +130,39 @@ export async function buildCompanyPulse(
 ): Promise<CompanyPulseResult> {
   const startOfToday = getStartOfUtcDay();
 
+  let accessible: Awaited<ReturnType<typeof getAccessibleProjectIds>> = "all";
+  if (clerkUserId) {
+    const membership = await getWorkspaceMembership(ctx, workspaceId, clerkUserId);
+    if (membership) {
+      accessible = await getAccessibleProjectIds(ctx, workspaceId, membership);
+    }
+  }
+
   const todayEvents = filterPrimaryEventRecords(
-    (await listEventsInWindow(ctx, workspaceId, startOfToday)).filter(
-      (event) => !isMetaInsightEvent(event),
-    ),
+    (await listEventsInWindow(ctx, workspaceId, startOfToday))
+      .filter((event) => !isMetaInsightEvent(event))
+      .filter((event) => canViewEvent(event, accessible)),
   );
 
-  const recentEvents = await listEventsForWorkspace(ctx, workspaceId, {
-    limit: 5,
-    visibility: "primary",
-  });
+  const recentEvents = (
+    await listEventsForWorkspace(ctx, workspaceId, {
+      limit: 5,
+      visibility: "primary",
+      accessibleProjects: accessible,
+    })
+  );
 
-  const activeWorkstreams = await listWorkstreamsForWorkspace(ctx, workspaceId, {
-    status: "active",
-    limit: 5,
-  });
+  const activeWorkstreams = (
+    await listWorkstreamsForWorkspace(ctx, workspaceId, {
+      status: "active",
+      limit: 5,
+      accessibleProjects: accessible,
+    })
+  );
 
-  const pinnedReplays = await listPinnedForWorkspace(ctx, workspaceId, 10);
+  const pinnedReplays = (await listPinnedForWorkspace(ctx, workspaceId, 10)).filter(
+    (item) => canViewWorkstream(item.workstream, accessible),
+  );
 
   let pinnedViews: PinnedViewSummary[] = [];
   if (clerkUserId) {
@@ -159,6 +176,7 @@ export async function buildCompanyPulse(
         views.slice(0, 5).map(async (view) => {
           const events = await applySavedViewFilters(ctx, workspaceId, view.filters, {
             windowStart,
+            accessibleProjects: accessible,
           });
           const counts = buildViewPulseCounts(events);
           const parts: string[] = [];
@@ -215,5 +233,6 @@ export async function buildCompanyPulse(
     latestInsightRun,
     sourceStatus,
     isEmpty,
+    scopedAccess: accessible !== "all",
   };
 }

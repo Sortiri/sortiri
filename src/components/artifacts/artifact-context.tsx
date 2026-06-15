@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 
 type ArtifactContextValue = {
   artifactId: string | null;
-  openArtifact: (id: string) => void;
+  auditReportId: string | null;
+  openArtifact: (id: string, auditReportId?: string) => void;
   closeArtifact: () => void;
 };
 
@@ -12,17 +13,22 @@ const ArtifactContext = createContext<ArtifactContextValue | null>(null);
 
 export function ArtifactProvider({ children }: { children: ReactNode }) {
   const [artifactId, setArtifactId] = useState<string | null>(null);
+  const [auditReportId, setAuditReportId] = useState<string | null>(null);
 
-  const openArtifact = useCallback((id: string) => {
+  const openArtifact = useCallback((id: string, reportId?: string) => {
     setArtifactId(id);
+    setAuditReportId(reportId ?? null);
   }, []);
 
   const closeArtifact = useCallback(() => {
     setArtifactId(null);
+    setAuditReportId(null);
   }, []);
 
   return (
-    <ArtifactContext.Provider value={{ artifactId, openArtifact, closeArtifact }}>
+    <ArtifactContext.Provider
+      value={{ artifactId, auditReportId, openArtifact, closeArtifact }}
+    >
       {children}
     </ArtifactContext.Provider>
   );

@@ -7,6 +7,8 @@ import {
   type GithubWebhookSecretRecord,
 } from "../../src/types/github-integration";
 
+// TODO(future sprint): migrate GitHub webhook secrets to encrypted integrationSecrets table.
+
 type DbReadCtx = Pick<QueryCtx, "db">;
 type DbWriteCtx = Pick<MutationCtx, "db">;
 

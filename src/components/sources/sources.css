@@ -244,6 +244,10 @@
   color: var(--ca-brand);
 }
 
+.source-card__status--error {
+  color: #e05252;
+}
+
 .source-card__status--soon {
   color: var(--ca-muted);
 }

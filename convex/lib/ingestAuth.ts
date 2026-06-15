@@ -1,5 +1,5 @@
 import type { Doc, Id } from "../_generated/dataModel";
-import type { MutationCtx } from "../_generated/server";
+import type { QueryCtx } from "../_generated/server";
 import { assertApiKeyInWorkspace } from "./apiKeysLib";
 import { getWorkspaceDocByExternalId } from "./workspacesLib";
 
@@ -20,7 +20,7 @@ export type ResolveIngestWorkspaceArgs = {
 };
 
 export async function resolveIngestWorkspace(
-  ctx: Pick<MutationCtx, "db">,
+  ctx: Pick<QueryCtx, "db">,
   args: ResolveIngestWorkspaceArgs,
 ): Promise<Doc<"workspaces">> {
   if (args.apiKeyId) {

@@ -1,0 +1,122 @@
+.evidence-safety-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.evidence-safety-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+
+.evidence-safety-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+}
+
+.evidence-safety-note--blocked {
+  color: #b45309;
+}
+
+.evidence-review-page__title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+
+.evidence-review-page__subtitle {
+  margin: 0 0 1.5rem;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+}
+
+.evidence-review-section {
+  margin-bottom: 2rem;
+}
+
+.evidence-review-section__title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.evidence-review-item {
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.evidence-review-item__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.evidence-review-item__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.evidence-review-item__meta {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+}
+
+.evidence-review-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.evidence-review-item__action {
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: transparent;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.evidence-review-item__action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audit-safety-summary {
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.audit-safety-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.audit-safety-summary__stat strong {
+  display: block;
+  font-size: 1.25rem;
+}
+
+.audit-safety-summary__banner {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+}

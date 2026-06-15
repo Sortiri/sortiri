@@ -6,7 +6,8 @@ import {
   canEditView,
   canSeeView,
 } from "../../convex/lib/savedViewsLib";
-import type { Doc } from "../../convex/_generated/dataModel";
+import { intersectProjectIds } from "../../convex/lib/projectAccessLib";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 
 function member(
   overrides: Partial<Doc<"workspaceMembers">> = {},
@@ -84,5 +85,14 @@ describe("view permissions", () => {
     const defaultView = view({ isDefault: true });
     expect(canDeleteView("member", defaultView, "user_1")).toBe(false);
     expect(canDeleteView("owner", defaultView, "user_1")).toBe(true);
+  });
+
+  it("intersects project filters with accessible project set", () => {
+    const accessible = new Set(["p1" as Id<"projects">]);
+    const result = intersectProjectIds(
+      ["p1" as Id<"projects">, "p2" as Id<"projects">],
+      accessible,
+    );
+    expect(result).toEqual(["p1"]);
   });
 });

@@ -12,6 +12,8 @@ import { api } from "../../../convex/_generated/api";
 import { ConvexAuthError } from "@/components/auth/convex-auth-error";
 import { DashboardContentLoader } from "@/components/dashboard-content-loader";
 import { POST_SIGN_UP_PATH } from "@/lib/auth-routes";
+import { useWorkspace } from "@/components/workspace/workspace-context";
+import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { useAppAuth } from "@/hooks/use-app-auth";
 import { isOnboardingComplete } from "@/lib/onboarding/types";
 
@@ -38,14 +40,21 @@ function GuardUnauthenticated() {
 
 function GuardCheckOnboarding({ children }: OnboardingGuardProps) {
   const router = useRouter();
+  const { activeWorkspaceId } = useWorkspace();
+  const { capabilities } = useWorkspaceMembership(activeWorkspaceId);
   const profile = useQuery(api.onboarding.getProfile);
 
   useEffect(() => {
+    if (capabilities?.role === "auditor") return;
     if (profile === undefined) return;
     if (!isOnboardingComplete(profile)) {
       router.replace(POST_SIGN_UP_PATH);
     }
-  }, [profile, router]);
+  }, [capabilities?.role, profile, router]);
+
+  if (capabilities?.role === "auditor") {
+    return children;
+  }
 
   if (profile === undefined || !isOnboardingComplete(profile)) {
     return <DashboardContentLoader />;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canCreateApiKeys,
   canManageMembers,
+  canManageProjectAssignments,
   canManageSources,
   canManageWorkspace,
   canWriteWorkspaceData,
@@ -45,6 +46,14 @@ describe("role permissions", () => {
     const caps = buildMembershipCapabilities("member", "active");
     expect(caps.canManageViews).toBe(false);
     expect(caps.canCreatePrivateViews).toBe(true);
+  });
+
+  it("owner and admin can manage project assignments", () => {
+    expect(canManageProjectAssignments("owner")).toBe(true);
+    expect(canManageProjectAssignments("admin")).toBe(true);
+    expect(canManageProjectAssignments("member")).toBe(false);
+    const caps = buildMembershipCapabilities("admin", "active");
+    expect(caps.canManageProjectAssignments).toBe(true);
   });
 
   it("removed members have no capabilities", () => {

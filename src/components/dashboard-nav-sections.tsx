@@ -11,14 +11,19 @@ type DashboardNavSectionsProps = {
   onItemSelect?: () => void;
   viewItems?: DashboardNavItem[];
   replayItems?: DashboardNavItem[];
+  primaryItems?: DashboardNavItem[];
 };
 
 export function DashboardNavSections({
   onItemSelect,
   viewItems = [],
   replayItems = [],
+  primaryItems,
 }: DashboardNavSectionsProps) {
   const sections = dashboardNavSections.map((section) => {
+    if (section.id === "primary") {
+      return { ...section, items: primaryItems ?? section.items };
+    }
     if (section.id === "replays") return { ...section, items: replayItems };
     if (section.id === "views") return { ...section, items: viewItems };
     return section;

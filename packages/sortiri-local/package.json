@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@sortiri/security": "*",
     "zod": "^3.24.2"
   },
   "devDependencies": {

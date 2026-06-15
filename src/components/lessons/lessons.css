@@ -1,0 +1,197 @@
+.lessons-page,
+.lessons-detail-page,
+.playbooks-page,
+.playbooks-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-6);
+  max-width: 42rem;
+}
+
+.lessons-page__header-row,
+.playbooks-page__header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ca-space-4);
+  flex-wrap: wrap;
+}
+
+.lessons-page__title,
+.playbooks-page__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ca-ink);
+}
+
+.lessons-page__subtitle,
+.playbooks-page__subtitle {
+  margin: var(--ca-space-1) 0 0;
+  color: var(--ca-muted);
+  font-size: 0.9375rem;
+}
+
+.lessons-page__actions,
+.playbooks-page__actions,
+.lessons-detail-page__actions,
+.playbooks-detail-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ca-space-2);
+}
+
+.lessons-page__action,
+.playbooks-page__action {
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+  padding: var(--ca-space-2) var(--ca-space-3);
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--ca-ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.lessons-page__action:disabled,
+.playbooks-page__action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lessons-filter-chips,
+.playbooks-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ca-space-2);
+}
+
+.lessons-filter-chip,
+.playbooks-filter-chip {
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.lessons-filter-chip--active,
+.playbooks-filter-chip--active {
+  border-color: var(--ca-ink);
+  font-weight: 600;
+}
+
+.lessons-table,
+.playbooks-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lessons-table th,
+.lessons-table td,
+.playbooks-table th,
+.playbooks-table td {
+  border-bottom: 1px solid var(--ca-hairline);
+  padding: var(--ca-space-3) var(--ca-space-2);
+  text-align: left;
+  font-size: 0.875rem;
+  vertical-align: top;
+}
+
+.lessons-table a,
+.playbooks-table a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.lessons-table a:hover,
+.playbooks-table a:hover {
+  text-decoration: underline;
+}
+
+.lessons-badge,
+.playbooks-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--ca-hairline);
+  font-size: 0.75rem;
+  margin-right: 0.25rem;
+}
+
+.lessons-section,
+.playbooks-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-3);
+}
+
+.lessons-section h2,
+.playbooks-section h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.lessons-detail-page__back,
+.playbooks-detail-page__back {
+  color: var(--ca-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.lessons-step,
+.playbooks-step {
+  border: 1px solid var(--ca-hairline);
+  padding: var(--ca-space-3);
+}
+
+.lessons-modal,
+.playbooks-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: var(--ca-space-4);
+}
+
+.lessons-modal__panel,
+.playbooks-modal__panel {
+  background: var(--ca-surface);
+  border: 1px solid var(--ca-hairline);
+  padding: var(--ca-space-5);
+  max-width: 32rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-3);
+}
+
+.lessons-modal__field label,
+.playbooks-modal__field label {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.lessons-modal__field input,
+.lessons-modal__field textarea,
+.lessons-modal__field select,
+.playbooks-modal__field input,
+.playbooks-modal__field textarea,
+.playbooks-modal__field select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.875rem;
+  padding: var(--ca-space-2);
+  border: 1px solid var(--ca-hairline);
+}
+
+.lessons-modal__actions,
+.playbooks-modal__actions {
+  display: flex;
+  gap: var(--ca-space-2);
+  justify-content: flex-end;
+}

@@ -11,14 +11,19 @@ import { useMemo } from "react";
 type ReplayTimelineProps = {
   events: TimelineEvent[];
   focusEventId?: string | null;
+  disableEntityResolve?: boolean;
 };
 
-export function ReplayTimeline({ events, focusEventId }: ReplayTimelineProps) {
+export function ReplayTimeline({
+  events,
+  focusEventId,
+  disableEntityResolve = false,
+}: ReplayTimelineProps) {
   const { activeWorkspaceId } = useWorkspace();
 
   const entityCandidates = useMemo(
-    () => buildEntityResolveCandidates(events),
-    [events],
+    () => (disableEntityResolve ? [] : buildEntityResolveCandidates(events)),
+    [disableEntityResolve, events],
   );
 
   const entityResolveMap = useQuery(

@@ -12,6 +12,8 @@ import path from "node:path";
 
 const AGENTMAIL_BASE = "https://api.agentmail.to/v0";
 const DEFAULT_INBOX_USERNAME = "sortiri-e2e";
+const DEFAULT_MEMBER_INBOX_USERNAME = "sortiri-e2e-member";
+const DEFAULT_AUDITOR_INBOX_USERNAME = "sortiri-e2e-auditor";
 const DEFAULT_PASSWORD = "SortiriE2E!sortiri-timeline-2026";
 
 function clerkIssuerFromPublishableKey(publishableKey: string): string {
@@ -70,24 +72,55 @@ async function agentMailFetch<T>(
   return (await response.json()) as T;
 }
 
-async function resolveInbox(apiKey: string): Promise<AgentMailInbox> {
-  const preferredEmail = `${DEFAULT_INBOX_USERNAME}@agentmail.to`;
+async function resolveInbox(
+  apiKey: string,
+  username = DEFAULT_INBOX_USERNAME,
+): Promise<AgentMailInbox> {
+  const preferredEmail = `${username}@agentmail.to`;
   const listed = await agentMailFetch<AgentMailInboxList>(apiKey, "/inboxes");
-  const existing =
-    listed.inboxes.find((inbox) => inbox.email === preferredEmail) ??
-    listed.inboxes[0];
+  const existing = listed.inboxes.find((inbox) => inbox.email === preferredEmail);
 
   if (existing) {
     return existing;
   }
 
-  return agentMailFetch<AgentMailInbox>(apiKey, "/inboxes", {
-    method: "POST",
-    body: JSON.stringify({
-      username: DEFAULT_INBOX_USERNAME,
-      display_name: "Sortiri E2E",
-    }),
-  });
+  const displayName =
+    username === DEFAULT_MEMBER_INBOX_USERNAME
+      ? "Sortiri E2E Member"
+      : username === DEFAULT_AUDITOR_INBOX_USERNAME
+        ? "Sortiri E2E Auditor"
+        : "Sortiri E2E";
+
+  try {
+    return await agentMailFetch<AgentMailInbox>(apiKey, "/inboxes", {
+      method: "POST",
+      body: JSON.stringify({
+        username,
+        display_name: displayName,
+      }),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const limitExceeded = message.includes("LimitExceeded") || message.includes("403");
+
+    // Owner: reuse first inbox when account is at inbox limit.
+    if (limitExceeded && username === DEFAULT_INBOX_USERNAME && listed.inboxes[0]) {
+      console.warn(
+        `AgentMail inbox limit reached — using ${listed.inboxes[0]!.email} for owner.`,
+      );
+      return listed.inboxes[0]!;
+    }
+
+    // Member/auditor: Clerk testing sign-in does not need a real inbox.
+    if (limitExceeded) {
+      console.warn(
+        `AgentMail inbox limit reached — using Clerk-only email ${preferredEmail}.`,
+      );
+      return { inbox_id: "clerk-only", email: preferredEmail };
+    }
+
+    throw error;
+  }
 }
 
 async function ensureClerkConvexJwtTemplate() {
@@ -178,12 +211,22 @@ async function main() {
   const password = process.env.E2E_PASSWORD?.trim() ?? DEFAULT_PASSWORD;
 
   console.log("Resolving AgentMail inbox…");
-  const inbox = await resolveInbox(apiKey);
+  const inbox = await resolveInbox(apiKey, DEFAULT_INBOX_USERNAME);
   console.log(`AgentMail inbox: ${inbox.email}`);
+
+  console.log("Resolving member AgentMail inbox…");
+  const memberInbox = await resolveInbox(apiKey, DEFAULT_MEMBER_INBOX_USERNAME);
+  console.log(`Member inbox: ${memberInbox.email}`);
+
+  console.log("Resolving auditor AgentMail inbox…");
+  const auditorInbox = await resolveInbox(apiKey, DEFAULT_AUDITOR_INBOX_USERNAME);
+  console.log(`Auditor inbox: ${auditorInbox.email}`);
 
   console.log("Ensuring Clerk E2E user…");
   await ensureClerkConvexJwtTemplate();
   await ensureClerkUser(inbox.email, password);
+  await ensureClerkUser(memberInbox.email, password);
+  await ensureClerkUser(auditorInbox.email, password);
 
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   if (publishableKey) {
@@ -200,6 +243,10 @@ async function main() {
   const contents = [
     `E2E_EMAIL=${inbox.email}`,
     `E2E_PASSWORD=${password}`,
+    `E2E_MEMBER_EMAIL=${memberInbox.email}`,
+    `E2E_MEMBER_PASSWORD=${password}`,
+    `E2E_AUDITOR_EMAIL=${auditorInbox.email}`,
+    `E2E_AUDITOR_PASSWORD=${password}`,
     "",
   ].join("\n");
   fs.mkdirSync(path.dirname(envFile), { recursive: true });
@@ -208,6 +255,8 @@ async function main() {
   console.log("");
   console.log("E2E credentials ready:");
   console.log(`  E2E_EMAIL=${inbox.email}`);
+  console.log(`  E2E_MEMBER_EMAIL=${memberInbox.email}`);
+  console.log(`  E2E_AUDITOR_EMAIL=${auditorInbox.email}`);
   console.log(`  wrote ${envFile}`);
   console.log("");
   console.log("Run:");

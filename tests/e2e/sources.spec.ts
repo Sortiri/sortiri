@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { describeE2E } from "./helpers/auth";
+import { describeE2E, skipForAuditor } from "./helpers/auth";
 
 describeE2E("sources", () => {
-  test("shows api keys and github sections", async ({ page }) => {
+  test("shows api keys and github sections", async ({ page }, testInfo) => {
+    skipForAuditor(testInfo);
     await page.goto("/sources");
     await expect(page.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
     await expect(page.getByText(/API key|Workspace API key/i).first()).toBeVisible();

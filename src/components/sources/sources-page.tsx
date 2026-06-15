@@ -8,10 +8,12 @@ import { AdvancedApiKeySection } from "@/components/sources/advanced-api-key-sec
 import { CliSetupSection } from "@/components/sources/cli-setup-section";
 import { SourceSetupCard } from "@/components/sources/source-setup-card";
 import { GithubSourceCard } from "@/components/sources/github-source-card";
+import { StripeSourceCard } from "@/components/sources/stripe-source-card";
+import { PosthogSourceCard } from "@/components/sources/posthog-source-card";
 import { TestEventButton } from "@/components/sources/test-event-button";
 import "./sources.css";
 
-const COMING_SOON_SOURCES = ["Stripe", "PostHog", "Slack", "Linear"] as const;
+const COMING_SOON_SOURCES = ["Slack", "Linear"] as const;
 
 function buildSdkExample() {
   return `import { Sortiri } from "@sortiri/sdk";
@@ -32,23 +34,28 @@ export function SourcesPage() {
   const { activeWorkspaceId, loading: wsLoading } = useWorkspace();
   const [sessionRawKey, setSessionRawKey] = useState<string | null>(null);
 
-  const sourceStatus = useQuery(
-    api.sources.getSourceStatus,
+  const sourceHealth = useQuery(
+    api.integrations.health.getSourceHealth,
     activeWorkspaceId ? { workspaceId: activeWorkspaceId } : "skip",
   );
 
-  const statusBySource = useMemo(() => {
-    const map = new Map<string, (typeof sourceStatus extends (infer T)[] | undefined ? T : never)>();
-    for (const item of sourceStatus ?? []) {
+  const healthBySource = useMemo(() => {
+    const map = new Map<string, (typeof sourceHealth extends (infer T)[] | undefined ? T : never)>();
+    for (const item of sourceHealth ?? []) {
       map.set(item.source, item);
     }
     return map;
-  }, [sourceStatus]);
+  }, [sourceHealth]);
 
   const loading =
-    wsLoading || (activeWorkspaceId !== null && sourceStatus === undefined);
+    wsLoading || (activeWorkspaceId !== null && sourceHealth === undefined);
 
   const sdkExample = buildSdkExample();
+
+  function isConnected(source: string): boolean {
+    const entry = healthBySource.get(source);
+    return entry?.status === "connected" || entry?.status === "error";
+  }
 
   return (
     <div className="sources-page">
@@ -77,9 +84,9 @@ export function SourcesPage() {
               <SourceSetupCard
                 title="Cursor MCP"
                 description="Record agent workstreams and actions from Cursor via the Sortiri MCP server."
-                connected={statusBySource.get("cursor")?.connected ?? false}
-                eventCount={statusBySource.get("cursor")?.eventCount}
-                lastEventAt={statusBySource.get("cursor")?.lastEventAt}
+                connected={isConnected("cursor")}
+                eventCount={healthBySource.get("cursor")?.eventCount}
+                lastEventAt={healthBySource.get("cursor")?.lastEventAt}
                 workspaceId={activeWorkspaceId}
                 sourceKey="cursor"
                 setupLabel="Setup"
@@ -93,9 +100,9 @@ npx sortiri doctor`}
               <SourceSetupCard
                 title="Local watcher"
                 description="Capture file changes from your repo with the CLI watcher."
-                connected={statusBySource.get("watcher")?.connected ?? false}
-                eventCount={statusBySource.get("watcher")?.eventCount}
-                lastEventAt={statusBySource.get("watcher")?.lastEventAt}
+                connected={isConnected("watcher")}
+                eventCount={healthBySource.get("watcher")?.eventCount}
+                lastEventAt={healthBySource.get("watcher")?.lastEventAt}
                 workspaceId={activeWorkspaceId}
                 sourceKey="watcher"
                 setupLabel="Start watcher"
@@ -106,9 +113,9 @@ npx sortiri dev`}
               <SourceSetupCard
                 title="Sortiri CLI"
                 description="Capture command runs, validation output, doctor checks, and local CLI events."
-                connected={statusBySource.get("cli")?.connected ?? false}
-                eventCount={statusBySource.get("cli")?.eventCount}
-                lastEventAt={statusBySource.get("cli")?.lastEventAt}
+                connected={isConnected("cli")}
+                eventCount={healthBySource.get("cli")?.eventCount}
+                lastEventAt={healthBySource.get("cli")?.lastEventAt}
                 workspaceId={activeWorkspaceId}
                 sourceKey="cli"
                 setupLabel="Run commands"
@@ -120,9 +127,9 @@ sortiri run -- npx tsc --noEmit`}
               <SourceSetupCard
                 title="TypeScript SDK"
                 description="Send product events, revenue events, and company decisions from your app."
-                connected={statusBySource.get("sdk")?.connected ?? false}
-                eventCount={statusBySource.get("sdk")?.eventCount}
-                lastEventAt={statusBySource.get("sdk")?.lastEventAt}
+                connected={isConnected("sdk")}
+                eventCount={healthBySource.get("sdk")?.eventCount}
+                lastEventAt={healthBySource.get("sdk")?.lastEventAt}
                 workspaceId={activeWorkspaceId}
                 sourceKey="sdk"
                 setupLabel="SDK example"
@@ -134,9 +141,9 @@ ${sdkExample}`}
               <SourceSetupCard
                 title="Manual events"
                 description="Events recorded manually or from internal tools appear with source manual."
-                connected={statusBySource.get("manual")?.connected ?? false}
-                eventCount={statusBySource.get("manual")?.eventCount}
-                lastEventAt={statusBySource.get("manual")?.lastEventAt}
+                connected={isConnected("manual")}
+                eventCount={healthBySource.get("manual")?.eventCount}
+                lastEventAt={healthBySource.get("manual")?.lastEventAt}
                 workspaceId={activeWorkspaceId}
                 sourceKey="manual"
                 setupLabel="Note"
@@ -145,9 +152,29 @@ ${sdkExample}`}
 
               <GithubSourceCard
                 workspaceId={activeWorkspaceId}
-                connected={statusBySource.get("github")?.connected ?? false}
-                eventCount={statusBySource.get("github")?.eventCount}
-                lastEventAt={statusBySource.get("github")?.lastEventAt}
+                connected={isConnected("github")}
+                eventCount={healthBySource.get("github")?.eventCount}
+                lastEventAt={healthBySource.get("github")?.lastEventAt}
+                primaryEventCount={healthBySource.get("github")?.primaryEventCount}
+                lastError={healthBySource.get("github")?.lastError}
+              />
+
+              <StripeSourceCard
+                workspaceId={activeWorkspaceId}
+                connected={isConnected("stripe")}
+                eventCount={healthBySource.get("stripe")?.eventCount}
+                lastEventAt={healthBySource.get("stripe")?.lastEventAt}
+                primaryEventCount={healthBySource.get("stripe")?.primaryEventCount}
+                lastError={healthBySource.get("stripe")?.lastError}
+              />
+
+              <PosthogSourceCard
+                workspaceId={activeWorkspaceId}
+                connected={isConnected("posthog")}
+                eventCount={healthBySource.get("posthog")?.eventCount}
+                lastEventAt={healthBySource.get("posthog")?.lastEventAt}
+                primaryEventCount={healthBySource.get("posthog")?.primaryEventCount}
+                lastError={healthBySource.get("posthog")?.lastError}
               />
 
               {COMING_SOON_SOURCES.map((name) => (

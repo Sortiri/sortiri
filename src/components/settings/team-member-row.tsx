@@ -7,6 +7,8 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { formatEventTime } from "@/lib/events/format";
 import type { WorkspaceMemberRecord, WorkspaceRole } from "@/types/workspace-members";
 import { WorkspaceRoleBadge } from "@/components/workspace/workspace-role-badge";
+import { MemberProjectAccess } from "./member-project-access";
+import { ManageProjectAccessModal } from "./manage-project-access-modal";
 
 type TeamMemberRowProps = {
   member: WorkspaceMemberRecord;
@@ -15,7 +17,7 @@ type TeamMemberRowProps = {
   isOwner: boolean;
 };
 
-const ROLE_OPTIONS: WorkspaceRole[] = ["owner", "admin", "member", "viewer"];
+const ROLE_OPTIONS: WorkspaceRole[] = ["owner", "admin", "member", "viewer", "auditor"];
 
 export function TeamMemberRow({
   member,
@@ -27,6 +29,7 @@ export function TeamMemberRow({
   const removeMember = useMutation(api.workspaceMembers.removeMember);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [manageProjectsOpen, setManageProjectsOpen] = useState(false);
 
   const handleRoleChange = useCallback(
     async (role: WorkspaceRole) => {
@@ -76,6 +79,7 @@ export function TeamMemberRow({
         </div>
         <div className="team-member-row__meta">
           <WorkspaceRoleBadge role={member.role} />
+          <MemberProjectAccess workspaceId={workspaceId} member={member} />
           {member.joinedAt ? (
             <span>Joined {formatEventTime(member.joinedAt)}</span>
           ) : null}
@@ -100,6 +104,16 @@ export function TeamMemberRow({
               ))}
             </select>
           ) : null}
+          {member.role !== "owner" && member.role !== "admin" && member.role !== "auditor" ? (
+            <button
+              type="button"
+              className="team-button"
+              disabled={busy}
+              onClick={() => setManageProjectsOpen(true)}
+            >
+              Manage Projects
+            </button>
+          ) : null}
           <button
             type="button"
             className="team-button team-button--danger"
@@ -112,6 +126,14 @@ export function TeamMemberRow({
       ) : null}
 
       {error ? <p className="team-error">{error}</p> : null}
+
+      {manageProjectsOpen ? (
+        <ManageProjectAccessModal
+          workspaceId={workspaceId}
+          member={member}
+          onClose={() => setManageProjectsOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -9,6 +9,9 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { WorkstreamRelatedHistorySection } from "@/components/links/workstream-related-history-section";
 import { getTimelineEventDomId } from "@/lib/links/navigation";
 import { PinReplayButton } from "@/components/pinned-replays/pin-replay-button";
+import { WorkstreamAgentContextPanel } from "@/components/context/workstream-agent-context-panel";
+import { WorkstreamPrivateEvalsPanel } from "@/components/evals/workstream-private-evals-panel";
+import { AnalyzeImpactButton } from "@/components/impact/analyze-impact-button";
 import "@/components/pinned-replays/pin-replay-button.css";
 import { ReplayTimeline } from "@/components/workstreams/replay-timeline";
 import { WorkstreamArtifactsSection } from "@/components/workstreams/workstream-artifacts-section";
@@ -41,6 +44,29 @@ export function WorkstreamDetailPage({ workstreamId }: WorkstreamDetailPageProps
   const relatedGroups = useQuery(
     api.eventLinks.listForWorkstream,
     workstream ? { workstreamId: id, limit: 30 } : "skip",
+  );
+  const recentAnalyses = useQuery(
+    api.impactAnalyses.listForAnchor,
+    activeWorkspaceId && workstream
+      ? {
+          workspaceId: activeWorkspaceId,
+          anchorType: "workstream",
+          anchorId: workstreamId,
+          limit: 5,
+        }
+      : "skip",
+  );
+  const workstreamLessons = useQuery(
+    api.lessons.listByWorkstream,
+    activeWorkspaceId && workstream
+      ? { workspaceId: activeWorkspaceId, workstreamId: id }
+      : "skip",
+  );
+  const suggestedPlaybooks = useQuery(
+    api.playbooks.suggestForGoal,
+    activeWorkspaceId && workstream
+      ? { workspaceId: activeWorkspaceId, goal: workstream.title }
+      : "skip",
   );
 
   const eventList = (events ?? []) as TimelineEvent[];
@@ -113,13 +139,79 @@ export function WorkstreamDetailPage({ workstreamId }: WorkstreamDetailPageProps
           <p className="workstream-detail-header__summary">{ws.summary}</p>
         ) : null}
         <p className="workstream-detail-header__meta">{metaParts.join(" · ")}</p>
-        <Link
-          href={`/ask?workstreamId=${ws.id}`}
-          className="workstream-detail-page__ask-link"
-        >
-          Ask about this replay
-        </Link>
+        <div className="workstream-detail-header__links">
+          {activeWorkspaceId ? (
+            <AnalyzeImpactButton
+              workspaceId={activeWorkspaceId}
+              anchor={{
+                type: "workstream",
+                workstreamId: ws.id,
+                title: ws.title,
+              }}
+              projectId={ws.projectId}
+              className="workstream-detail-page__ask-link"
+            />
+          ) : null}
+          <Link
+            href={`/ask?workstreamId=${ws.id}`}
+            className="workstream-detail-page__ask-link"
+          >
+            Ask about this replay
+          </Link>
+        </div>
       </header>
+
+      {activeWorkspaceId ? (
+        <WorkstreamAgentContextPanel
+          workspaceId={activeWorkspaceId}
+          workstreamId={ws.id}
+          workstreamTitle={ws.title}
+          projectId={ws.projectId}
+        />
+      ) : null}
+
+      {activeWorkspaceId ? (
+        <WorkstreamPrivateEvalsPanel workspaceId={activeWorkspaceId} workstreamId={ws.id} />
+      ) : null}
+
+      {recentAnalyses && recentAnalyses.length > 0 ? (
+        <section className="workstream-impact-section">
+          <h2 className="entity-section__title">Recent Impact Analyses</h2>
+          <ul>
+            {recentAnalyses.map((analysis) => (
+              <li key={analysis.id}>
+                <Link href={`/impact/${analysis.id}`}>{analysis.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {workstreamLessons && workstreamLessons.length > 0 ? (
+        <section className="workstream-impact-section">
+          <h2 className="entity-section__title">Lessons</h2>
+          <ul>
+            {workstreamLessons.map((lesson) => (
+              <li key={lesson.id}>
+                <Link href={`/lessons/${lesson.id}`}>{lesson.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {suggestedPlaybooks && suggestedPlaybooks.length > 0 ? (
+        <section className="workstream-impact-section">
+          <h2 className="entity-section__title">Relevant Playbooks</h2>
+          <ul>
+            {suggestedPlaybooks.map((playbook) => (
+              <li key={playbook.id}>
+                <Link href={`/playbooks/${playbook.id}`}>{playbook.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {relatedGroups && relatedGroups.length > 0 ? (
         <WorkstreamRelatedHistorySection groups={relatedGroups} />

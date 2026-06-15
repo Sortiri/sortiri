@@ -145,6 +145,24 @@ Example replay:
 | `record_event` | Record agent actions, code changes, decisions |
 | `attach_artifact` | Attach diffs, files, URLs, logs |
 | `finish_workstream` | Complete the active workstream; clears session |
+| `sortiri_create_context_pack` | Create and generate a context pack for the current goal |
+| `sortiri_get_context_pack` | Fetch a context pack by ID (marks used by agent) |
+| `sortiri_get_project_memory` | Ephemeral project memory: events, playbook, failures, validation |
+| `sortiri_get_entity_memory` | Entity-scoped memory |
+| `sortiri_get_known_failures` | Known failure patterns for a goal or files |
+| `sortiri_get_validation_requirements` | Rule-based validation checklist for a goal |
+| `sortiri_get_recommended_playbook` | Best-matching active playbook for a goal |
+| `sortiri_list_recommendations` | List open recommendations in the autonomy queue |
+| `sortiri_get_recommendation` | Get a recommendation by ID |
+| `sortiri_generate_recommendations` | Generate recommendations from intelligence signals |
+| `sortiri_convert_recommendation_to_workstream` | Convert a recommendation to a workstream with context pack |
+| `sortiri_generate_context_from_recommendation` | Generate a context pack from a recommendation |
+| `sortiri_generate_eval_suite` | Generate a private eval suite from playbook, lesson, recommendation, context pack, or known failure |
+| `sortiri_list_eval_suites` | List active private eval suites for the workspace |
+| `sortiri_get_eval_suite` | Get an eval suite with cases and recent runs |
+| `sortiri_run_eval_suite` | Queue an eval run (execute locally with `npm run eval:run`) |
+| `sortiri_get_eval_run` | Get an eval run with filtered results |
+| `sortiri_recommend_evals_for_workstream` | Suggest eval suites linked to a workstream |
 
 ## CLI commands
 
@@ -152,6 +170,16 @@ Example replay:
 |---|---|
 | `npm run sortiri:init` | Create `.sortiri/` config, merge Cursor MCP, update `.gitignore` |
 | `npm run sortiri:dev` | Start local file watcher |
+| `sortiri context --goal "..."` | Create or fetch a context pack via API (prints formatted text) |
+| `sortiri recommendations list` | List open recommendations |
+| `sortiri recommendations generate` | Generate recommendations for the workspace |
+| `sortiri recommendations get <id>` | Get a recommendation by ID |
+| `sortiri recommendations convert <id>` | Convert a recommendation to a workstream |
+| `sortiri evals list` | List active private eval suites |
+| `sortiri evals generate --from-recommendation <id>` | Generate an eval suite from a source entity |
+| `sortiri evals runs <suiteId>` | List recent runs for a suite |
+| `sortiri evals get-run <runId>` | Get an eval run with results |
+| `npm run eval:run -- --suite <id>` | Execute eval cases locally and record results |
 
 Local development (without npm scripts):
 

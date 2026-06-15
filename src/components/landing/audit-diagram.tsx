@@ -1,51 +1,53 @@
 import {
-  LandingTerminalDiagram,
-  type TerminalDiagramCard,
-} from "@/components/landing/landing-terminal-diagram";
+  AbstractDiagram,
+  DiagramNode,
+  DotLine,
+  Packet,
+} from "@/components/landing/abstract-diagram";
 
-const CARDS: TerminalDiagramCard[] = [
-  {
-    id: "history",
-    title: "COMPANY HISTORY",
-    rows: [
-      "agent actions",
-      "GitHub PRs",
-      "product events",
-      "Stripe revenue",
-      "company decisions",
-    ],
-  },
-  {
-    id: "audit",
-    title: "SORTIRI AUDIT",
-    rows: [
-      "collect evidence",
-      "link decisions to diffs",
-      "detect missing context",
-      "redact sensitive data",
-      "freeze audit trail",
-    ],
-  },
-  {
-    id: "report",
-    title: "SECURE REPORT",
-    rows: [
-      "frozen timeline",
-      "redacted artifacts",
-      "auditor share link",
-      "exportable report",
-      "proof, not screenshots",
-    ],
-  },
-];
+const ARTIFACTS = ["event", "diff", "decision", "payment"];
+const PIPELINE = ["collect", "redact", "freeze"];
 
 export function AuditDiagram({ className = "" }: { className?: string }) {
   return (
-    <LandingTerminalDiagram
-      cards={CARDS}
-      idPrefix="audit-diagram"
-      ariaLabel="Sortiri collects company history into an audit trail and produces a secure report with frozen timeline, redacted artifacts, and exportable proof."
-      className={className}
-    />
+    <AbstractDiagram
+      className={`abstract-diagram--evidence ${className}`.trim()}
+      ariaLabel="Evidence chain from scattered artifacts through collect, redact, and freeze into sealed proof packet."
+    >
+      <div className="abstract-evidence__artifacts">
+        {ARTIFACTS.map((artifact, index) => (
+          <Packet key={artifact} accent={index === 0}>
+            {artifact}
+          </Packet>
+        ))}
+      </div>
+
+      <DotLine className="abstract-evidence__dot-bar" />
+
+      <div className="abstract-evidence__pipeline">
+        {PIPELINE.map((step, index) => (
+          <div key={step} className="abstract-evidence__pipeline-step">
+            {index > 0 ? (
+              <span className="abstract-evidence__arrow" aria-hidden>
+                →
+              </span>
+            ) : null}
+            <DiagramNode accent={step === "freeze"}>{step}</DiagramNode>
+          </div>
+        ))}
+      </div>
+
+      <span className="abstract-evidence__drop" aria-hidden>
+        │
+      </span>
+      <span className="abstract-evidence__drop-end" aria-hidden>
+        ▼
+      </span>
+
+      <div className="abstract-evidence__sealed">
+        <DiagramNode accent>sealed report</DiagramNode>
+        <Packet accent>proof packet</Packet>
+      </div>
+    </AbstractDiagram>
   );
 }

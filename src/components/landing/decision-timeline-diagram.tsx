@@ -1,7 +1,11 @@
+"use client";
+
+import { useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
 import { departureMono } from "@/lib/landing-fonts";
 
-const ACCENT = "text-[#00E013]";
 const MONO = departureMono.className;
+const CYCLE_MS = 1400;
 
 type DecisionTimelineEvent = {
   time: string;
@@ -54,36 +58,32 @@ const EVENTS: DecisionTimelineEvent[] = [
   },
 ];
 
-function DecisionTimelineRow({ event }: { event: DecisionTimelineEvent }) {
-  return (
-    <div className="decision-timeline__row">
-      <span className="decision-timeline__time">{event.time}</span>
-      <span
-        className={
-          event.typeHighlight
-            ? `decision-timeline__type ${ACCENT}`
-            : "decision-timeline__type"
-        }
-      >
-        {event.type}
-      </span>
-      <span
-        className={
-          event.descriptionHighlight
-            ? `decision-timeline__description ${ACCENT}`
-            : "decision-timeline__description"
-        }
-      >
-        {event.description}
-      </span>
-    </div>
-  );
-}
+type DecisionTimelineDiagramProps = {
+  className?: string;
+};
 
-export function DecisionTimelineDiagram({ className = "" }: { className?: string }) {
+export function DecisionTimelineDiagram({
+  className = "",
+}: DecisionTimelineDiagramProps) {
+  const reduceMotion = useReducedMotion();
+  const staticMode = reduceMotion === true;
+  const [cycle, setCycle] = useState(0);
+
+  useEffect(() => {
+    if (staticMode) return;
+
+    const id = window.setInterval(() => {
+      setCycle((value) => value + 1);
+    }, CYCLE_MS);
+
+    return () => window.clearInterval(id);
+  }, [staticMode]);
+
+  const activeIndex = staticMode ? 4 : cycle % EVENTS.length;
+
   return (
     <div
-      className={`decision-timeline ${className}`.trim()}
+      className={`decision-timeline${staticMode ? " decision-timeline--static" : ""} ${className}`.trim()}
       role="img"
       aria-label="Chronological decision timeline from onboarding signal through agent changes, GitHub merge, product events, and extracted lesson."
     >
@@ -99,17 +99,60 @@ export function DecisionTimelineDiagram({ className = "" }: { className?: string
             Decision Timeline
           </h3>
         </header>
+
         <div className={`${MONO} decision-timeline__body`}>
-          {EVENTS.map((event, index) => (
-            <div key={`${event.time}-${event.type}`} className="decision-timeline__entry">
-              <DecisionTimelineRow event={event} />
-              {index < EVENTS.length - 1 ? (
-                <div className="decision-timeline__connector" aria-hidden>
-                  │
-                </div>
-              ) : null}
-            </div>
-          ))}
+          <ul className="decision-timeline__list" aria-live="polite">
+            {EVENTS.map((event, index) => {
+              const isActive = index === activeIndex;
+              const isPast = index < activeIndex;
+
+              return (
+                <li
+                  key={`${event.time}-${event.type}`}
+                  className={`decision-timeline__entry${
+                    isActive ? " decision-timeline__entry--active" : ""
+                  }${isPast ? " decision-timeline__entry--past" : ""}`}
+                >
+                  <div className="decision-timeline__row">
+                    <span className="decision-timeline__time">{event.time}</span>
+                    <span
+                      className={`decision-timeline__type${
+                        event.typeHighlight || isActive
+                          ? " decision-timeline__type--accent"
+                          : ""
+                      }`}
+                    >
+                      {event.type}
+                    </span>
+                    <span
+                      className={`decision-timeline__description${
+                        event.descriptionHighlight || isActive
+                          ? " decision-timeline__description--accent"
+                          : ""
+                      }`}
+                    >
+                      {event.description}
+                    </span>
+                  </div>
+
+                  {index < EVENTS.length - 1 ? (
+                    <div
+                      className={`decision-timeline__connector${
+                        isActive ? " decision-timeline__connector--flow" : ""
+                      }`}
+                      aria-hidden
+                    >
+                      │
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+
+          <span className={`${MONO} decision-timeline__cursor blink`} aria-hidden>
+            _
+          </span>
         </div>
       </article>
     </div>

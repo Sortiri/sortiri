@@ -13,17 +13,23 @@ import { useSidebar } from "@/components/dashboard/sidebar-context";
 import { SidebarContextPanel } from "@/components/dashboard/sidebar-context-panel";
 import { DashboardNavItem } from "@/components/dashboard-nav-item";
 import { DashboardNavSections } from "@/components/dashboard-nav-sections";
-import { dashboardSettingsNavItem } from "@/config/dashboard-nav";
+import { dashboardSettingsNavItem, getNavItemsForRole } from "@/config/dashboard-nav";
 import { usePinnedReplayNavItems } from "@/hooks/use-pinned-replay-nav";
 import { usePinnedViewNavItems } from "@/hooks/use-pinned-view-nav";
+import { useWorkspace } from "@/components/workspace/workspace-context";
+import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import "@/components/search/search.css";
 
 export function DashboardSidebar() {
   const router = useRouter();
   const { collapsed, toggle } = useSidebar();
   const { setOpen } = useSearch();
+  const { activeWorkspaceId } = useWorkspace();
+  const { capabilities } = useWorkspaceMembership(activeWorkspaceId);
   const replayItems = usePinnedReplayNavItems();
   const viewItems = usePinnedViewNavItems();
+  const primaryItems = getNavItemsForRole(capabilities?.role);
+  const showSettings = capabilities?.canAccessWorkspaceNav ?? true;
 
   return (
     <div className="dashboard-sidebar-panel">
@@ -82,12 +88,16 @@ export function DashboardSidebar() {
           </SidebarTooltip>
 
           <Stack direction="block" gap="small-100" className="dashboard-sidebar-primary-nav">
-            <DashboardNavSections viewItems={viewItems} replayItems={replayItems} />
+            <DashboardNavSections
+              viewItems={capabilities?.canAccessWorkspaceNav ? viewItems : []}
+              replayItems={capabilities?.canAccessWorkspaceNav ? replayItems : []}
+              primaryItems={primaryItems}
+            />
           </Stack>
 
           <div className="dashboard-sidebar-footer">
-            <DashboardNavItem item={dashboardSettingsNavItem} />
-            <Separator className="dashboard-sidebar-separator" />
+            {showSettings ? <DashboardNavItem item={dashboardSettingsNavItem} /> : null}
+            {showSettings ? <Separator className="dashboard-sidebar-separator" /> : null}
             <div className="dashboard-sidebar-account">
               <UserButton />
             </div>

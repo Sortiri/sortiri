@@ -25,7 +25,7 @@ function docToInviteRecord(
     _id: string;
     workspaceId: string;
     email: string;
-    role: "admin" | "member" | "viewer";
+    role: "admin" | "member" | "viewer" | "auditor";
     tokenPrefix: string;
     last4: string;
     status: "pending" | "accepted" | "expired" | "revoked";
@@ -121,7 +121,12 @@ export const invite = mutation({
   args: {
     workspaceId: v.string(),
     email: v.string(),
-    role: v.union(v.literal("admin"), v.literal("member"), v.literal("viewer")),
+    role: v.union(
+      v.literal("admin"),
+      v.literal("member"),
+      v.literal("viewer"),
+      v.literal("auditor"),
+    ),
   },
   handler: async (ctx, args) => {
     const { user, workspace } = await requireWorkspaceRole(ctx, args.workspaceId, [
@@ -258,6 +263,7 @@ export const updateRole = mutation({
       v.literal("admin"),
       v.literal("member"),
       v.literal("viewer"),
+      v.literal("auditor"),
     ),
   },
   handler: async (ctx, args) => {

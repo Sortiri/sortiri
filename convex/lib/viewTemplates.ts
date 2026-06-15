@@ -34,7 +34,7 @@ export const DEFAULT_VIEW_TEMPLATES: SavedViewTemplate[] = [
       "Product events, feature decisions, user/customer activity, and related workstreams.",
     filters: {
       categories: ["product_event", "company_decision", "agent_action"],
-      sources: ["sdk", "manual", "cursor", "github"],
+      sources: ["sdk", "posthog", "manual", "cursor", "github"],
       entityTypes: ["user", "customer", "feature", "file"],
       visibility: "primary",
     },
@@ -85,7 +85,7 @@ export const DEFAULT_VIEW_TEMPLATES: SavedViewTemplate[] = [
     description: "Signup, activation, referral, product usage, and revenue movement.",
     filters: {
       categories: ["product_event", "revenue_event", "company_decision"],
-      sources: ["sdk", "manual"],
+      sources: ["sdk", "posthog", "manual"],
       entityTypes: ["user", "customer"],
       visibility: "primary",
     },

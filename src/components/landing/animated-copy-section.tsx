@@ -47,6 +47,7 @@ type LandingAnimatedCopySectionProps = {
   className?: string;
   inViewAmount?: number;
   followsDiagram?: boolean;
+  showLearnMore?: boolean;
 };
 
 function stripTrailingPunctuation(word: string) {
@@ -90,6 +91,7 @@ export function LandingAnimatedCopySection({
   className = "",
   inViewAmount = 0.32,
   followsDiagram = false,
+  showLearnMore = false,
 }: LandingAnimatedCopySectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
@@ -147,9 +149,11 @@ export function LandingAnimatedCopySection({
         })}
       </motion.div>
 
-      <div className="mx-auto mt-8 flex w-full max-w-3xl justify-center sm:mt-10">
-        <LearnMoreButton />
-      </div>
+      {showLearnMore ? (
+        <div className="mx-auto mt-8 flex w-full max-w-3xl justify-center sm:mt-10">
+          <LearnMoreButton />
+        </div>
+      ) : null}
     </section>
   );
 }

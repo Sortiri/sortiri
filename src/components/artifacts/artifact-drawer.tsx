@@ -8,6 +8,10 @@ import { formatEventTime } from "@/lib/events/format";
 import { formatDurationMs } from "@/lib/events/commandMeta";
 import { DiffBlock } from "@/components/artifacts/diff-block";
 import { useArtifactDrawer } from "@/components/artifacts/artifact-context";
+import {
+  EvidenceSafetyBadges,
+  EvidenceSafetyNote,
+} from "@/components/security/evidence-safety-badges";
 import "./artifacts.css";
 
 function getCommandMetadata(metadata: unknown): {
@@ -27,11 +31,18 @@ function getCommandMetadata(metadata: unknown): {
 }
 
 export function ArtifactDrawer() {
-  const { artifactId, closeArtifact } = useArtifactDrawer();
+  const { artifactId, auditReportId, closeArtifact } = useArtifactDrawer();
 
   const artifact = useQuery(
     api.artifacts.getById,
-    artifactId ? { artifactId: artifactId as Id<"artifacts"> } : "skip",
+    artifactId
+      ? {
+          artifactId: artifactId as Id<"artifacts">,
+          auditReportId: auditReportId
+            ? (auditReportId as Id<"auditReports">)
+            : undefined,
+        }
+      : "skip",
   );
 
   useEffect(() => {
@@ -73,6 +84,7 @@ export function ArtifactDrawer() {
             <h2 className="artifact-drawer-title">
               {artifact === undefined ? "Loading…" : artifact?.title ?? "Artifact not found"}
             </h2>
+            {artifact ? <EvidenceSafetyBadges item={artifact} /> : null}
           </div>
           <button type="button" className="artifact-drawer-close" onClick={closeArtifact}>
             Close
@@ -88,6 +100,7 @@ export function ArtifactDrawer() {
             {artifact.summary ? (
               <p className="artifact-drawer-summary">{artifact.summary}</p>
             ) : null}
+            {artifact ? <EvidenceSafetyNote item={artifact} /> : null}
 
             <dl className="artifact-drawer-meta">
               {commandMeta.command ? (

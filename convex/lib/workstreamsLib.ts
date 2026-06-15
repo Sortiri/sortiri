@@ -1,6 +1,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
-import { getWorkspaceMembership } from "./authz";
+import { canViewWorkstream, getWorkspaceMembership } from "./authz";
+import { getAccessibleProjectIds, type AccessibleProjects } from "./projectAccessLib";
 import type { WorkstreamStatus } from "./eventTypes";
 import { buildWorkstreamSearchText } from "./search";
 
@@ -24,6 +25,7 @@ type ListWorkstreamsOptions = {
   status?: WorkstreamStatus;
   projectId?: Id<"projects">;
   limit?: number;
+  accessibleProjects?: AccessibleProjects;
 };
 
 export function docToWorkstream(doc: Doc<"workstreams">): WorkstreamRecord {
@@ -74,10 +76,18 @@ export async function listWorkstreamsForWorkspace(
       .collect();
   }
 
-  return docs
+  let records = docs
     .sort((a, b) => b.startedAt - a.startedAt)
     .slice(0, limit)
     .map(docToWorkstream);
+
+  if (options.accessibleProjects) {
+    records = records.filter((workstream) =>
+      canViewWorkstream(workstream, options.accessibleProjects!),
+    );
+  }
+
+  return records;
 }
 
 type SearchWorkstreamsOptions = {
@@ -86,6 +96,7 @@ type SearchWorkstreamsOptions = {
   scanLimit?: number;
   status?: WorkstreamStatus;
   projectId?: Id<"projects">;
+  accessibleProjects?: AccessibleProjects;
 };
 
 export async function searchWorkstreamsForWorkspace(
@@ -102,6 +113,7 @@ export async function searchWorkstreamsForWorkspace(
       limit,
       status: options.status,
       projectId: options.projectId,
+      accessibleProjects: options.accessibleProjects,
     });
   }
 
@@ -155,6 +167,13 @@ export async function assertWorkstreamAccess(
   }
   const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
   if (!membership) {
+    throw new Error("Workstream not found");
+  }
+  if (membership.role === "auditor") {
+    throw new Error("Workstream not found");
+  }
+  const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
+  if (!canViewWorkstream(workstream, accessible)) {
     throw new Error("Workstream not found");
   }
   return workstream;

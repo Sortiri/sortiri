@@ -15,6 +15,7 @@
   "include": [
     "packages/cli/**/*.ts",
     "packages/sortiri-local/**/*.ts",
+    "packages/sortiri-security/**/*.ts",
     "packages/sdk/**/*.ts"
   ],
   "exclude": ["node_modules", "**/node_modules/**"]

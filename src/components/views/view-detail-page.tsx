@@ -12,6 +12,7 @@ import { WorkstreamCard } from "@/components/workstreams/workstream-card";
 import { ViewForm } from "@/components/views/view-form";
 import { ViewPulse } from "@/components/views/view-pulse";
 import { InsightsWindowFilter } from "@/components/insights/insights-window-filter";
+import { AnalyzeImpactButton } from "@/components/impact/analyze-impact-button";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { EntityRecord } from "@/types/entities";
@@ -189,6 +190,19 @@ export function ViewDetailPage({ viewId }: ViewDetailPageProps) {
             >
               Ask about this view
             </Link>
+            {activeWorkspaceId ? (
+              <AnalyzeImpactButton
+                workspaceId={activeWorkspaceId}
+                anchor={{
+                  type: "view",
+                  viewId: viewRecord.id,
+                  title: viewRecord.name,
+                }}
+                viewId={viewRecord.id}
+                className="view-detail-header__action"
+                label="Analyze this view"
+              />
+            ) : null}
             {canEdit ? (
               <button
                 type="button"

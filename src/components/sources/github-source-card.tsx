@@ -3,9 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { useCallback, useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
 import { formatEventTime } from "@/lib/events/format";
-import { WEBHOOK_SECRET_PREFIX } from "@/types/github-integration";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { SourceTimelineLink } from "@/components/sources/source-timeline-link";
 import { SetupBlock } from "@/components/sources/setup-block";
@@ -15,6 +13,8 @@ type GithubSourceCardProps = {
   connected: boolean;
   eventCount?: number;
   lastEventAt?: number;
+  primaryEventCount?: number;
+  lastError?: string;
 };
 
 export function GithubSourceCard({
@@ -22,16 +22,18 @@ export function GithubSourceCard({
   connected,
   eventCount,
   lastEventAt,
+  primaryEventCount,
+  lastError,
 }: GithubSourceCardProps) {
   const { capabilities } = useWorkspaceMembership(workspaceId);
   const canManage = capabilities?.canManageSources ?? false;
-  const secrets = useQuery(api.integrations.github.listWebhookSecrets, { workspaceId });
+  const githubStatus = useQuery(api.integrations.github.getGithubStatus, { workspaceId });
   const createSecret = useMutation(api.integrations.github.createWebhookSecret);
   const revokeSecret = useMutation(api.integrations.github.revokeWebhookSecret);
   const sendTestEvent = useMutation(api.integrations.github.sendTestEvent);
 
   const [creating, setCreating] = useState(false);
-  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -41,6 +43,14 @@ export function GithubSourceCard({
     typeof window !== "undefined" ? window.location.origin : "https://your-sortiri-app.com";
 
   const webhookUrl = `${apiUrl}/api/integrations/github/webhook?workspaceId=${workspaceId}`;
+
+  const statusLabel = useMemo(() => {
+    const status = githubStatus?.connectionStatus;
+    if (status === "connected") return "Connected";
+    if (status === "error") return "Error";
+    if (status === "revoked") return "Not connected";
+    return connected ? "Connected" : "Not connected";
+  }, [connected, githubStatus?.connectionStatus]);
 
   const setupInstructions = useMemo(
     () => `GitHub Repo → Settings → Webhooks → Add webhook
@@ -68,6 +78,7 @@ Events:
     try {
       const result = await createSecret({ workspaceId });
       setCreatedRawSecret(result.rawSecret);
+      setMessage("Webhook secret saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create webhook secret");
     } finally {
@@ -75,21 +86,20 @@ Events:
     }
   }, [createSecret, workspaceId]);
 
-  const handleRevoke = useCallback(
-    async (secretId: string) => {
-      setError(null);
-      setRevokingId(secretId);
-      try {
-        await revokeSecret({ secretId: secretId as Id<"githubWebhookSecrets"> });
-        setCreatedRawSecret(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not revoke webhook secret");
-      } finally {
-        setRevokingId(null);
-      }
-    },
-    [revokeSecret],
-  );
+  const handleRevoke = useCallback(async () => {
+    setError(null);
+    setMessage(null);
+    setRevoking(true);
+    try {
+      await revokeSecret({ workspaceId });
+      setCreatedRawSecret(null);
+      setMessage("Webhook secret revoked");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not revoke webhook secret");
+    } finally {
+      setRevoking(false);
+    }
+  }, [revokeSecret, workspaceId]);
 
   const handleSendTestEvent = useCallback(async () => {
     setError(null);
@@ -105,16 +115,20 @@ Events:
     }
   }, [sendTestEvent, workspaceId]);
 
+  const displayEventCount = githubStatus?.eventCount ?? eventCount ?? 0;
+  const displayLastEventAt = githubStatus?.lastEventAt ?? lastEventAt;
+  const displayError = githubStatus?.lastError ?? lastError;
+
   return (
     <article className="source-card github-source-card">
       <div className="source-card__header">
         <h3 className="source-card__title">GitHub</h3>
         <span
           className={`source-card__status${
-            connected ? " source-card__status--connected" : ""
-          }`}
+            statusLabel === "Connected" ? " source-card__status--connected" : ""
+          }${statusLabel === "Error" ? " source-card__status--error" : ""}`}
         >
-          {connected ? "Connected" : "Not connected"}
+          {statusLabel}
         </span>
       </div>
 
@@ -122,12 +136,29 @@ Events:
         Track pull requests, commits, issues, and merges in your company timeline.
       </p>
 
-      {connected ? (
-        <div className="source-card__stats">
-          <p>Events recorded: {eventCount ?? 0}</p>
-          <p>Last event: {lastEventAt ? formatEventTime(lastEventAt) : "—"}</p>
-          <SourceTimelineLink workspaceId={workspaceId} sourceKey="github" />
-        </div>
+      <div className="source-card__stats">
+        <p>Events recorded: {displayEventCount}</p>
+        {primaryEventCount !== undefined ? (
+          <p>Primary events: {primaryEventCount}</p>
+        ) : null}
+        <p>Last event: {displayLastEventAt ? formatEventTime(displayLastEventAt) : "—"}</p>
+        {githubStatus?.maskedSecret ? (
+          <p>Webhook secret saved: {githubStatus.maskedSecret}</p>
+        ) : githubStatus?.legacySecretDetected && githubStatus.secretLast4 ? (
+          <p>
+            Legacy webhook secret: whsec_sortiri_••••{githubStatus.secretLast4}
+          </p>
+        ) : githubStatus?.connectionStatus === "revoked" ? (
+          <p>Webhook secret revoked</p>
+        ) : null}
+        {displayError ? <p className="sources-section__error">Last error: {displayError}</p> : null}
+        <SourceTimelineLink workspaceId={workspaceId} sourceKey="github" />
+      </div>
+
+      {githubStatus?.legacySecretDetected ? (
+        <p className="sources-section__hint">
+          Legacy webhook secret detected. Run migration to move this secret to encrypted storage.
+        </p>
       ) : null}
 
       {error ? <p className="sources-section__error">{error}</p> : null}
@@ -150,6 +181,16 @@ Events:
         >
           {sendingTest ? "Sending…" : "Send test event"}
         </button>
+        {githubStatus?.secretStatus === "active" && canManage ? (
+          <button
+            type="button"
+            className="sources-button sources-button--ghost"
+            onClick={() => void handleRevoke()}
+            disabled={revoking || !canManage}
+          >
+            {revoking ? "Revoking…" : "Revoke secret"}
+          </button>
+        ) : null}
       </div>
       {!canManage ? (
         <p className="sources-section__hint">Admin access required to manage GitHub sources.</p>
@@ -166,56 +207,6 @@ Events:
 
       <SetupBlock label="Webhook URL" code={webhookUrl} defaultOpen />
       <SetupBlock label="GitHub setup instructions" code={setupInstructions} />
-
-      {secrets === undefined ? (
-        <p className="sources-section__loading">Loading webhook secrets…</p>
-      ) : secrets.length > 0 ? (
-        <div className="api-key-table-wrap">
-          <table className="api-key-table">
-            <thead>
-              <tr>
-                <th>Secret</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {secrets.map((secret) => (
-                <tr key={secret.id}>
-                  <td>
-                    <code>
-                      {WEBHOOK_SECRET_PREFIX}_••••{secret.last4}
-                    </code>
-                  </td>
-                  <td>
-                    <span
-                      className={`api-key-table__status api-key-table__status--${secret.status}`}
-                    >
-                      {secret.status}
-                    </span>
-                  </td>
-                  <td>{formatEventTime(secret.createdAt)}</td>
-                  <td>
-                    {secret.status === "active" && canManage ? (
-                      <button
-                        type="button"
-                        className="sources-button sources-button--ghost"
-                        disabled={revokingId === secret.id}
-                        onClick={() => void handleRevoke(secret.id)}
-                      >
-                        {revokingId === secret.id ? "Revoking…" : "Revoke"}
-                      </button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="sources-section__empty">No webhook secrets yet.</p>
-      )}
     </article>
   );
 }

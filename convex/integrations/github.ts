@@ -2,27 +2,39 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { requireUserId } from "../lib/auth";
 import { requireWorkspaceRole } from "../lib/authz";
-import { assertWorkspaceAccess, insertEvent } from "../lib/eventsLib";
+import { insertEvent } from "../lib/eventsLib";
 import {
   actorValidator,
   entityValidator,
   eventCategoryValidator,
   eventSourceValidator,
+  importanceValidator,
 } from "../lib/validators";
 import { getWorkspaceDocByExternalId } from "../lib/workspacesLib";
 import {
-  assertWebhookSecretAccess,
-  createWebhookSecretDoc,
   generateRawWebhookSecret,
-  getActiveSecretForWorkspace,
-  revokeActiveSecretsForWorkspace,
-  revokeWebhookSecretDoc,
+  getActiveSecretForWorkspace as getLegacyActiveSecret,
   docToWebhookSecretRecord,
 } from "../lib/githubWebhookSecretsLib";
+import {
+  getActiveIntegrationSecret,
+  getActiveIntegrationSecretForServer,
+  getActiveIntegrationSecretMetadata,
+  getIntegrationConnection,
+  markLegacySecretPathUsed,
+  recordIntegrationDelivery,
+  recordIntegrationSystemEvent,
+  revokeIntegrationSecret,
+  saveEncryptedIntegrationSecret,
+  setIntegrationConnectionError,
+  updateIntegrationStatus,
+} from "../lib/integrationSharedLib";
 import type {
   CreateGithubWebhookSecretResult,
+  GithubStatus,
   GithubWebhookSecretRecord,
 } from "../../src/types/github-integration";
+import { WEBHOOK_SECRET_PREFIX } from "../../src/types/github-integration";
 
 function validateIntegrationServerKey(serverKey: string): void {
   const expected = process.env.SORTIRI_INTEGRATION_SERVER_KEY;
@@ -31,13 +43,15 @@ function validateIntegrationServerKey(serverKey: string): void {
   }
 }
 
-function toPublicWebhookSecretRecord(
-  doc: Parameters<typeof docToWebhookSecretRecord>[0],
-  workspaceExternalId: string,
-): GithubWebhookSecretRecord {
+function buildCreatedBy(membership: {
+  clerkUserId: string;
+  email?: string;
+  name?: string;
+}) {
   return {
-    ...docToWebhookSecretRecord(doc),
-    workspaceId: workspaceExternalId,
+    clerkUserId: membership.clerkUserId,
+    email: membership.email,
+    name: membership.name,
   };
 }
 
@@ -46,63 +60,144 @@ export const createWebhookSecret = mutation({
     workspaceId: v.string(),
   },
   handler: async (ctx, args): Promise<CreateGithubWebhookSecretResult> => {
-    const userId = await requireUserId(ctx);
-    const { workspace } = await requireWorkspaceRole(ctx, args.workspaceId, [
+    await requireUserId(ctx);
+    const { workspace, membership } = await requireWorkspaceRole(ctx, args.workspaceId, [
       "owner",
       "admin",
     ]);
 
-    await revokeActiveSecretsForWorkspace(ctx, workspace._id);
-
     const rawSecret = generateRawWebhookSecret();
-    const last4 = rawSecret.slice(-4);
-
-    const secretId = await createWebhookSecretDoc(ctx, {
+    const { last4, connectionId } = await saveEncryptedIntegrationSecret(ctx, {
       workspaceId: workspace._id,
-      secret: rawSecret,
-      last4,
+      source: "github",
+      connectionName: "GitHub",
+      secretName: "GitHub Webhook Secret",
+      rawSecret,
+      createdBy: buildCreatedBy(membership),
     });
 
+    const secretDoc = await getActiveIntegrationSecret(ctx, workspace._id, "github");
+
     return {
-      secretId,
+      secretId: secretDoc?._id ?? connectionId,
       rawSecret,
       last4,
     };
   },
 });
 
+/** @deprecated Use getGithubStatus instead */
 export const listWebhookSecrets = query({
   args: {
     workspaceId: v.string(),
   },
   handler: async (ctx, args): Promise<GithubWebhookSecretRecord[]> => {
-    const userId = await requireUserId(ctx);
+    await requireUserId(ctx);
     const { workspace } = await requireWorkspaceRole(ctx, args.workspaceId, [
       "owner",
       "admin",
     ]);
-    const docs = await ctx.db
-      .query("githubWebhookSecrets")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
-      .order("desc")
-      .collect();
 
-    return docs.map((doc) => toPublicWebhookSecretRecord(doc, workspace.externalId));
+    const secretMeta = await getActiveIntegrationSecretMetadata(ctx, workspace._id, "github");
+    if (secretMeta) {
+      return [
+        {
+          id: secretMeta.id,
+          workspaceId: workspace.externalId,
+          last4: secretMeta.secretLast4,
+          status: secretMeta.status,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ];
+    }
+
+    const legacy = await getLegacyActiveSecret(ctx, workspace._id);
+    if (legacy) {
+      return [docToWebhookSecretRecord(legacy)];
+    }
+
+    return [];
   },
 });
 
 export const revokeWebhookSecret = mutation({
   args: {
-    secretId: v.id("githubWebhookSecrets"),
+    workspaceId: v.string(),
   },
   handler: async (ctx, args): Promise<void> => {
-    const userId = await requireUserId(ctx);
-    const secret = await assertWebhookSecretAccess(ctx, args.secretId, userId);
-    const workspace = await ctx.db.get(secret.workspaceId);
-    if (workspace) {
-      await requireWorkspaceRole(ctx, workspace.externalId, ["owner", "admin"]);
+    await requireUserId(ctx);
+    const { workspace } = await requireWorkspaceRole(ctx, args.workspaceId, [
+      "owner",
+      "admin",
+    ]);
+
+    await revokeIntegrationSecret(ctx, {
+      workspaceId: workspace._id,
+      source: "github",
+      connectionName: "GitHub",
+    });
+  },
+});
+
+export const getGithubStatus = query({
+  args: {
+    workspaceId: v.string(),
+  },
+  handler: async (ctx, args): Promise<GithubStatus> => {
+    await requireUserId(ctx);
+    const { workspace } = await requireWorkspaceRole(ctx, args.workspaceId, [
+      "owner",
+      "admin",
+      "member",
+      "viewer",
+    ]);
+
+    const connection = await getIntegrationConnection(ctx, workspace._id, "github");
+    const secretMeta = await getActiveIntegrationSecretMetadata(ctx, workspace._id, "github");
+    const legacySecret = secretMeta ? null : await getLegacyActiveSecret(ctx, workspace._id);
+
+    const githubEvents = await ctx.db
+      .query("events")
+      .withIndex("by_source", (q) =>
+        q.eq("workspaceId", workspace._id).eq("source", "github"),
+      )
+      .collect();
+
+    const eventCount = Math.max(connection?.eventCount ?? 0, githubEvents.length);
+    const lastEventAt =
+      connection?.lastEventAt ??
+      (githubEvents.length > 0
+        ? githubEvents.reduce(
+            (max, doc) => (doc.occurredAt > max ? doc.occurredAt : max),
+            githubEvents[0]!.occurredAt,
+          )
+        : undefined);
+
+    const metadata = connection?.metadata as { lastError?: string } | undefined;
+    let connectionStatus = connection?.status ?? "not_connected";
+    if (metadata?.lastError) {
+      connectionStatus = "error";
+    } else if (secretMeta && connectionStatus !== "revoked") {
+      connectionStatus = "connected";
+    } else if (legacySecret && connectionStatus !== "revoked") {
+      connectionStatus = "connected";
+    } else if (!secretMeta && !legacySecret && connectionStatus === "connected") {
+      connectionStatus = "not_connected";
     }
-    await revokeWebhookSecretDoc(ctx, args.secretId);
+
+    return {
+      connectionStatus,
+      maskedSecret: secretMeta?.maskedSecret,
+      secretLast4: secretMeta?.secretLast4 ?? legacySecret?.last4,
+      secretStatus: secretMeta?.status ?? legacySecret?.status,
+      hasActiveSecret: Boolean(secretMeta) || Boolean(legacySecret),
+      eventCount,
+      lastEventAt,
+      legacySecretDetected: Boolean(legacySecret) && !secretMeta,
+      lastError: metadata?.lastError,
+      connectionId: connection?._id ?? secretMeta?.connectionId,
+    };
   },
 });
 
@@ -111,16 +206,34 @@ export const getActiveSecretForServer = query({
     workspaceExternalId: v.string(),
     serverKey: v.string(),
   },
-  handler: async (ctx, args): Promise<{ secret: string } | null> => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    encryptedSecret?: string;
+    legacyPlaintext?: string;
+    secretPath: "encrypted" | "legacy";
+  } | null> => {
     validateIntegrationServerKey(args.serverKey);
 
     const workspace = await getWorkspaceDocByExternalId(ctx, args.workspaceExternalId);
-    const secretDoc = await getActiveSecretForWorkspace(ctx, workspace._id);
-    if (!secretDoc) {
-      return null;
+    const encrypted = await getActiveIntegrationSecretForServer(ctx, workspace._id, "github");
+    if (encrypted) {
+      return {
+        encryptedSecret: encrypted.encryptedSecret,
+        secretPath: "encrypted",
+      };
     }
 
-    return { secret: secretDoc.secret };
+    const legacy = await getLegacyActiveSecret(ctx, workspace._id);
+    if (legacy) {
+      return {
+        legacyPlaintext: legacy.secret,
+        secretPath: "legacy",
+      };
+    }
+
+    return null;
   },
 });
 
@@ -145,59 +258,85 @@ export const recordGithubEvent = mutation({
 
     const workspace = await getWorkspaceDocByExternalId(ctx, args.workspaceExternalId);
 
-    if (args.deliveryId) {
-      const existing = await ctx.db
-        .query("integrationDeliveries")
-        .withIndex("by_source_delivery", (q) =>
-          q.eq("source", "github").eq("deliveryId", args.deliveryId!),
-        )
-        .unique();
+    const result = await recordIntegrationDelivery(ctx, {
+      workspaceId: workspace._id,
+      source: "github",
+      deliveryId: args.deliveryId,
+      eventType: args.githubEventType,
+      onRecord: async () =>
+        insertEvent(ctx, {
+          workspaceId: workspace._id,
+          source: args.source,
+          category: args.category,
+          type: args.type,
+          actor: args.actor,
+          title: args.title,
+          summary: args.summary,
+          entity: args.entity,
+          data: args.data,
+          occurredAt: args.occurredAt,
+        }),
+    });
 
-      if (existing?.status === "processed") {
-        return { ok: true as const, duplicate: true as const };
-      }
+    if (result.duplicate) {
+      return { ok: true as const, duplicate: true as const };
     }
 
-    try {
-      const eventId = await insertEvent(ctx, {
-        workspaceId: workspace._id,
-        source: args.source,
-        category: args.category,
-        type: args.type,
-        actor: args.actor,
-        title: args.title,
-        summary: args.summary,
-        entity: args.entity,
-        data: args.data,
-        occurredAt: args.occurredAt,
-      });
+    const occurredAt = args.occurredAt ?? Date.now();
+    await updateIntegrationStatus(ctx, workspace._id, "github", occurredAt);
 
-      if (args.deliveryId) {
-        await ctx.db.insert("integrationDeliveries", {
-          workspaceId: workspace._id,
-          source: "github",
-          deliveryId: args.deliveryId,
-          eventType: args.githubEventType,
-          status: "processed",
-          createdAt: Date.now(),
-        });
-      }
+    return { ok: true as const, duplicate: false as const, eventId: result.eventId };
+  },
+});
 
-      return { ok: true as const, duplicate: false as const, eventId };
-    } catch (error) {
-      if (args.deliveryId) {
-        await ctx.db.insert("integrationDeliveries", {
-          workspaceId: workspace._id,
-          source: "github",
-          deliveryId: args.deliveryId,
-          eventType: args.githubEventType,
-          status: "failed",
-          error: error instanceof Error ? error.message : "Failed to record event",
-          createdAt: Date.now(),
-        });
-      }
-      throw error;
+function normalizeWebhookErrorImportance(
+  importance?: "critical" | "low" | "normal" | "high",
+): "normal" | "high" {
+  return importance === "high" || importance === "critical" ? "high" : "normal";
+}
+
+export const markGithubLegacySecretPath = mutation({
+  args: {
+    serverKey: v.string(),
+    workspaceExternalId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    validateIntegrationServerKey(args.serverKey);
+    const workspace = await getWorkspaceDocByExternalId(ctx, args.workspaceExternalId);
+    await markLegacySecretPathUsed(ctx, workspace._id, "github", "GitHub");
+    return { ok: true as const };
+  },
+});
+
+export const recordGithubWebhookError = mutation({
+  args: {
+    serverKey: v.string(),
+    workspaceExternalId: v.string(),
+    error: v.string(),
+    usedLegacySecret: v.optional(v.boolean()),
+    importance: v.optional(importanceValidator),
+  },
+  handler: async (ctx, args) => {
+    validateIntegrationServerKey(args.serverKey);
+    const workspace = await getWorkspaceDocByExternalId(ctx, args.workspaceExternalId);
+    await setIntegrationConnectionError(
+      ctx,
+      workspace._id,
+      "github",
+      "GitHub",
+      args.error,
+    );
+    if (args.usedLegacySecret) {
+      await markLegacySecretPathUsed(ctx, workspace._id, "github", "GitHub");
     }
+    await recordIntegrationSystemEvent(ctx, {
+      workspaceId: workspace._id,
+      type: "integration.webhook_error",
+      title: "GitHub webhook error",
+      summary: args.error,
+      importance: normalizeWebhookErrorImportance(args.importance),
+    });
+    return { ok: true as const };
   },
 });
 
@@ -206,7 +345,7 @@ export const sendTestEvent = mutation({
     workspaceId: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
+    await requireUserId(ctx);
     const { workspace } = await requireWorkspaceRole(ctx, args.workspaceId, [
       "owner",
       "admin",
@@ -228,6 +367,8 @@ export const sendTestEvent = mutation({
       },
     });
 
+    await updateIntegrationStatus(ctx, workspace._id, "github", Date.now());
+
     return { eventId };
   },
 });
@@ -237,19 +378,27 @@ export const provisionWebhookSecretForServer = mutation({
   args: {
     serverKey: v.string(),
     workspaceExternalId: v.string(),
-    secret: v.string(),
+    secret: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     validateIntegrationServerKey(args.serverKey);
     const workspace = await getWorkspaceDocByExternalId(ctx, args.workspaceExternalId);
+    const rawSecret = args.secret ?? generateRawWebhookSecret();
 
-    await revokeActiveSecretsForWorkspace(ctx, workspace._id);
-    const secretId = await createWebhookSecretDoc(ctx, {
+    if (!rawSecret.startsWith(WEBHOOK_SECRET_PREFIX)) {
+      throw new Error(`GitHub webhook secret must start with ${WEBHOOK_SECRET_PREFIX}`);
+    }
+
+    const { connectionId } = await saveEncryptedIntegrationSecret(ctx, {
       workspaceId: workspace._id,
-      secret: args.secret,
-      last4: args.secret.slice(-4),
+      source: "github",
+      connectionName: "GitHub",
+      secretName: "GitHub Webhook Secret",
+      rawSecret,
     });
 
-    return { secretId };
+    const secretDoc = await getActiveIntegrationSecret(ctx, workspace._id, "github");
+
+    return { secretId: secretDoc?._id ?? connectionId, rawSecret };
   },
 });

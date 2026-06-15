@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib/auth";
-import { assertWorkspaceAccess } from "./lib/eventsLib";
+import { getMembershipAndAccessible, requireProjectAccess } from "./lib/authz";
+import { assertWorkspaceBrowseAccess } from "./lib/eventsLib";
 import { validateIngestKey } from "./lib/ingestAuth";
 import { createWorkstream, finishWorkstream } from "./lib/workstreamMutations";
 import { workstreamStatusValidator, createdByValidator } from "./lib/validators";
@@ -72,11 +73,16 @@ export const listByWorkspace = query({
   },
   handler: async (ctx, args): Promise<WorkstreamRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
+    if (args.projectId) {
+      await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
+    }
     return listWorkstreamsForWorkspace(ctx, workspace._id, {
       status: args.status,
       projectId: args.projectId,
       limit: args.limit,
+      accessibleProjects: accessible,
     });
   },
 });
@@ -90,8 +96,10 @@ export const listByProject = query({
   },
   handler: async (ctx, args): Promise<WorkstreamRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
     await assertProjectInWorkspace(ctx, args.projectId, workspace._id);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
 
     return listWorkstreamsForWorkspace(ctx, workspace._id, {
       projectId: args.projectId,
@@ -126,12 +134,17 @@ export const search = query({
   },
   handler: async (ctx, args): Promise<WorkstreamRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
+    if (args.projectId) {
+      await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
+    }
     return searchWorkstreamsForWorkspace(ctx, workspace._id, {
       query: args.query,
       status: args.status,
       projectId: args.projectId,
       limit: args.limit,
+      accessibleProjects: accessible,
     });
   },
 });
@@ -143,10 +156,14 @@ export const listRecent = query({
   },
   handler: async (ctx, args): Promise<WorkstreamRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
     const limit = args.limit ?? 10;
 
-    const all = await listWorkstreamsForWorkspace(ctx, workspace._id, { limit: 100 });
+    const all = await listWorkstreamsForWorkspace(ctx, workspace._id, {
+      limit: 100,
+      accessibleProjects: accessible,
+    });
     return all
       .filter((ws) => ws.status === "active" || ws.status === "completed")
       .slice(0, limit);

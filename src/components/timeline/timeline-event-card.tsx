@@ -28,6 +28,42 @@ import { ArtifactPreview } from "@/components/artifacts/artifact-preview";
 import { RelatedHistoryPanel } from "@/components/links/related-history-panel";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { getTimelineEventDomId } from "@/lib/links/navigation";
+import { EvidenceSafetyBadges } from "@/components/security/evidence-safety-badges";
+import { AnalyzeImpactButton } from "@/components/impact/analyze-impact-button";
+import { isImpactAnchorEligible } from "@/lib/impact/eligibility";
+import { redactionStatusLabel } from "@/types/evidence-safety";
+
+function formatStripeRevenueMeta(data: Record<string, unknown> | undefined): string {
+  if (!data) return "Stripe revenue event";
+  const parts: string[] = [];
+  const amount =
+    typeof data.amount === "number"
+      ? data.amount
+      : typeof data.amountTotal === "number"
+        ? data.amountTotal
+        : typeof data.amountPaid === "number"
+          ? data.amountPaid
+          : typeof data.amountRefunded === "number"
+            ? data.amountRefunded
+            : undefined;
+  const currency = typeof data.currency === "string" ? data.currency.toUpperCase() : undefined;
+  if (amount !== undefined) {
+    parts.push(`${amount.toFixed(2)} ${currency ?? "USD"}`);
+  }
+  if (typeof data.customerEmail === "string") {
+    parts.push(`Customer: ${data.customerEmail}`);
+  } else if (typeof data.customerId === "string") {
+    parts.push(`Customer: ${data.customerId}`);
+  }
+  if (typeof data.subscriptionId === "string") {
+    parts.push(`Subscription: ${data.subscriptionId}`);
+  } else if (typeof data.paymentIntentId === "string") {
+    parts.push(`Payment: ${data.paymentIntentId}`);
+  } else if (typeof data.sessionId === "string") {
+    parts.push(`Checkout: ${data.sessionId}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "Stripe revenue event";
+}
 
 type TimelineEventCardProps = {
   event: TimelineEvent;
@@ -111,6 +147,11 @@ export function TimelineEventCard({
               {visibilityLabel}
             </span>
           ) : null}
+          {event.sensitivity && event.sensitivity !== "internal" ? (
+            <EvidenceSafetyBadges item={event} />
+          ) : redactionStatusLabel(event.redactionStatus) ? (
+            <EvidenceSafetyBadges item={event} />
+          ) : null}
         </div>
         <div className="timeline-event-card__actions">
           {canWrite && !event.isUserPinned ? (
@@ -143,6 +184,20 @@ export function TimelineEventCard({
               Restore
             </button>
           ) : null}
+          {workspaceId && isImpactAnchorEligible(event) ? (
+            <AnalyzeImpactButton
+              workspaceId={workspaceId}
+              anchor={{
+                type: "event",
+                eventId: event.id,
+                title: event.title,
+                occurredAt: event.occurredAt,
+              }}
+              projectId={event.projectId}
+              className="timeline-event-card__action"
+              label="Analyze Impact"
+            />
+          ) : null}
         </div>
       </div>
       <h3 className="timeline-event-card__title">{event.title}</h3>
@@ -165,6 +220,11 @@ export function TimelineEventCard({
       {commandMetaLine ? (
         <p className="timeline-event-card__command-meta">{commandMetaLine}</p>
       ) : null}
+      {event.source === "stripe" && event.category === "revenue_event" ? (
+        <p className="timeline-event-card__command-meta">
+          {formatStripeRevenueMeta(event.data as Record<string, unknown> | undefined)}
+        </p>
+      ) : null}
       <p className="timeline-event-card__meta">
         {actor} · {source} · {time}
       </p>
@@ -176,6 +236,13 @@ export function TimelineEventCard({
         <p className="timeline-event-card__external-link">
           <a href={event.entity.url} target="_blank" rel="noreferrer">
             Open in GitHub
+          </a>
+        </p>
+      ) : null}
+      {event.source === "stripe" && event.entity?.url ? (
+        <p className="timeline-event-card__external-link">
+          <a href={event.entity.url} target="_blank" rel="noreferrer">
+            Open in Stripe
           </a>
         </p>
       ) : null}

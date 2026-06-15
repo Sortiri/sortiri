@@ -1,14 +1,16 @@
 import { test, expect } from "@playwright/test";
-import { describeE2E } from "./helpers/auth";
+import { describeE2E, skipForAuditor } from "./helpers/auth";
 
 describeE2E("views", () => {
-  test("loads views page", async ({ page }) => {
+  test("loads views page", async ({ page }, testInfo) => {
+    skipForAuditor(testInfo);
     await page.goto("/views");
     await expect(page.getByRole("heading", { name: /^Views$/i })).toBeVisible();
     await expect(page.getByText(/Saved lenses over your company timeline/i)).toBeVisible();
   });
 
-  test("shows create default views affordance for writable users", async ({ page }) => {
+  test("shows create default views affordance for writable users", async ({ page }, testInfo) => {
+    skipForAuditor(testInfo);
     await page.goto("/views");
     const createDefaults = page.getByRole("button", { name: /Create Default Views/i });
     if (await createDefaults.isVisible()) {
@@ -19,7 +21,8 @@ describeE2E("views", () => {
     }
   });
 
-  test("view detail and ask link render when a view exists", async ({ page }) => {
+  test("view detail and ask link render when a view exists", async ({ page }, testInfo) => {
+    skipForAuditor(testInfo);
     await page.goto("/views");
     const engineeringLink = page.getByRole("link", { name: /Engineering/i }).first();
     if (!(await engineeringLink.isVisible())) {

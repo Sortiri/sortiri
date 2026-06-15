@@ -68,12 +68,18 @@ export function canSeeView(
     return false;
   }
 
+  if (membership.role === "auditor") {
+    return false;
+  }
+
   if (view.visibility === "private") {
     return view.ownerUserId === membership.clerkUserId;
   }
 
   if (view.allowedRoles && view.allowedRoles.length > 0) {
-    return view.allowedRoles.includes(membership.role);
+    return view.allowedRoles.includes(
+      membership.role as (typeof view.allowedRoles)[number],
+    );
   }
 
   return true;

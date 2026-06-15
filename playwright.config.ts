@@ -1,9 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
-import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 
-const authFile = "tests/e2e/.auth/user.json";
+const ownerAuthFile = "tests/e2e/.auth/user.json";
+const memberAuthFile = "tests/e2e/.auth/member.json";
+const auditorAuthFile = "tests/e2e/.auth/auditor.json";
 const e2eEnvFile = path.join("tests/e2e/.env.e2e");
 
 function loadEnvFile(filePath: string) {
@@ -22,8 +23,6 @@ function loadEnvFile(filePath: string) {
   }
 }
 
-dotenv.config({ path: ".env.local", quiet: true });
-dotenv.config({ path: ".env", quiet: true });
 loadEnvFile(e2eEnvFile);
 
 export default defineConfig({
@@ -33,9 +32,28 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: "list",
+  projects: [
+    {
+      name: "owner",
+      use: {
+        storageState: ownerAuthFile,
+      },
+    },
+    {
+      name: "member",
+      use: {
+        storageState: memberAuthFile,
+      },
+    },
+    {
+      name: "auditor",
+      use: {
+        storageState: auditorAuthFile,
+      },
+    },
+  ],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
-    storageState: authFile,
     trace: "on-first-retry",
     ...devices["Desktop Chrome"],
   },

@@ -27,6 +27,14 @@ export const retrieveContext = internalQuery({
     entityId: v.optional(v.id("entities")),
     projectId: v.optional(v.id("projects")),
     viewId: v.optional(v.id("savedViews")),
+    auditReportId: v.optional(v.id("auditReports")),
+    impactAnalysisId: v.optional(v.id("impactAnalyses")),
+    lessonId: v.optional(v.id("lessons")),
+    playbookId: v.optional(v.id("playbooks")),
+    contextPackId: v.optional(v.id("contextPacks")),
+    recommendationId: v.optional(v.id("recommendations")),
+    evalSuiteId: v.optional(v.id("evalSuites")),
+    evalRunId: v.optional(v.id("evalRuns")),
   },
   handler: async (ctx, args) => {
     const workspace = await assertWorkspaceAccess(
@@ -39,6 +47,14 @@ export const retrieveContext = internalQuery({
       entityId: args.entityId,
       projectId: args.projectId,
       viewId: args.viewId,
+      auditReportId: args.auditReportId,
+      impactAnalysisId: args.impactAnalysisId,
+      lessonId: args.lessonId,
+      playbookId: args.playbookId,
+      contextPackId: args.contextPackId,
+      recommendationId: args.recommendationId,
+      evalSuiteId: args.evalSuiteId,
+      evalRunId: args.evalRunId,
       clerkUserId: args.userId,
     });
   },
@@ -129,6 +145,14 @@ export const ask = action({
     entityId: v.optional(v.id("entities")),
     projectId: v.optional(v.id("projects")),
     viewId: v.optional(v.id("savedViews")),
+    auditReportId: v.optional(v.id("auditReports")),
+    impactAnalysisId: v.optional(v.id("impactAnalyses")),
+    lessonId: v.optional(v.id("lessons")),
+    playbookId: v.optional(v.id("playbooks")),
+    contextPackId: v.optional(v.id("contextPacks")),
+    recommendationId: v.optional(v.id("recommendations")),
+    evalSuiteId: v.optional(v.id("evalSuites")),
+    evalRunId: v.optional(v.id("evalRuns")),
   },
   handler: async (ctx, args): Promise<{
     sessionId: Id<"askSessions">;
@@ -151,6 +175,14 @@ export const ask = action({
       entityId: args.entityId,
       projectId: args.projectId,
       viewId: args.viewId,
+      auditReportId: args.auditReportId,
+      impactAnalysisId: args.impactAnalysisId,
+      lessonId: args.lessonId,
+      playbookId: args.playbookId,
+      contextPackId: args.contextPackId,
+      recommendationId: args.recommendationId,
+      evalSuiteId: args.evalSuiteId,
+      evalRunId: args.evalRunId,
     });
 
     let threadId = args.threadId;
@@ -184,7 +216,63 @@ export const ask = action({
       questionLength: question.length,
     });
 
-    const prompt: string = `Question: ${question}
+    const prompt: string = args.auditReportId
+      ? `Question: ${question}
+
+Audit report evidence context:
+${context.contextText}
+
+Answer using ONLY the audit report evidence above. If there is not enough information in the report, say what is missing. Do not infer or reconstruct redacted secrets. Mention when evidence was excluded from the report.`
+      : args.impactAnalysisId
+        ? `Question: ${question}
+
+Impact analysis context:
+${context.contextText}
+
+Answer using ONLY the impact analysis context above. Do not claim causation. Use cautious language (possibly related, in the impact window, correlation only). If there is not enough information, say what is missing.`
+        : args.lessonId
+          ? `Question: ${question}
+
+Lesson context:
+${context.contextText}
+
+Answer using ONLY the lesson context above. Do not claim causation. Use cautious language. If there is not enough information, say what is missing.`
+          : args.playbookId
+            ? `Question: ${question}
+
+Playbook context:
+${context.contextText}
+
+Answer using ONLY the playbook context above. Help the user follow steps and validation without claiming causation.`
+            : args.contextPackId
+              ? `Question: ${question}
+
+Context pack:
+${context.contextText}
+
+Answer using ONLY the context pack above. Prioritize lessons, failures, and validation requirements. Do not claim causation. Do not infer redacted secrets.`
+              : args.recommendationId
+                ? `Question: ${question}
+
+Recommendation context:
+${context.contextText}
+
+Answer from the recommendation evidence first. Do not claim causation. Use cautious language and note when evidence is weak. Do not infer redacted secrets.`
+                : args.evalSuiteId
+                  ? `Question: ${question}
+
+Eval suite context:
+${context.contextText}
+
+Explain what this eval suite checks. Do not claim causation. Use cautious language.`
+                  : args.evalRunId
+                    ? `Question: ${question}
+
+Eval run context:
+${context.contextText}
+
+Explain why this eval failed or what the agent should fix next. Do not claim causation.`
+                    : `Question: ${question}
 
 Company timeline context:
 ${context.contextText}

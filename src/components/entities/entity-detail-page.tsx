@@ -16,6 +16,8 @@ import {
 } from "@/lib/entities/format";
 import { ProjectLink } from "@/components/projects/project-link";
 import { getAskEntityHref } from "@/lib/entities/links";
+import { AnalyzeImpactButton } from "@/components/impact/analyze-impact-button";
+import { GenerateContextPackButton } from "@/components/context/generate-context-pack-button";
 import type { TimelineViewMode } from "@/lib/events/display";
 import { groupEventsByDay } from "@/lib/events/format";
 import type { TimelineEvent, Workstream } from "@/types/events";
@@ -45,6 +47,13 @@ export function EntityDetailPage({ entityId }: EntityDetailPageProps) {
     entityId: id,
     limit: 10,
   });
+
+  const entityLessons = useQuery(
+    api.lessons.listByEntity,
+    activeWorkspaceId
+      ? { workspaceId: activeWorkspaceId, entityId: id }
+      : "skip",
+  );
 
   const eventList = (timeline?.events ?? []) as TimelineEvent[];
   const eventIds = useMemo(
@@ -110,7 +119,44 @@ export function EntityDetailPage({ entityId }: EntityDetailPageProps) {
         <Link href={getAskEntityHref(entity)} className="entity-detail-page__ask-link">
           Ask about this entity
         </Link>
+        {activeWorkspaceId ? (
+          <AnalyzeImpactButton
+            workspaceId={activeWorkspaceId}
+            anchor={{
+              type: "entity",
+              entityId: entity.id,
+              title: entity.name,
+            }}
+            className="entity-detail-page__ask-link"
+            label="Analyze entity impact"
+          />
+        ) : null}
+        {activeWorkspaceId ? (
+          <GenerateContextPackButton
+            workspaceId={activeWorkspaceId}
+            scope={{
+              entityId: entity.id,
+              goal: `Work involving ${entity.name}`,
+              title: `Context: ${entity.name}`,
+            }}
+            className="entity-detail-page__ask-link"
+            label="Generate Agent Context"
+          />
+        ) : null}
       </header>
+
+      {entityLessons && entityLessons.length > 0 ? (
+        <section className="entity-related-workstreams">
+          <h2 className="entity-section__title">Lessons</h2>
+          <ul>
+            {entityLessons.map((lesson) => (
+              <li key={lesson.id}>
+                <Link href={`/lessons/${lesson.id}`}>{lesson.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {relatedProjects && relatedProjects.length > 0 ? (
         <section className="entity-detail-projects">

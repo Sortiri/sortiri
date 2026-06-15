@@ -13,6 +13,7 @@ const ROLE_OPTIONS: { value: InviteRole; label: string }[] = [
   { value: "admin", label: "Admin" },
   { value: "member", label: "Member" },
   { value: "viewer", label: "Viewer" },
+  { value: "auditor", label: "Auditor" },
 ];
 
 export function InviteForm({ workspaceId }: InviteFormProps) {

@@ -8,7 +8,7 @@ export function LandingEnterpriseSection() {
       lines={[
         {
           text: "When every employee has agents,",
-          accent: "every employee has agents",
+          accent: "every employee",
         },
         {
           text: "someone needs the black box.",

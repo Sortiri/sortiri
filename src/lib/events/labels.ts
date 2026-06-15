@@ -15,8 +15,8 @@ export const SOURCE_LABELS: Record<EventSource, string> = {
   codex: "codex",
   sdk: "SDK",
   github: "GitHub",
-  stripe: "stripe",
-  posthog: "posthog",
+  stripe: "Stripe",
+  posthog: "PostHog",
   slack: "slack",
   linear: "linear",
   manual: "manual",
@@ -97,6 +97,24 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   "github.issue.reopened": "Issue reopened",
   "github.release.published": "Release published",
   "github.test_event": "GitHub test event",
+  "stripe.checkout.session.completed": "Checkout Completed",
+  "stripe.payment_intent.succeeded": "Payment Succeeded",
+  "stripe.payment_intent.payment_failed": "Payment Failed",
+  "stripe.invoice.paid": "Invoice Paid",
+  "stripe.invoice.payment_failed": "Invoice Failed",
+  "stripe.customer.subscription.created": "Subscription Created",
+  "stripe.customer.subscription.updated": "Subscription Updated",
+  "stripe.customer.subscription.deleted": "Subscription Canceled",
+  "stripe.charge.refunded": "Refunded",
+  "stripe.customer.created": "Customer Created",
+  "stripe.customer.updated": "Customer Updated",
+  "stripe.webhook_secret_revoked": "Stripe webhook secret revoked",
+  "posthog.user.signed_up": "User signed up",
+  "posthog.activation.completed": "Activation completed",
+  "posthog.feature.used": "Feature used",
+  "posthog.checkout.clicked": "Checkout clicked",
+  "posthog.trial.started": "Trial started",
+  "posthog.invite.sent": "Invite sent",
   "command.started": "Command Started",
   "command.completed": "Command Passed",
   "command.failed": "Command Failed",
@@ -108,9 +126,24 @@ export function getRevenueSummary(
   summary?: string,
 ): string | undefined {
   if (summary) return summary;
-  if (!data || typeof data.amount !== "number") return undefined;
+  if (!data) return undefined;
+
   const currency = typeof data.currency === "string" ? data.currency : "USD";
-  return `Customer paid $${data.amount} ${currency}.`;
+  const amount =
+    typeof data.amount === "number"
+      ? data.amount
+      : typeof data.amountTotal === "number"
+        ? data.amountTotal
+        : typeof data.amountPaid === "number"
+          ? data.amountPaid
+          : typeof data.amountRefunded === "number"
+            ? data.amountRefunded
+            : typeof data.amountCents === "number"
+              ? data.amountCents / 100
+              : undefined;
+
+  if (amount === undefined) return undefined;
+  return `Customer paid $${amount.toFixed(2)} ${currency.toUpperCase()}.`;
 }
 
 export function getEventTypeLabel(type: string): string | null {

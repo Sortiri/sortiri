@@ -102,7 +102,7 @@ export function InsightsPage() {
           <div>
             <h1 className="insights-page__title">Insights</h1>
             <p className="insights-page__subtitle">
-              Find hotspots, risks, and patterns across your company timeline.
+              Signals Sortiri found across your company timeline.
             </p>
           </div>
           {hasCompletedRun ? (

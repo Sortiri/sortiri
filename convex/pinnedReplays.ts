@@ -1,8 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib/auth";
-import { requireWorkspaceRole } from "./lib/authz";
-import { assertWorkspaceAccess } from "./lib/eventsLib";
+import { canViewWorkstream, getMembershipAndAccessible, requireWorkspaceRole } from "./lib/authz";
+import { assertWorkspaceBrowseAccess } from "./lib/eventsLib";
 import {
   deletePinDoc,
   findPinForWorkstream,
@@ -24,7 +24,7 @@ export const pin = mutation({
     const userId = await requireUserId(ctx);
     const identity = await ctx.auth.getUserIdentity();
     await requireWorkspaceRole(ctx, args.workspaceId, ["owner", "admin", "member"]);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     await assertWorkstreamAccess(ctx, args.workstreamId, userId);
 
     const existing = await findPinForWorkstream(ctx, workspace._id, args.workstreamId);
@@ -56,7 +56,7 @@ export const unpin = mutation({
   handler: async (ctx, args): Promise<{ ok: true }> => {
     const userId = await requireUserId(ctx);
     await requireWorkspaceRole(ctx, args.workspaceId, ["owner", "admin", "member"]);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     await assertWorkstreamAccess(ctx, args.workstreamId, userId);
 
     const existing = await findPinForWorkstream(ctx, workspace._id, args.workstreamId);
@@ -77,7 +77,7 @@ export const toggle = mutation({
     const userId = await requireUserId(ctx);
     const identity = await ctx.auth.getUserIdentity();
     await requireWorkspaceRole(ctx, args.workspaceId, ["owner", "admin", "member"]);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     await assertWorkstreamAccess(ctx, args.workstreamId, userId);
 
     const existing = await findPinForWorkstream(ctx, workspace._id, args.workstreamId);
@@ -107,8 +107,10 @@ export const listByWorkspace = query({
   },
   handler: async (ctx, args): Promise<PinnedReplayWithWorkstream[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
-    return listPinnedForWorkspace(ctx, workspace._id, args.limit ?? 10);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
+    const pins = await listPinnedForWorkspace(ctx, workspace._id, args.limit ?? 10);
+    return pins.filter((item) => canViewWorkstream(item.workstream, accessible));
   },
 });
 
@@ -119,7 +121,7 @@ export const isPinned = query({
   },
   handler: async (ctx, args): Promise<{ pinned: boolean; pinId?: Id<"pinnedReplays"> }> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     await assertWorkstreamAccess(ctx, args.workstreamId, userId);
 
     const existing = await findPinForWorkstream(ctx, workspace._id, args.workstreamId);

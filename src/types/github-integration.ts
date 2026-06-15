@@ -16,3 +16,16 @@ export type CreateGithubWebhookSecretResult = {
   rawSecret: string;
   last4: string;
 };
+
+export type GithubStatus = {
+  connectionStatus: "connected" | "not_connected" | "error" | "revoked";
+  maskedSecret?: string;
+  secretLast4?: string;
+  secretStatus?: "active" | "revoked";
+  hasActiveSecret?: boolean;
+  eventCount: number;
+  lastEventAt?: number;
+  legacySecretDetected?: boolean;
+  lastError?: string;
+  connectionId?: string;
+};

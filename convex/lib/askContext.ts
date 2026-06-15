@@ -19,6 +19,7 @@ import {
   listEventsByWorkstream,
   listEventsForWorkspace,
   searchEventsForWorkspace,
+  docToEvent,
   type EventRecord,
 } from "./eventsLib";
 import {
@@ -31,7 +32,30 @@ import { listEntitiesByProject } from "./projectPulse";
 import { docToProjectRecord } from "./projectsLib";
 import { applySavedViewFilters } from "./savedViewEvents";
 import { assertSavedViewAccess } from "./savedViewsLib";
-import { getWorkspaceMembership } from "./authz";
+import { getWorkspaceMembership, canViewEvent, canViewWorkstream, getMembershipAndAccessible } from "./authz";
+import { getAccessibleProjectIds } from "./projectAccessLib";
+import { listFindingsForAnalysis, docToImpactAnalysis } from "./impactAnalysesLib";
+import { docToLesson } from "./lessonsLib";
+import { docToPlaybook } from "./playbooksLib";
+import { assertReportViewAccess } from "./auditReportAccessLib";
+import { isEventSafeForAudit } from "./sensitiveContent";
+import {
+  docToContextPack,
+  listItemsForContextPack,
+  type ContextPackItemRecord,
+} from "./contextPackLib";
+import { formatContextPackText } from "./contextPackFormat";
+import {
+  docToRecommendation,
+  filterRecommendationEvidence,
+} from "./recommendationLib";
+import {
+  docToEvalRun,
+  docToEvalSuite,
+  filterEvalResultsEvidence,
+  listEvalCasesForSuite,
+  listEvalResultsForRun,
+} from "./evalLib";
 
 type DbReadCtx = Pick<QueryCtx, "db">;
 
@@ -40,6 +64,14 @@ type RetrieveAskContextOptions = {
   entityId?: Id<"entities">;
   projectId?: Id<"projects">;
   viewId?: Id<"savedViews">;
+  auditReportId?: Id<"auditReports">;
+  impactAnalysisId?: Id<"impactAnalyses">;
+  lessonId?: Id<"lessons">;
+  playbookId?: Id<"playbooks">;
+  contextPackId?: Id<"contextPacks">;
+  recommendationId?: Id<"recommendations">;
+  evalSuiteId?: Id<"evalSuites">;
+  evalRunId?: Id<"evalRuns">;
   clerkUserId?: string;
 };
 
@@ -76,6 +108,23 @@ function filterAskContextEvents(events: EventRecord[]): EventRecord[] {
   return events.filter((event) => !isMetaAskEvent(event));
 }
 
+function filterSafeEventsForAsk(
+  events: EventRecord[],
+  role?: string,
+): EventRecord[] {
+  return events.filter((event) => {
+    if (!isEventSafeForAudit(event)) return false;
+    if (
+      event.sensitivity === "restricted" &&
+      role !== "owner" &&
+      role !== "admin"
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function formatAskContext(args: {
   events: EventRecord[];
   workstreams: WorkstreamRecord[];
@@ -84,6 +133,7 @@ export function formatAskContext(args: {
   projectName?: string;
   viewName?: string;
   viewDescription?: string;
+  auditReportTitle?: string;
 }): string {
   const eventLines = args.events.map((event) => {
     const lines = [
@@ -152,6 +202,16 @@ export function formatAskContext(args: {
     }) ?? [];
 
   return [
+    ...(args.auditReportTitle
+      ? [
+          "AUDIT REPORT CONTEXT",
+          `Report: ${args.auditReportTitle}`,
+          "Answer ONLY using evidence included in this audit report snapshot.",
+          "Do not reference workspace data outside this report.",
+          "Do not infer or reconstruct redacted secrets. Mention when evidence was excluded from the report.",
+          "",
+        ]
+      : []),
     ...(args.viewName
       ? [
           "VIEW CONTEXT",
@@ -176,7 +236,520 @@ export function formatAskContext(args: {
     "ENTITY CONTEXT",
     "",
     entityBlocks.length > 0 ? entityBlocks.join("\n\n") : "(none)",
+    "",
+    "PERMISSION NOTE",
+    args.auditReportTitle
+      ? "This is an external auditor session scoped to a finalized audit report. Answer only from the report evidence above."
+      : "The user may have scoped access. Answer only from the provided accessible context.",
+    "If information may exist outside the user's access, do not mention or guess it.",
   ].join("\n");
+}
+
+async function retrieveAuditReportAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  auditReportId: Id<"auditReports">,
+  clerkUserId: string,
+  includeDebug: boolean,
+): Promise<AskContextResult> {
+  const report = await ctx.db.get(auditReportId);
+  if (!report || report.workspaceId !== workspaceDocId) {
+    throw new Error("Report not found");
+  }
+
+  const membership = await getWorkspaceMembership(ctx, workspaceDocId, clerkUserId);
+  if (!membership) {
+    throw new Error("Report not found");
+  }
+  await assertReportViewAccess(ctx, report, membership);
+
+  const eventIds = report.snapshotEventIds ?? [];
+  const workstreamIds = report.snapshotWorkstreamIds ?? [];
+
+  const events: EventRecord[] = [];
+  for (const eventId of eventIds) {
+    const doc = await ctx.db.get(eventId);
+    if (doc && doc.workspaceId === workspaceDocId) {
+      events.push(docToEvent(doc));
+    }
+  }
+
+  const workstreams: WorkstreamRecord[] = [];
+  for (const workstreamId of workstreamIds) {
+    const doc = await ctx.db.get(workstreamId);
+    if (doc && doc.workspaceId === workspaceDocId) {
+      workstreams.push(docToWorkstream(doc));
+    }
+  }
+
+  let filteredEvents = filterAskContextEvents(
+    events.sort((a, b) => b.occurredAt - a.occurredAt),
+  );
+  filteredEvents = filterSafeEventsForAsk(filteredEvents, membership.role);
+  if (!includeDebug) {
+    filteredEvents = filterPrimaryEventRecords(filteredEvents);
+  }
+
+  const primaryEventIds = filteredEvents
+    .slice(0, 10)
+    .map((event) => event.id as Id<"events">);
+  const relatedLinks = await listLinksForEventIds(ctx, primaryEventIds, 3);
+
+  return {
+    contextText: formatAskContext({
+      events: filteredEvents,
+      workstreams: workstreams.sort((a, b) => b.startedAt - a.startedAt),
+      relatedLinks,
+      auditReportTitle: report.title,
+    }),
+    eventIds: filteredEvents.map((event) => event.id as Id<"events">),
+    workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
+    events: filteredEvents,
+    workstreams,
+  };
+}
+
+async function retrieveImpactAnalysisAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  impactAnalysisId: Id<"impactAnalyses">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const analysisDoc = await ctx.db.get(impactAnalysisId);
+  if (!analysisDoc || analysisDoc.workspaceId !== workspaceDocId) {
+    throw new Error("Impact analysis not found");
+  }
+
+  const membership = await getWorkspaceMembership(ctx, workspaceDocId, clerkUserId);
+  if (!membership) {
+    throw new Error("Impact analysis not found");
+  }
+
+  const accessible = await getAccessibleProjectIds(ctx, workspaceDocId, membership);
+  const analysis = docToImpactAnalysis(analysisDoc);
+  const findings = await listFindingsForAnalysis(ctx, impactAnalysisId);
+
+  const events: EventRecord[] = [];
+  const workstreams: WorkstreamRecord[] = [];
+  const seenEvents = new Set<string>();
+  const seenWorkstreams = new Set<string>();
+
+  for (const finding of findings) {
+    for (const eventId of finding.evidenceEventIds ?? []) {
+      if (seenEvents.has(eventId)) continue;
+      const doc = await ctx.db.get(eventId as Id<"events">);
+      if (!doc || doc.workspaceId !== workspaceDocId) continue;
+      const event = docToEvent(doc);
+      if (!canViewEvent(event, accessible)) continue;
+      if (!isEventSafeForAudit(event)) continue;
+      seenEvents.add(eventId);
+      events.push(event);
+    }
+    for (const workstreamId of finding.evidenceWorkstreamIds ?? []) {
+      if (seenWorkstreams.has(workstreamId)) continue;
+      const doc = await ctx.db.get(workstreamId as Id<"workstreams">);
+      if (!doc || doc.workspaceId !== workspaceDocId) continue;
+      seenWorkstreams.add(workstreamId);
+      workstreams.push(docToWorkstream(doc));
+    }
+  }
+
+  const contextText = [
+    "IMPACT ANALYSIS CONTEXT",
+    "You are answering from an impact analysis context. Do not claim causation.",
+    "Use cautious language: possibly related, in the impact window, correlation only.",
+    "",
+    `Title: ${analysis.title}`,
+    `Anchor: ${analysis.anchor.type} — ${analysis.anchor.title}`,
+    `Status: ${analysis.status}`,
+    "",
+    analysis.generatedSummary ?? analysis.summary ?? "(no summary)",
+    "",
+    "FINDINGS",
+    findings.length > 0
+      ? findings
+          .map((finding) => `- [${finding.confidence}] ${finding.title}: ${finding.summary}`)
+          .join("\n")
+      : "(none)",
+    "",
+    "METRICS NOTE",
+    analysis.metrics
+      ? "Baseline vs impact metrics are available in the analysis. Describe differences without claiming causation."
+      : "Metrics not yet generated.",
+  ].join("\n");
+
+  return {
+    contextText,
+    eventIds: events.map((event) => event.id as Id<"events">),
+    workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
+    events: events.sort((a, b) => b.occurredAt - a.occurredAt),
+    workstreams: workstreams.sort((a, b) => b.startedAt - a.startedAt),
+  };
+}
+
+async function retrieveLessonAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  lessonId: Id<"lessons">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const lessonDoc = await ctx.db.get(lessonId);
+  if (!lessonDoc || lessonDoc.workspaceId !== workspaceDocId) {
+    throw new Error("Lesson not found");
+  }
+
+  const membership = await getWorkspaceMembership(ctx, workspaceDocId, clerkUserId);
+  if (!membership) {
+    throw new Error("Lesson not found");
+  }
+
+  const accessible = await getAccessibleProjectIds(ctx, workspaceDocId, membership);
+  const lesson = docToLesson(lessonDoc);
+
+  const events: EventRecord[] = [];
+  const workstreams: WorkstreamRecord[] = [];
+  for (const eventId of lesson.evidenceEventIds ?? []) {
+    const doc = await ctx.db.get(eventId as Id<"events">);
+    if (!doc || doc.workspaceId !== workspaceDocId) continue;
+    const event = docToEvent(doc);
+    if (!canViewEvent(event, accessible) || !isEventSafeForAudit(event)) continue;
+    events.push(event);
+  }
+  for (const workstreamId of lesson.evidenceWorkstreamIds ?? []) {
+    const doc = await ctx.db.get(workstreamId as Id<"workstreams">);
+    if (!doc || doc.workspaceId !== workspaceDocId) continue;
+    workstreams.push(docToWorkstream(doc));
+  }
+
+  const contextText = [
+    "LESSON CONTEXT",
+    "You are answering from a lesson record. Do not claim causation.",
+    "Use cautious language: possibly related, may correlate, not proved.",
+    "",
+    `Title: ${lesson.title}`,
+    `Type: ${lesson.type}`,
+    `Confidence: ${lesson.confidence}`,
+    `Source: ${lesson.source}`,
+    "",
+    `Summary: ${lesson.summary}`,
+    lesson.recommendation ? `Recommendation: ${lesson.recommendation}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    contextText,
+    eventIds: events.map((event) => event.id as Id<"events">),
+    workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
+    events: events.sort((a, b) => b.occurredAt - a.occurredAt),
+    workstreams: workstreams.sort((a, b) => b.startedAt - a.startedAt),
+  };
+}
+
+async function retrievePlaybookAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  playbookId: Id<"playbooks">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const playbookDoc = await ctx.db.get(playbookId);
+  if (!playbookDoc || playbookDoc.workspaceId !== workspaceDocId) {
+    throw new Error("Playbook not found");
+  }
+
+  const membership = await getWorkspaceMembership(ctx, workspaceDocId, clerkUserId);
+  if (!membership) {
+    throw new Error("Playbook not found");
+  }
+
+  const playbook = docToPlaybook(playbookDoc);
+  const relatedLessons = [];
+  for (const lessonId of playbook.lessonIds ?? []) {
+    const lesson = await ctx.db.get(lessonId as Id<"lessons">);
+    if (lesson) relatedLessons.push(docToLesson(lesson));
+  }
+
+  const contextText = [
+    "PLAYBOOK CONTEXT",
+    "You are answering from a playbook. Do not claim causation.",
+    "",
+    `Title: ${playbook.title}`,
+    `Type: ${playbook.type}`,
+    `Trigger: ${playbook.trigger ?? "(none)"}`,
+    "",
+    playbook.summary,
+    "",
+    "STEPS",
+    ...playbook.steps.map(
+      (step, index) =>
+        `${step.order ?? index + 1}. ${step.title}${step.description ? `: ${step.description}` : ""}`,
+    ),
+    "",
+    "VALIDATION",
+    ...(playbook.validationRequirements ?? []).map(
+      (req) =>
+        `- ${req.title}${req.command ? ` (${req.command})` : ""}${req.reason ? `: ${req.reason}` : ""}`,
+    ),
+    "",
+    "RELATED LESSONS",
+    relatedLessons.length > 0
+      ? relatedLessons.map((l) => `- ${l.title}: ${l.summary}`).join("\n")
+      : "(none)",
+  ].join("\n");
+
+  return {
+    contextText,
+    eventIds: [],
+    workstreamIds: [],
+    events: [],
+    workstreams: [],
+  };
+}
+
+async function filterContextPackItemsForAsk(
+  ctx: DbReadCtx,
+  items: ContextPackItemRecord[],
+  accessible: Awaited<ReturnType<typeof getMembershipAndAccessible>>["accessible"],
+): Promise<ContextPackItemRecord[]> {
+  const filtered: ContextPackItemRecord[] = [];
+  for (const item of items) {
+    if (item.eventId) {
+      const event = await ctx.db.get(item.eventId as Id<"events">);
+      if (!event || !canViewEvent(event, accessible) || !isEventSafeForAudit(event)) continue;
+    }
+    if (item.workstreamId) {
+      const ws = await ctx.db.get(item.workstreamId as Id<"workstreams">);
+      if (!ws || !canViewWorkstream(ws, accessible)) continue;
+    }
+    filtered.push(item);
+  }
+  return filtered;
+}
+
+async function retrieveContextPackAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  contextPackId: Id<"contextPacks">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const packDoc = await ctx.db.get(contextPackId);
+  if (!packDoc || packDoc.workspaceId !== workspaceDocId) {
+    throw new Error("Context pack not found");
+  }
+
+  const { membership, accessible } = await getMembershipAndAccessible(
+    ctx,
+    workspaceDocId,
+    clerkUserId,
+  );
+  if (membership.role === "auditor") {
+    throw new Error("Access denied");
+  }
+
+  const pack = docToContextPack(packDoc);
+  const items = await filterContextPackItemsForAsk(
+    ctx,
+    await listItemsForContextPack(ctx, contextPackId),
+    accessible,
+  );
+
+  const contextText = [
+    "CONTEXT PACK",
+    "Answer from the context pack items below first. Do not claim causation.",
+    "Use cautious language. Do not infer or reconstruct redacted secrets.",
+    "",
+    formatContextPackText(pack, items),
+  ].join("\n");
+
+  const eventIds = items
+    .filter((item) => item.eventId)
+    .map((item) => item.eventId as Id<"events">);
+  const workstreamIds = items
+    .filter((item) => item.workstreamId)
+    .map((item) => item.workstreamId as Id<"workstreams">);
+
+  return {
+    contextText,
+    eventIds,
+    workstreamIds,
+    events: [],
+    workstreams: [],
+  };
+}
+
+async function retrieveRecommendationAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  recommendationId: Id<"recommendations">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const doc = await ctx.db.get(recommendationId);
+  if (!doc || doc.workspaceId !== workspaceDocId) {
+    throw new Error("Recommendation not found");
+  }
+
+  const { membership, accessible } = await getMembershipAndAccessible(
+    ctx,
+    workspaceDocId,
+    clerkUserId,
+  );
+  if (membership.role === "auditor") {
+    throw new Error("Access denied");
+  }
+
+  const recommendation = await filterRecommendationEvidence(
+    ctx,
+    docToRecommendation(doc),
+    accessible,
+  );
+
+  const lines = [
+    "RECOMMENDATION",
+    `Title: ${recommendation.title}`,
+    `Summary: ${recommendation.summary}`,
+    recommendation.reason ? `Reason: ${recommendation.reason}` : "",
+    recommendation.suggestedGoal ? `Suggested goal: ${recommendation.suggestedGoal}` : "",
+    recommendation.suggestedWorkstreamTitle
+      ? `Suggested workstream: ${recommendation.suggestedWorkstreamTitle}`
+      : "",
+    "",
+    "Answer from this recommendation evidence first. Do not claim causation.",
+    "Use cautious language. Note when evidence is weak or incomplete.",
+    "Do not infer or reconstruct redacted secrets.",
+  ].filter(Boolean);
+
+  if (recommendation.validationRequirements?.length) {
+    lines.push("", "Validation requirements:");
+    for (const req of recommendation.validationRequirements) {
+      lines.push(`- ${req.title}${req.command ? ` (${req.command})` : ""}`);
+    }
+  }
+
+  const eventIds = (recommendation.evidenceEventIds ?? []).map((id) => id as Id<"events">);
+  const workstreamIds = (recommendation.evidenceWorkstreamIds ?? []).map(
+    (id) => id as Id<"workstreams">,
+  );
+
+  if (eventIds.length) {
+    lines.push("", "Linked events:");
+    for (const eventId of eventIds.slice(0, 15)) {
+      const event = await ctx.db.get(eventId);
+      if (event && canViewEvent(event, accessible) && isEventSafeForAudit(event)) {
+        lines.push(`- ${formatTimestamp(event.occurredAt)} ${event.title}`);
+      }
+    }
+  }
+
+  return {
+    contextText: lines.join("\n"),
+    eventIds,
+    workstreamIds,
+    events: [],
+    workstreams: [],
+  };
+}
+
+async function retrieveEvalSuiteAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  evalSuiteId: Id<"evalSuites">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const doc = await ctx.db.get(evalSuiteId);
+  if (!doc || doc.workspaceId !== workspaceDocId) {
+    throw new Error("Eval suite not found");
+  }
+
+  const { membership, accessible } = await getMembershipAndAccessible(
+    ctx,
+    workspaceDocId,
+    clerkUserId,
+  );
+  if (membership.role === "auditor") {
+    throw new Error("Access denied");
+  }
+
+  const suite = docToEvalSuite(doc);
+  const cases = await listEvalCasesForSuite(ctx, evalSuiteId);
+  const lines = [
+    "PRIVATE EVAL SUITE",
+    `Title: ${suite.title}`,
+    `Summary: ${suite.summary}`,
+    `Source: ${suite.source}`,
+    `Status: ${suite.status}`,
+    "",
+    "Cases:",
+    ...cases.map(
+      (evalCase) =>
+        `- [${evalCase.required ? "required" : "optional"}] ${evalCase.title} (${evalCase.type})`,
+    ),
+    "",
+    "Answer about what this eval suite checks. Do not claim causation.",
+    "Use cautious language. Do not infer redacted secrets.",
+  ];
+
+  return {
+    contextText: lines.join("\n"),
+    eventIds: [],
+    workstreamIds: suite.workstreamId ? [suite.workstreamId as Id<"workstreams">] : [],
+    events: [],
+    workstreams: [],
+  };
+}
+
+async function retrieveEvalRunAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  evalRunId: Id<"evalRuns">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const doc = await ctx.db.get(evalRunId);
+  if (!doc || doc.workspaceId !== workspaceDocId) {
+    throw new Error("Eval run not found");
+  }
+
+  const { membership, accessible } = await getMembershipAndAccessible(
+    ctx,
+    workspaceDocId,
+    clerkUserId,
+  );
+  if (membership.role === "auditor") {
+    throw new Error("Access denied");
+  }
+
+  const run = docToEvalRun(doc);
+  const results = await filterEvalResultsEvidence(
+    ctx,
+    await listEvalResultsForRun(ctx, evalRunId),
+    accessible,
+  );
+
+  const lines = [
+    "EVAL RUN",
+    `Status: ${run.status}`,
+    run.summary ? `Summary: ${run.summary}` : "",
+    "",
+    "Case results:",
+    ...results.map(
+      (result) =>
+        `- ${result.title}: ${result.status}${result.summary ? ` — ${result.summary}` : ""}`,
+    ),
+    "",
+    "Explain why this eval failed or what to fix next. Do not claim causation.",
+    "Use cautious language. Do not infer redacted secrets.",
+  ].filter(Boolean);
+
+  const eventIds = results.flatMap((result) =>
+    (result.evidenceEventIds ?? []).map((id) => id as Id<"events">),
+  );
+
+  return {
+    contextText: lines.join("\n"),
+    eventIds,
+    workstreamIds: run.workstreamId ? [run.workstreamId as Id<"workstreams">] : [],
+    events: [],
+    workstreams: [],
+  };
 }
 
 export async function retrieveAskContext(
@@ -186,9 +759,106 @@ export async function retrieveAskContext(
   options: RetrieveAskContextOptions = {},
 ): Promise<AskContextResult> {
   const includeDebug = questionRequestsDebugEvents(question);
+
+  if (options.clerkUserId) {
+    const membership = await getWorkspaceMembership(
+      ctx,
+      workspaceDocId,
+      options.clerkUserId,
+    );
+    if (membership?.role === "auditor" && !options.auditReportId) {
+      throw new Error("Access denied");
+    }
+  }
+
+  if (options.auditReportId && options.clerkUserId) {
+    return retrieveAuditReportAskContext(
+      ctx,
+      workspaceDocId,
+      options.auditReportId,
+      options.clerkUserId,
+      includeDebug,
+    );
+  }
+
+  if (options.impactAnalysisId && options.clerkUserId) {
+    return retrieveImpactAnalysisAskContext(
+      ctx,
+      workspaceDocId,
+      options.impactAnalysisId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.lessonId && options.clerkUserId) {
+    return retrieveLessonAskContext(
+      ctx,
+      workspaceDocId,
+      options.lessonId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.playbookId && options.clerkUserId) {
+    return retrievePlaybookAskContext(
+      ctx,
+      workspaceDocId,
+      options.playbookId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.contextPackId && options.clerkUserId) {
+    return retrieveContextPackAskContext(
+      ctx,
+      workspaceDocId,
+      options.contextPackId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.recommendationId && options.clerkUserId) {
+    return retrieveRecommendationAskContext(
+      ctx,
+      workspaceDocId,
+      options.recommendationId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.evalSuiteId && options.clerkUserId) {
+    return retrieveEvalSuiteAskContext(
+      ctx,
+      workspaceDocId,
+      options.evalSuiteId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.evalRunId && options.clerkUserId) {
+    return retrieveEvalRunAskContext(
+      ctx,
+      workspaceDocId,
+      options.evalRunId,
+      options.clerkUserId,
+    );
+  }
+
   let projectName: string | undefined;
   let viewName: string | undefined;
   let viewDescription: string | undefined;
+
+  let accessible: Awaited<ReturnType<typeof getAccessibleProjectIds>> = "all";
+  if (options.clerkUserId) {
+    const membership = await getWorkspaceMembership(
+      ctx,
+      workspaceDocId,
+      options.clerkUserId,
+    );
+    if (membership) {
+      accessible = await getAccessibleProjectIds(ctx, workspaceDocId, membership);
+    }
+  }
 
   if (options.viewId && options.clerkUserId) {
     const membership = await getWorkspaceMembership(
@@ -203,6 +873,7 @@ export async function retrieveAskContext(
 
       const viewEvents = await applySavedViewFilters(ctx, workspaceDocId, view.filters, {
         limit: 40,
+        accessibleProjects: accessible,
       });
 
       const workstreamMap = new Map<string, WorkstreamRecord>();
@@ -287,10 +958,12 @@ export async function retrieveAskContext(
         limit: 30,
         visibility: includeDebug ? "all" : "primary",
         includeDebug,
+        accessibleProjects: accessible,
       });
       const projectWorkstreams = await listWorkstreamsForWorkspace(ctx, workspaceDocId, {
         projectId: options.projectId,
         limit: 10,
+        accessibleProjects: accessible,
       });
       const projectEntities = await listEntitiesByProject(
         ctx,
@@ -355,16 +1028,20 @@ export async function retrieveAskContext(
     }
   }
 
-  const searchedEvents = await searchEventsForWorkspace(ctx, workspaceDocId, {
-    query: question,
-    limit: 30,
-    includeDebug: true,
-    includeHidden: false,
-  });
+  const searchedEvents = (
+    await searchEventsForWorkspace(ctx, workspaceDocId, {
+      query: question,
+      limit: 30,
+      includeDebug: true,
+      includeHidden: false,
+      accessibleProjects: accessible,
+    })
+  );
 
   const searchedWorkstreams = await searchWorkstreamsForWorkspace(ctx, workspaceDocId, {
     query: question,
     limit: 10,
+    accessibleProjects: accessible,
   });
 
   const eventMap = new Map<string, EventRecord>();
@@ -474,18 +1151,29 @@ export async function retrieveAskContext(
         ),
       );
 
+  let memberRole: string | undefined;
+  if (options.clerkUserId) {
+    const membership = await getWorkspaceMembership(
+      ctx,
+      workspaceDocId,
+      options.clerkUserId,
+    );
+    memberRole = membership?.role;
+  }
+  const safeEvents = filterSafeEventsForAsk(allEvents, memberRole);
+
   return {
     contextText: formatAskContext({
-      events: allEvents,
+      events: safeEvents,
       workstreams,
       relatedLinks,
       entityContexts,
       viewName,
       viewDescription,
     }),
-    eventIds: allEvents.map((event) => event.id as Id<"events">),
+    eventIds: safeEvents.map((event) => event.id as Id<"events">),
     workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
-    events: allEvents,
+    events: safeEvents,
     workstreams,
   };
 }

@@ -1,8 +1,12 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { getWorkspaceMembership } from "./authz";
+import { getMembershipAndAccessible, getWorkspaceMembership } from "./authz";
 import { matchesVisibilityFilter } from "./eventDisplay";
 import { docToEvent, type EventRecord } from "./eventsLib";
+import {
+  type AccessibleProjects,
+  shouldHideEntity,
+} from "./projectAccessLib";
 
 type DbReadCtx = Pick<QueryCtx, "db">;
 type DbWriteCtx = Pick<MutationCtx, "db">;
@@ -128,7 +132,12 @@ export function extractEntitiesFromEvent(event: ExtractableEvent): EntityCandida
         key,
         name,
         url: entity.url,
-        source: event.source === "github" ? "github" : undefined,
+        source:
+          event.source === "github" ||
+          event.source === "stripe" ||
+          event.source === "posthog"
+            ? event.source
+            : undefined,
       });
     }
   }
@@ -147,6 +156,10 @@ export function extractEntitiesFromEvent(event: ExtractableEvent): EntityCandida
       type: "customer",
       key: event.actor.id,
       name: event.actor.name ?? event.actor.id,
+        source:
+          event.source === "stripe" || event.source === "posthog"
+            ? event.source
+            : undefined,
     });
   }
 
@@ -190,6 +203,89 @@ export function extractEntitiesFromEvent(event: ExtractableEvent): EntityCandida
         type: entityType,
         key: customerId,
         name: event.actor.name ?? customerId,
+        source:
+          event.source === "stripe" || event.source === "posthog"
+            ? event.source
+            : undefined,
+      });
+    }
+  }
+
+  if (event.source === "stripe") {
+    const paymentId =
+      (typeof data.paymentIntentId === "string" && data.paymentIntentId) ||
+      (typeof data.sessionId === "string" && data.sessionId) ||
+      (typeof data.chargeId === "string" && data.chargeId) ||
+      (typeof data.invoiceId === "string" && data.invoiceId
+        ? `invoice:${data.invoiceId}`
+        : undefined);
+
+    if (paymentId && !map.has(candidateKey("payment", paymentId))) {
+      addCandidate(map, {
+        type: "payment",
+        key: paymentId,
+        name: `Payment ${paymentId}`,
+        url: typeof event.entity?.url === "string" ? event.entity.url : undefined,
+        source: "stripe",
+      });
+    }
+
+    const subscriptionId = data.subscriptionId;
+    if (typeof subscriptionId === "string" && subscriptionId.trim()) {
+      if (!map.has(candidateKey("subscription", subscriptionId))) {
+        addCandidate(map, {
+          type: "subscription",
+          key: subscriptionId,
+          name: `Subscription ${subscriptionId}`,
+          source: "stripe",
+        });
+      }
+    }
+  }
+
+  if (event.source === "posthog") {
+    const distinctId =
+      (typeof data.distinctId === "string" && data.distinctId) ||
+      event.actor.id;
+    if (distinctId && !map.has(candidateKey("user", distinctId))) {
+      const email =
+        typeof data.$email === "string"
+          ? data.$email
+          : typeof data.email === "string"
+            ? data.email
+            : undefined;
+      addCandidate(map, {
+        type: "user",
+        key: distinctId,
+        name: event.actor.name ?? email ?? distinctId,
+        source: "posthog",
+      });
+    }
+
+    const posthogCustomerId =
+      (typeof data.customer_id === "string" && data.customer_id) ||
+      (typeof data.customerId === "string" && data.customerId);
+    if (posthogCustomerId && !map.has(candidateKey("customer", posthogCustomerId))) {
+      addCandidate(map, {
+        type: "customer",
+        key: posthogCustomerId,
+        name: event.actor.name ?? posthogCustomerId,
+        source: "posthog",
+      });
+    }
+
+    const featureKey =
+      (typeof data.feature === "string" && data.feature) ||
+      (typeof data.feature_key === "string" && data.feature_key) ||
+      (typeof data.feature_name === "string" && data.feature_name) ||
+      (typeof data.$pathname === "string" && data.$pathname) ||
+      (typeof data.pathname === "string" && data.pathname);
+    if (featureKey && !map.has(candidateKey("feature", featureKey))) {
+      addCandidate(map, {
+        type: "feature",
+        key: featureKey,
+        name: featureKey,
+        source: "posthog",
       });
     }
   }
@@ -528,9 +624,71 @@ export async function assertEntityAccess(
   if (!entity) throw new Error("Entity not found");
   const workspace = await ctx.db.get(entity.workspaceId);
   if (!workspace) throw new Error("Entity not found");
-  const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+  const membership = await getWorkspaceMembership(ctx, entity.workspaceId, userId);
   if (!membership) throw new Error("Entity not found");
   return entity;
+}
+
+export async function assertEntityVisible(
+  ctx: DbReadCtx,
+  entityId: Id<"entities">,
+  userId: string,
+): Promise<Doc<"entities">> {
+  const entity = await assertEntityAccess(ctx, entityId, userId);
+  const { accessible } = await getMembershipAndAccessible(ctx, entity.workspaceId, userId);
+  if (accessible === "all") {
+    return entity;
+  }
+
+  const events = await getEntityTimelineEvents(ctx, entity.workspaceId, entity, {
+    limit: 100,
+    visibility: "all",
+  });
+  const projectIds = events.map((event) => event.projectId as Id<"projects"> | undefined);
+  if (shouldHideEntity(projectIds, accessible)) {
+    throw new Error("Entity not found");
+  }
+  return entity;
+}
+
+export async function filterEntityRecordsByProjectAccess(
+  ctx: DbReadCtx,
+  workspaceId: Id<"workspaces">,
+  entities: EntityRecord[],
+  accessible: AccessibleProjects,
+): Promise<EntityRecord[]> {
+  if (accessible === "all" || entities.length === 0) {
+    return entities;
+  }
+
+  const scanLimit = Math.max(entities.length * 20, 500);
+  const docs = await ctx.db
+    .query("events")
+    .withIndex("by_workspace_occurred_at", (q) => q.eq("workspaceId", workspaceId))
+    .order("desc")
+    .take(scanLimit);
+
+  const projectIdsByEntity = new Map<string, Id<"projects">[]>();
+
+  for (const doc of docs) {
+    const event = docToEvent(doc);
+    const projectId = doc.projectId as Id<"projects"> | undefined;
+    for (const entity of entities) {
+      if (!eventMatchesEntity(event, entity)) {
+        continue;
+      }
+      const existing = projectIdsByEntity.get(entity.id) ?? [];
+      if (projectId) {
+        existing.push(projectId);
+      }
+      projectIdsByEntity.set(entity.id, existing);
+    }
+  }
+
+  return entities.filter((entity) => {
+    const projectIds = projectIdsByEntity.get(entity.id) ?? [];
+    return !shouldHideEntity(projectIds, accessible);
+  });
 }
 
 export async function backfillEntitiesForWorkspace(

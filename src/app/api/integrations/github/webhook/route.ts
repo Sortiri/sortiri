@@ -1,7 +1,8 @@
+import { verifyGithubSignature } from "@/lib/integrations/github/verifySignature";
+import { mapWebhookPayload } from "@/lib/integrations/github/mapWebhook";
+import { decryptSecret } from "@/lib/security/secrets";
 import { api } from "../../../../../../convex/_generated/api";
 import { getIngestConvexClient } from "@/lib/sortiri/ingestApi";
-import { mapWebhookPayload } from "@/lib/integrations/github/mapWebhook";
-import { verifyGithubSignature } from "@/lib/integrations/github/verifySignature";
 
 function getIntegrationServerKey(): string {
   const key = process.env.SORTIRI_INTEGRATION_SERVER_KEY;
@@ -44,18 +45,71 @@ export async function POST(req: Request) {
     serverKey,
   });
 
-  if (!secretResult?.secret) {
+  if (!secretResult) {
+    await convex.mutation(api.integrations.github.recordGithubWebhookError, {
+      serverKey,
+      workspaceExternalId,
+      error: "No active GitHub webhook secret",
+    });
     return jsonResponse({ error: "No active GitHub webhook secret" }, 401);
   }
 
-  if (!verifyGithubSignature(rawBody, signatureHeader, secretResult.secret)) {
+  let webhookSecret: string;
+  let usedLegacySecret = false;
+  try {
+    if (secretResult.encryptedSecret) {
+      webhookSecret = decryptSecret(secretResult.encryptedSecret);
+    } else if (secretResult.legacyPlaintext) {
+      webhookSecret = secretResult.legacyPlaintext;
+      usedLegacySecret = true;
+      console.warn(
+        `[github-webhook] Legacy githubWebhookSecrets path used for workspace ${workspaceExternalId}`,
+      );
+    } else {
+      await convex.mutation(api.integrations.github.recordGithubWebhookError, {
+        serverKey,
+        workspaceExternalId,
+        error: "No active GitHub webhook secret",
+      });
+      return jsonResponse({ error: "No active GitHub webhook secret" }, 401);
+    }
+  } catch {
+    await convex.mutation(api.integrations.github.recordGithubWebhookError, {
+      serverKey,
+      workspaceExternalId,
+      error: "Webhook secret decryption failed",
+    });
+    return jsonResponse({ error: "Webhook secret decryption failed" }, 500);
+  }
+
+  if (!verifyGithubSignature(rawBody, signatureHeader, webhookSecret)) {
+    await convex.mutation(api.integrations.github.recordGithubWebhookError, {
+      serverKey,
+      workspaceExternalId,
+      error: "Invalid signature",
+      usedLegacySecret: usedLegacySecret || undefined,
+    });
     return jsonResponse({ error: "Invalid signature" }, 401);
+  }
+
+  if (usedLegacySecret) {
+    await convex
+      .mutation(api.integrations.github.markGithubLegacySecretPath, {
+        serverKey,
+        workspaceExternalId,
+      })
+      .catch(() => undefined);
   }
 
   let payload: unknown;
   try {
     payload = JSON.parse(rawBody) as unknown;
   } catch {
+    await convex.mutation(api.integrations.github.recordGithubWebhookError, {
+      serverKey,
+      workspaceExternalId,
+      error: "Invalid JSON payload",
+    });
     return jsonResponse({ error: "Invalid JSON payload" }, 400);
   }
 
@@ -92,6 +146,12 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to record GitHub event";
+    await convex.mutation(api.integrations.github.recordGithubWebhookError, {
+      serverKey,
+      workspaceExternalId,
+      error: message,
+      importance: "high",
+    });
     return jsonResponse({ error: message }, 500);
   }
 }

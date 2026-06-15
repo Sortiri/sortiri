@@ -54,6 +54,7 @@ export function HomePage() {
         <h1 className="home-page__title">Company Pulse</h1>
         <p className="home-page__subtitle">
           A live summary of your timeline, workstreams, sources, and insights.
+          {data.scopedAccess ? " Showing activity you have access to." : ""}
         </p>
       </header>
 

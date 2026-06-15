@@ -1,7 +1,12 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireUserId } from "./lib/auth";
-import { assertWorkspaceAccess } from "./lib/eventsLib";
+import { assertWorkspaceBrowseAccess } from "./lib/eventsLib";
+import {
+  getConnectionByWorkspaceSource,
+} from "./lib/integrationConnectionsLib";
+import { getActiveIntegrationSecret } from "./lib/integrationSecretsLib";
+import { getActiveSecretForWorkspace as getLegacyGithubSecret } from "./lib/githubWebhookSecretsLib";
 
 const TRACKED_SOURCES = [
   "cursor",
@@ -11,6 +16,7 @@ const TRACKED_SOURCES = [
   "manual",
   "system",
   "github",
+  "stripe",
 ] as const;
 
 export type SourceStatus = {
@@ -26,7 +32,7 @@ export const getSourceStatus = query({
   },
   handler: async (ctx, args): Promise<SourceStatus[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
 
     const statuses: SourceStatus[] = [];
 
@@ -47,11 +53,37 @@ export const getSourceStatus = query({
             )
           : undefined;
 
+      let connected = eventCount > 0;
+
+      if (source === "stripe" || source === "github") {
+        const connection = await getConnectionByWorkspaceSource(ctx, workspace._id, source);
+        const secretDoc = await getActiveIntegrationSecret(ctx, workspace._id, source);
+        const legacyGithub =
+          source === "github" && !secretDoc
+            ? await getLegacyGithubSecret(ctx, workspace._id)
+            : null;
+        connected =
+          Boolean(secretDoc) ||
+          Boolean(legacyGithub) ||
+          connection?.status === "connected" ||
+          eventCount > 0;
+      }
+
       statuses.push({
         source,
-        connected: eventCount > 0,
-        eventCount,
-        lastEventAt,
+        connected,
+        eventCount:
+          source === "stripe" || source === "github"
+            ? Math.max(
+                eventCount,
+                (await getConnectionByWorkspaceSource(ctx, workspace._id, source))?.eventCount ?? 0,
+              )
+            : eventCount,
+        lastEventAt:
+          source === "stripe" || source === "github"
+            ? (await getConnectionByWorkspaceSource(ctx, workspace._id, source))?.lastEventAt ??
+              lastEventAt
+            : lastEventAt,
       });
     }
 

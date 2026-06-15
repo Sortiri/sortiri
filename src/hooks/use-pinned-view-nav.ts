@@ -5,13 +5,16 @@ import { useMemo } from "react";
 import { api } from "../../convex/_generated/api";
 import type { DashboardNavItem } from "@/config/dashboard-nav";
 import { useWorkspace } from "@/components/workspace/workspace-context";
+import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 
 export function usePinnedViewNavItems(): DashboardNavItem[] {
   const { activeWorkspaceId } = useWorkspace();
+  const { capabilities } = useWorkspaceMembership(activeWorkspaceId);
+  const isAuditor = capabilities?.role === "auditor";
 
   const views = useQuery(
     api.savedViews.listByWorkspace,
-    activeWorkspaceId ? { workspaceId: activeWorkspaceId } : "skip",
+    activeWorkspaceId && !isAuditor ? { workspaceId: activeWorkspaceId } : "skip",
   );
 
   return useMemo(

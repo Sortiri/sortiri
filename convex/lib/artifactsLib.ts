@@ -18,6 +18,12 @@ export function docToArtifact(doc: Doc<"artifacts">): Artifact {
     language: doc.language,
     filePath: doc.filePath,
     truncated: doc.truncated,
+    sensitivity: doc.sensitivity,
+    redactionStatus: doc.redactionStatus,
+    safeForAudit: doc.safeForAudit,
+    sensitiveFindings: doc.sensitiveFindings,
+    reviewedBy: doc.reviewedBy,
+    reviewedAt: doc.reviewedAt,
     createdAt: doc.createdAt,
   };
 }

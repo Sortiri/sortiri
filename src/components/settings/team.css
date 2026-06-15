@@ -254,6 +254,11 @@
   color: var(--ca-ink);
 }
 
+.workspace-role-badge--auditor {
+  border-color: var(--ca-muted);
+  color: var(--ca-muted);
+}
+
 .invite-accept-page {
   display: flex;
   flex-direction: column;
@@ -287,4 +292,85 @@
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--ca-muted);
+}
+
+.team-member-row__projects {
+  font-size: 0.8125rem;
+  color: var(--ca-muted);
+}
+
+.team-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 40%);
+}
+
+.team-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-4);
+  width: min(32rem, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  padding: var(--ca-space-5);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+}
+
+.team-modal__title {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.team-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-3);
+}
+
+.team-modal__assignments {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-2);
+}
+
+.team-modal__assignments li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ca-space-3);
+}
+
+.team-muted {
+  color: var(--ca-muted);
+  font-size: 0.875rem;
+}
+
+.project-access__grant {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ca-space-2);
+  margin-bottom: var(--ca-space-3);
+}
+
+.project-access__badge {
+  margin: 0 0 var(--ca-space-3);
+  font-size: 0.875rem;
+  color: var(--ca-muted);
+}
+
+.project-access__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ca-space-3);
+  padding: var(--ca-space-2) 0;
+  border-bottom: 1px solid var(--ca-hairline);
 }

@@ -7,12 +7,15 @@ export type InsightRunStatus = "pending" | "completed" | "failed";
 export type InsightFindingType =
   | "hotspot"
   | "risk"
+  | "sensitive_evidence"
   | "duplicate_work"
   | "error"
   | "stale_workstream"
   | "product_movement"
   | "decision"
   | "summary"
+  | "impact_opportunity"
+  | "lesson_opportunity"
   | "other";
 
 export type InsightFindingSeverity = "info" | "warning" | "critical";

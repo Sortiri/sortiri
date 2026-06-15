@@ -1,6 +1,6 @@
 export type InviteStatus = "pending" | "accepted" | "expired" | "revoked";
 
-export type InviteRole = "admin" | "member" | "viewer";
+export type InviteRole = "admin" | "member" | "viewer" | "auditor";
 
 export const INVITE_TOKEN_PREFIX = "invite_sortiri_";
 

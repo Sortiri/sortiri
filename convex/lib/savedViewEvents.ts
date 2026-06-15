@@ -1,7 +1,14 @@
 import type { Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
+import { getWorkspaceMembership } from "./authz";
+import {
+  intersectProjectIds,
+  type AccessibleProjects,
+} from "./projectAccessLib";
+import { assertSavedViewAccess } from "./savedViewsLib";
 import { docToEntity, type EntityRecord } from "./entitiesLib";
 import { docToEvent, type EventRecord } from "./eventsLib";
+import { canViewEvent } from "./authz";
 import {
   applyViewFilters,
   buildEntityKeyLookup,
@@ -70,11 +77,24 @@ export async function applySavedViewFilters(
     limit?: number;
     windowStart?: number;
     scanLimit?: number;
+    accessibleProjects?: AccessibleProjects;
   } = {},
 ): Promise<EventRecord[]> {
-  const entityLookup = await loadEntityLookup(ctx, workspaceId, filters);
-  const events = await fetchWorkspaceEvents(ctx, workspaceId, options);
-  const filtered = applyViewFilters(events, filters, entityLookup);
+  let effectiveFilters = filters;
+  if (options.accessibleProjects && options.accessibleProjects !== "all") {
+    const intersected = intersectProjectIds(filters.projectIds, options.accessibleProjects);
+    effectiveFilters = {
+      ...filters,
+      projectIds: intersected && intersected.length > 0 ? intersected : undefined,
+    };
+  }
+
+  const entityLookup = await loadEntityLookup(ctx, workspaceId, effectiveFilters);
+  let events = await fetchWorkspaceEvents(ctx, workspaceId, options);
+  if (options.accessibleProjects) {
+    events = events.filter((event) => canViewEvent(event, options.accessibleProjects!));
+  }
+  const filtered = applyViewFilters(events, effectiveFilters, entityLookup);
   if (options.limit !== undefined) {
     return filtered.slice(0, options.limit);
   }
@@ -82,13 +102,21 @@ export async function applySavedViewFilters(
 }
 
 export async function loadSavedViewFilters(
-  ctx: DbReadCtx,
+  ctx: Pick<QueryCtx, "db">,
   viewId: Id<"savedViews">,
   workspaceId: Id<"workspaces">,
+  clerkUserId?: string,
 ): Promise<SavedViewFilters | null> {
   const view = await ctx.db.get(viewId);
   if (!view || view.workspaceId !== workspaceId) {
     return null;
+  }
+  if (clerkUserId) {
+    const membership = await getWorkspaceMembership(ctx, workspaceId, clerkUserId);
+    if (!membership) {
+      return null;
+    }
+    await assertSavedViewAccess(ctx, viewId, membership);
   }
   return view.filters as SavedViewFilters;
 }

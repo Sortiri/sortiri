@@ -15,6 +15,35 @@ import type { EntityRecord } from "@/types/entities";
 import type { TimelineEvent, Workstream } from "@/types/events";
 import "./search.css";
 
+const NAV_SHORTCUTS = [
+  { label: "Go to Intelligence", href: "/intelligence", keywords: ["intelligence", "go to"] },
+  { label: "Go to Insights", href: "/insights", keywords: ["insights", "go to"] },
+  { label: "Go to Impact", href: "/impact", keywords: ["impact", "go to"] },
+  { label: "Go to Lessons", href: "/lessons", keywords: ["lessons", "go to"] },
+  { label: "Go to Playbooks", href: "/playbooks", keywords: ["playbooks", "go to"] },
+] as const;
+
+function matchesNavShortcut(query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized.startsWith("go to")) return true;
+  return NAV_SHORTCUTS.some(
+    (shortcut) =>
+      shortcut.label.toLowerCase().includes(normalized) ||
+      shortcut.keywords.some((keyword) => keyword.includes(normalized) || normalized.includes(keyword)),
+  );
+}
+
+function filterNavShortcuts(query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return NAV_SHORTCUTS;
+  return NAV_SHORTCUTS.filter(
+    (shortcut) =>
+      shortcut.label.toLowerCase().includes(normalized) ||
+      shortcut.keywords.some((keyword) => keyword.includes(normalized) || normalized.includes(keyword)),
+  );
+}
+
 export function SearchPalette() {
   const router = useRouter();
   const { open, setOpen } = useSearch();
@@ -84,6 +113,13 @@ export function SearchPalette() {
     (events === undefined || workstreams === undefined || entities === undefined);
   const hasResults =
     eventList.length > 0 || workstreamList.length > 0 || entityList.length > 0;
+  const navShortcuts = filterNavShortcuts(debouncedQuery);
+  const showNavShortcuts = matchesNavShortcut(debouncedQuery);
+
+  const handleNavShortcut = (href: string) => {
+    router.push(href);
+    close();
+  };
 
   const handleEventClick = (event: TimelineEvent) => {
     if (event.workstreamId) {
@@ -127,6 +163,24 @@ export function SearchPalette() {
         />
 
         <div className="search-palette__body">
+          {showNavShortcuts && navShortcuts.length > 0 ? (
+            <section className="search-palette__section">
+              <h2 className="search-palette__section-title">Navigation</h2>
+              <div className="search-palette__results">
+                {navShortcuts.map((shortcut) => (
+                  <button
+                    key={shortcut.href}
+                    type="button"
+                    className="search-palette__nav-shortcut"
+                    onClick={() => handleNavShortcut(shortcut.href)}
+                  >
+                    {shortcut.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {loading ? (
             <p className="search-palette__loading">Searching…</p>
           ) : !hasResults ? (

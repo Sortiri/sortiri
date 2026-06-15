@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireUserId } from "./lib/auth";
-import { assertWorkspaceAccess } from "./lib/eventsLib";
+import { assertWorkspaceBrowseAccess } from "./lib/eventsLib";
 import { buildCompanyPulse, type CompanyPulseResult } from "./lib/homePulse";
 
 export const getPulse = query({
@@ -10,7 +10,7 @@ export const getPulse = query({
   },
   handler: async (ctx, args): Promise<CompanyPulseResult> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     return buildCompanyPulse(ctx, workspace._id, userId);
   },
 });

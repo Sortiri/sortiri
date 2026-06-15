@@ -10,6 +10,9 @@ import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
 import { WorkstreamCard } from "@/components/workstreams/workstream-card";
 import { SourceProjectsLabel } from "@/components/projects/source-projects-label";
 import { ProjectStatusBadge } from "@/components/projects/project-status-badge";
+import { ProjectAccessSection } from "@/components/projects/project-access-section";
+import { AnalyzeImpactButton } from "@/components/impact/analyze-impact-button";
+import { GenerateContextPackButton } from "@/components/context/generate-context-pack-button";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { formatProjectLastActivity } from "@/lib/projects/format";
 import type { EntityRecord } from "@/types/entities";
@@ -19,6 +22,62 @@ import type { ProjectPulseCounts } from "@/types/projects";
 import "@/components/home/home.css";
 import "@/components/entities/entities.css";
 import "./projects.css";
+
+function ProjectLessonsPlaybooksSection({
+  workspaceId,
+  projectId,
+}: {
+  workspaceId: string;
+  projectId: string;
+}) {
+  const lessons = useQuery(api.lessons.listByProject, {
+    workspaceId,
+    projectId: projectId as Id<"projects">,
+  });
+  const playbooks = useQuery(api.playbooks.listByProject, {
+    workspaceId,
+    projectId: projectId as Id<"projects">,
+  });
+
+  return (
+    <>
+      <section className="home-section">
+        <h2 className="home-section__title">Lessons</h2>
+        {!lessons || lessons.length === 0 ? (
+          <p className="home-section__empty">
+            No lessons for this project yet.{" "}
+            <Link href="/lessons">View all lessons</Link>
+          </p>
+        ) : (
+          <ul>
+            {lessons.slice(0, 5).map((lesson) => (
+              <li key={lesson.id}>
+                <Link href={`/lessons/${lesson.id}`}>{lesson.title}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="home-section">
+        <h2 className="home-section__title">Playbooks</h2>
+        {!playbooks || playbooks.length === 0 ? (
+          <p className="home-section__empty">
+            No playbooks for this project yet.{" "}
+            <Link href="/playbooks">View all playbooks</Link>
+          </p>
+        ) : (
+          <ul>
+            {playbooks.slice(0, 5).map((playbook) => (
+              <li key={playbook.id}>
+                <Link href={`/playbooks/${playbook.id}`}>{playbook.title}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
 
 const PULSE_CARDS: { label: string; key: keyof ProjectPulseCounts }[] = [
   { label: "Total Events", key: "totalEvents" },
@@ -106,6 +165,30 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
         <Link href={`/ask?projectId=${project.id}`} className="quick-actions__link">
           Ask about this project
         </Link>
+        {activeWorkspaceId ? (
+          <AnalyzeImpactButton
+            workspaceId={activeWorkspaceId}
+            anchor={{
+              type: "project",
+              projectId: project.id,
+              title: project.name,
+            }}
+            projectId={project.id}
+            className="quick-actions__link"
+            label="Analyze project impact"
+          />
+        ) : null}
+        {activeWorkspaceId ? (
+          <GenerateContextPackButton
+            workspaceId={activeWorkspaceId}
+            scope={{
+              projectId: project.id,
+              goal: `Work on ${project.name}`,
+              title: `Context: ${project.name}`,
+            }}
+            className="quick-actions__link"
+          />
+        ) : null}
         <Link href={`/timeline?projectId=${project.id}`} className="quick-actions__link">
           View full timeline
         </Link>
@@ -113,6 +196,10 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
           Open sources
         </Link>
       </nav>
+
+      {activeWorkspaceId ? (
+        <ProjectAccessSection workspaceId={activeWorkspaceId} projectId={id} />
+      ) : null}
 
       <section className="home-section">
         <h2 className="home-section__title">Project Pulse</h2>
@@ -179,6 +266,13 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
           </div>
         )}
       </section>
+
+      {activeWorkspaceId ? (
+        <ProjectLessonsPlaybooksSection
+          workspaceId={activeWorkspaceId}
+          projectId={project.id}
+        />
+      ) : null}
 
       <section className="home-section">
         <h2 className="home-section__title">Latest Insights</h2>

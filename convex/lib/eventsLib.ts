@@ -12,7 +12,20 @@ import { bumpProjectActivity } from "./projectsLib";
 import type { EventCategory, EventSource } from "./eventTypes";
 import { buildEventSearchText } from "./search";
 import { getWorkspaceDocByExternalId } from "./workspacesLib";
-import { canWriteWorkspaceData, getWorkspaceMembership } from "./authz";
+import {
+  canViewEvent,
+  canWriteWorkspaceData,
+  getWorkspaceMembership,
+  assertNotAuditorWorkspaceBrowse,
+} from "./authz";
+import {
+  getActiveAccessForProjectMember,
+  getAccessibleProjectIds,
+  resolveProjectAccessLevel,
+  type AccessibleProjects,
+} from "./projectAccessLib";
+import { canWriteProjectData } from "../../src/types/project-access";
+import { applyEventSafety, recordEvidenceSafetyEvent } from "./sensitiveContent";
 
 export type InsertEventInput = {
   workspaceId: Id<"workspaces">;
@@ -62,6 +75,12 @@ export type EventRecord = {
   displayReason?: string;
   isUserPinned?: boolean;
   isUserHidden?: boolean;
+  sensitivity?: Doc<"events">["sensitivity"];
+  redactionStatus?: Doc<"events">["redactionStatus"];
+  safeForAudit?: boolean;
+  sensitiveFindings?: Doc<"events">["sensitiveFindings"];
+  reviewedBy?: Doc<"events">["reviewedBy"];
+  reviewedAt?: Doc<"events">["reviewedAt"];
   occurredAt: number;
   createdAt: number;
 };
@@ -77,6 +96,7 @@ type ListEventsOptions = {
   includeHidden?: boolean;
   includeDebug?: boolean;
   scanLimit?: number;
+  accessibleProjects?: AccessibleProjects;
 };
 
 export async function assertWorkspaceAccess(
@@ -88,6 +108,20 @@ export async function assertWorkspaceAccess(
   const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
   if (!membership) {
     throw new Error("Workspace not found");
+  }
+  return workspace;
+}
+
+/** Workspace access for normal app surfaces (blocks external auditors). */
+export async function assertWorkspaceBrowseAccess(
+  ctx: DbReadCtx,
+  externalId: string,
+  userId: string,
+): Promise<Doc<"workspaces">> {
+  const workspace = await assertWorkspaceAccess(ctx, externalId, userId);
+  const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+  if (membership) {
+    assertNotAuditorWorkspaceBrowse(membership);
   }
   return workspace;
 }
@@ -115,6 +149,12 @@ export function docToEvent(doc: Doc<"events">): EventRecord {
     displayReason: doc.displayReason,
     isUserPinned: doc.isUserPinned,
     isUserHidden: doc.isUserHidden,
+    sensitivity: doc.sensitivity,
+    redactionStatus: doc.redactionStatus,
+    safeForAudit: doc.safeForAudit,
+    sensitiveFindings: doc.sensitiveFindings,
+    reviewedBy: doc.reviewedBy,
+    reviewedAt: doc.reviewedAt,
     occurredAt: doc.occurredAt,
     createdAt: doc.createdAt,
   };
@@ -140,8 +180,15 @@ export async function listEventsForWorkspace(
     });
   };
 
-  const collectFiltered = (docs: Doc<"events">[]) =>
-    docs.filter(filterDoc).slice(0, limit).map(docToEvent);
+  const collectFiltered = (docs: Doc<"events">[]) => {
+    let events = docs.filter(filterDoc).map(docToEvent);
+    if (options.accessibleProjects) {
+      events = events.filter((event) =>
+        canViewEvent(event, options.accessibleProjects!),
+      );
+    }
+    return events.slice(0, limit);
+  };
 
   if (options.projectId) {
     const docs = await ctx.db
@@ -194,6 +241,7 @@ type SearchEventsOptions = {
   projectId?: Id<"projects">;
   includeDebug?: boolean;
   includeHidden?: boolean;
+  accessibleProjects?: AccessibleProjects;
 };
 
 export async function searchEventsForWorkspace(
@@ -214,6 +262,7 @@ export async function searchEventsForWorkspace(
       visibility: "all",
       includeDebug: options.includeDebug ?? true,
       includeHidden: options.includeHidden ?? false,
+      accessibleProjects: options.accessibleProjects,
     });
   }
 
@@ -242,7 +291,7 @@ export async function searchEventsForWorkspace(
     docs = docs.filter((doc) => doc.source === options.source);
   }
 
-  return docs
+  let events = docs
     .filter((doc) => {
       if (!matchesVisibilityFilter(doc, "all", {
         includeDebug: options.includeDebug ?? true,
@@ -266,6 +315,12 @@ export async function searchEventsForWorkspace(
     })
     .slice(0, limit)
     .map(docToEvent);
+
+  if (options.accessibleProjects) {
+    events = events.filter((event) => canViewEvent(event, options.accessibleProjects!));
+  }
+
+  return events;
 }
 
 export async function listEventsByWorkstream(
@@ -300,6 +355,10 @@ export async function assertEventAccess(
   if (!membership) {
     throw new Error("Event not found");
   }
+  const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
+  if (!canViewEvent(event, accessible)) {
+    throw new Error("Event not found");
+  }
   return event;
 }
 
@@ -313,6 +372,17 @@ export async function assertEventWriteAccess(
   if (!membership || !canWriteWorkspaceData(membership.role)) {
     throw new Error("Insufficient permissions");
   }
+  if (event.projectId) {
+    const accessRow = await getActiveAccessForProjectMember(
+      ctx,
+      event.projectId,
+      membership._id,
+    );
+    const level = resolveProjectAccessLevel(membership.role, accessRow);
+    if (!level || !canWriteProjectData(level)) {
+      throw new Error("Insufficient permissions");
+    }
+  }
   return event;
 }
 
@@ -321,18 +391,27 @@ export async function insertEvent(
   input: InsertEventInput,
 ): Promise<Id<"events">> {
   const now = Date.now();
-  const searchText = buildEventSearchText({
+
+  const safety = applyEventSafety({
     title: input.title,
     summary: input.summary,
+    entity: input.entity,
+    actor: input.actor,
+    data: input.data,
+  });
+
+  const searchText = buildEventSearchText({
+    title: safety.title,
+    summary: safety.summary,
     type: input.type,
     category: input.category,
     source: input.source,
     actor: input.actor,
-    entity: input.entity,
+    entity: safety.entity,
     tags: input.tags,
     data:
-      typeof input.data === "object" && input.data !== null
-        ? (input.data as Record<string, unknown>)
+      typeof safety.data === "object" && safety.data !== null
+        ? (safety.data as Record<string, unknown>)
         : undefined,
   });
 
@@ -340,12 +419,12 @@ export async function insertEvent(
     source: input.source,
     category: input.category,
     type: input.type,
-    title: input.title,
-    summary: input.summary,
+    title: safety.title,
+    summary: safety.summary,
     severity: input.severity,
     workstreamId: input.workstreamId,
-    entity: input.entity,
-    data: input.data,
+    entity: safety.entity,
+    data: safety.data,
     isUserPinned: input.isUserPinned,
     isUserHidden: input.isUserHidden,
     importance: input.importance,
@@ -370,11 +449,11 @@ export async function insertEvent(
     category: input.category,
     type: input.type,
     actor: input.actor,
-    title: input.title,
-    summary: input.summary,
-    entity: input.entity,
+    title: safety.title,
+    summary: safety.summary,
+    entity: safety.entity,
     artifactIds: input.artifactIds,
-    data: input.data,
+    data: safety.data,
     severity: input.severity,
     tags: input.tags,
     importance: displayFields.importance,
@@ -383,9 +462,24 @@ export async function insertEvent(
     isUserPinned: input.isUserPinned,
     isUserHidden: input.isUserHidden,
     searchText,
+    sensitivity: safety.sensitivity,
+    redactionStatus: safety.redactionStatus,
+    safeForAudit: safety.safeForAudit,
+    sensitiveFindings: safety.sensitiveFindings,
     occurredAt: input.occurredAt ?? now,
     createdAt: now,
   });
+
+  if (safety.sensitiveFindings?.length) {
+    await recordEvidenceSafetyEvent(ctx, {
+      workspaceId: input.workspaceId,
+      type: "evidence.sensitive_content_detected",
+      title: `Sensitive content detected in event: ${safety.title}`,
+      summary: `${safety.sensitiveFindings.length} finding(s) in event fields.`,
+      importance: safety.sensitivity === "restricted" ? "high" : "normal",
+      data: { eventId, findings: safety.sensitiveFindings },
+    });
+  }
 
   await upsertEntitiesFromEvent(
     ctx,

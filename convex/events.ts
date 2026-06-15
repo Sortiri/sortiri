@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib/auth";
+import { getMembershipAndAccessible, canViewEvent, requireProjectAccess } from "./lib/authz";
 import {
   classifyEventForDisplay,
   resolveEventDisplayFields,
@@ -15,7 +16,7 @@ import {
 import {
   assertEventAccess,
   assertEventWriteAccess,
-  assertWorkspaceAccess,
+  assertWorkspaceBrowseAccess,
   docToEvent,
   insertEvent,
   listEventsByWorkstream,
@@ -49,7 +50,12 @@ export const record = mutation({
   args: recordArgs,
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    if (args.projectId) {
+      await requireProjectAccess(ctx, workspace._id, args.projectId, userId, {
+        minWrite: true,
+      });
+    }
 
     return insertEvent(ctx, {
       workspaceId: workspace._id,
@@ -90,7 +96,11 @@ export const listByWorkspace = query({
   },
   handler: async (ctx, args): Promise<EventRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
+    if (args.projectId) {
+      await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
+    }
     return listEventsForWorkspace(ctx, workspace._id, {
       limit: args.limit,
       category: args.category,
@@ -98,6 +108,7 @@ export const listByWorkspace = query({
       projectId: args.projectId,
       visibility: args.visibility ?? "primary",
       includeDebug: args.visibility === "all",
+      accessibleProjects: accessible,
     });
   },
 });
@@ -115,7 +126,11 @@ export const search = query({
   },
   handler: async (ctx, args): Promise<EventRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
+    if (args.projectId) {
+      await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
+    }
     return searchEventsForWorkspace(ctx, workspace._id, {
       query: args.query,
       category: args.category,
@@ -124,6 +139,7 @@ export const search = query({
       limit: args.limit,
       includeDebug: args.includeDebug ?? true,
       includeHidden: args.includeHidden ?? false,
+      accessibleProjects: accessible,
     });
   },
 });
@@ -145,8 +161,10 @@ export const listByProject = query({
   },
   handler: async (ctx, args): Promise<EventRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
     await assertProjectInWorkspace(ctx, args.projectId, workspace._id);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
 
     return listEventsForWorkspace(ctx, workspace._id, {
       projectId: args.projectId,
@@ -154,6 +172,7 @@ export const listByProject = query({
       category: args.category,
       visibility: args.visibility ?? "primary",
       includeDebug: args.visibility === "all",
+      accessibleProjects: accessible,
     });
   },
 });
@@ -165,10 +184,12 @@ export const listRecent = query({
   },
   handler: async (ctx, args): Promise<EventRecord[]> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
     return listEventsForWorkspace(ctx, workspace._id, {
       limit: args.limit ?? 20,
       visibility: "primary",
+      accessibleProjects: accessible,
     });
   },
 });
@@ -191,10 +212,16 @@ export const listByWorkstream = query({
   },
   handler: async (ctx, args): Promise<EventRecord[]> => {
     const userId = await requireUserId(ctx);
-    await assertWorkstreamAccess(ctx, args.workstreamId, userId);
-    return listEventsByWorkstream(ctx, args.workstreamId, {
+    const workstream = await assertWorkstreamAccess(ctx, args.workstreamId, userId);
+    const { accessible } = await getMembershipAndAccessible(
+      ctx,
+      workstream.workspaceId,
+      userId,
+    );
+    const events = await listEventsByWorkstream(ctx, args.workstreamId, {
       limit: args.limit,
     });
+    return events.filter((event) => canViewEvent(event, accessible));
   },
 });
 
@@ -210,7 +237,8 @@ export const getSourceStats = query({
   },
   handler: async (ctx, args): Promise<SourceStats> => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
 
     const docs = await ctx.db
       .query("events")
@@ -219,17 +247,19 @@ export const getSourceStats = query({
       )
       .collect();
 
-    if (docs.length === 0) {
+    const filtered = docs.filter((doc) => canViewEvent(doc, accessible));
+
+    if (filtered.length === 0) {
       return { eventCount: 0, lastOccurredAt: null };
     }
 
-    const lastOccurredAt = docs.reduce(
+    const lastOccurredAt = filtered.reduce(
       (max, doc) => (doc.occurredAt > max ? doc.occurredAt : max),
-      docs[0]!.occurredAt,
+      filtered[0]!.occurredAt,
     );
 
     return {
-      eventCount: docs.length,
+      eventCount: filtered.length,
       lastOccurredAt,
     };
   },
@@ -298,7 +328,7 @@ export const backfillDisplayFields = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const workspace = await assertWorkspaceAccess(ctx, args.workspaceId, userId);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
     const batchLimit = args.limit ?? 300;
 
     const docs = await ctx.db

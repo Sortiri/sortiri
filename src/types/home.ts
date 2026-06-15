@@ -29,4 +29,5 @@ export type CompanyPulse = {
   latestInsightRun?: InsightRun;
   sourceStatus: SourceHealthItem[];
   isEmpty: boolean;
+  scopedAccess?: boolean;
 };
