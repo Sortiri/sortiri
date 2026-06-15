@@ -11,6 +11,7 @@ import { getTimelineEventDomId } from "@/lib/links/navigation";
 import { PinReplayButton } from "@/components/pinned-replays/pin-replay-button";
 import { WorkstreamAgentContextPanel } from "@/components/context/workstream-agent-context-panel";
 import { WorkstreamPrivateEvalsPanel } from "@/components/evals/workstream-private-evals-panel";
+import { RemediationWorkstreamPanel } from "@/components/evals/remediation-workstream-panel";
 import { AnalyzeImpactButton } from "@/components/impact/analyze-impact-button";
 import "@/components/pinned-replays/pin-replay-button.css";
 import { ReplayTimeline } from "@/components/workstreams/replay-timeline";
@@ -171,7 +172,10 @@ export function WorkstreamDetailPage({ workstreamId }: WorkstreamDetailPageProps
       ) : null}
 
       {activeWorkspaceId ? (
-        <WorkstreamPrivateEvalsPanel workspaceId={activeWorkspaceId} workstreamId={ws.id} />
+        <>
+          <WorkstreamPrivateEvalsPanel workspaceId={activeWorkspaceId} workstreamId={ws.id} />
+          <RemediationWorkstreamPanel workstreamId={ws.id} />
+        </>
       ) : null}
 
       {recentAnalyses && recentAnalyses.length > 0 ? (

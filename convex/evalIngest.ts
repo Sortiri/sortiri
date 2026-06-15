@@ -473,6 +473,71 @@ export const recommendForWorkstream = query({
   },
 });
 
+export const rerunForRemediation = mutation({
+  args: {
+    ...ingestAuthArgs,
+    recommendationId: v.optional(v.id("recommendations")),
+    workstreamId: v.optional(v.id("workstreams")),
+    evalSuiteId: v.id("evalSuites"),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await resolveIngestWorkspace(ctx, args);
+    const { actor } = await assertIngestWrite(ctx, workspace._id, args.apiKeyId);
+
+    const recommendationId = args.recommendationId;
+    let workstreamId = args.workstreamId;
+    let contextPackId: Id<"contextPacks"> | undefined;
+
+    if (recommendationId) {
+      const rec = await ctx.db.get(recommendationId);
+      if (!rec || rec.workspaceId !== workspace._id) throw new Error("Recommendation not found");
+      workstreamId = workstreamId ?? rec.remediationWorkstreamId ?? rec.convertedWorkstreamId;
+      contextPackId = rec.remediationContextPackId ?? rec.generatedContextPackId;
+    }
+
+    const suite = await ctx.db.get(args.evalSuiteId);
+    if (!suite || suite.workspaceId !== workspace._id) throw new Error("Eval suite not found");
+
+    const runId = await createEvalRunDoc(ctx, {
+      workspaceId: suite.workspaceId,
+      evalSuiteId: args.evalSuiteId,
+      projectId: suite.projectId,
+      workstreamId: workstreamId ?? suite.workstreamId,
+      recommendationId,
+      contextPackId,
+      createdBy: {
+        clerkUserId: actor.clerkUserId,
+        email: actor.email,
+        name: actor.name,
+        source: "mcp",
+      },
+    });
+
+    if (recommendationId) {
+      await ctx.db.patch(recommendationId, {
+        remediationEvalRunId: runId,
+        remediationStatus: "fix_in_progress",
+        updatedAt: Date.now(),
+      });
+    }
+
+    await recordEvalRunStartedEvent(ctx, {
+      workspaceId: suite.workspaceId,
+      evalRunId: runId,
+      suiteTitle: suite.title,
+      actor: { type: "agent", name: actor.name, email: actor.email, id: actor.clerkUserId },
+    });
+
+    const cases = await listEvalCasesForSuite(ctx, args.evalSuiteId);
+    return {
+      runId,
+      cases,
+      recommendationId,
+      workstreamId,
+    };
+  },
+});
+
 export const archiveSuite = mutation({
   args: {
     ...ingestAuthArgs,

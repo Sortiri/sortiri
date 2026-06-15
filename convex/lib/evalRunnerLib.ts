@@ -7,6 +7,7 @@ import {
   type EvalResultRecord,
   type EvalRunRecord,
 } from "./evalLib";
+import { updateRemediationStatusAfterRerun } from "./evalRemediation";
 
 type DbWriteCtx = Pick<MutationCtx, "db">;
 
@@ -196,6 +197,27 @@ export async function finalizeEvalRun(
     importance: status === "failed" || status === "error" ? "high" : "normal",
     occurredAt: now,
   });
+
+  const updatedRemediationIds = await updateRemediationStatusAfterRerun(ctx, evalRunId, status);
+  if (updatedRemediationIds.length > 0) {
+    const remediationEventType =
+      status === "passed"
+        ? "eval_run.remediation_rerun_passed"
+        : "eval_run.remediation_rerun_failed";
+    await insertEvent(ctx, {
+      workspaceId: runDoc.workspaceId,
+      source: "system",
+      category: "system_event",
+      type: remediationEventType,
+      actor: options?.actor ?? { type: "system", name: "Sortiri" },
+      title: `Remediation eval re-run ${status}: ${suite?.title ?? "Eval run"}`,
+      summary,
+      entity: { type: "other", id: evalRunId, name: suite?.title ?? "Eval run" },
+      visibility: "primary",
+      importance: status === "passed" ? "normal" : "high",
+      occurredAt: now,
+    });
+  }
 
   const updated = await ctx.db.get(evalRunId);
   return docToEvalRun(updated!);

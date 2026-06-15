@@ -42,6 +42,13 @@ export type RecommendationInput = {
   evidencePlaybookIds?: Id<"playbooks">[];
   evidenceInsightFindingIds?: Id<"insightFindings">[];
   evidenceArtifactIds?: Id<"artifacts">[];
+  evalSuiteId?: Id<"evalSuites">;
+  evalRunId?: Id<"evalRuns">;
+  evalResultId?: Id<"evalResults">;
+  remediationStatus?: Doc<"recommendations">["remediationStatus"];
+  remediationWorkstreamId?: Id<"workstreams">;
+  remediationContextPackId?: Id<"contextPacks">;
+  remediationEvalRunId?: Id<"evalRuns">;
   dismissedReason?: string;
   dedupKey?: string;
   createdBy?: Doc<"recommendations">["createdBy"];
@@ -76,6 +83,13 @@ export type RecommendationRecord = {
   evidencePlaybookIds?: string[];
   evidenceInsightFindingIds?: string[];
   evidenceArtifactIds?: string[];
+  evalSuiteId?: string;
+  evalRunId?: string;
+  evalResultId?: string;
+  remediationStatus?: Doc<"recommendations">["remediationStatus"];
+  remediationWorkstreamId?: string;
+  remediationContextPackId?: string;
+  remediationEvalRunId?: string;
   dismissedReason?: string;
   dedupKey?: string;
   createdBy?: Doc<"recommendations">["createdBy"];
@@ -113,6 +127,13 @@ export function docToRecommendation(doc: Doc<"recommendations">): Recommendation
     evidencePlaybookIds: doc.evidencePlaybookIds,
     evidenceInsightFindingIds: doc.evidenceInsightFindingIds,
     evidenceArtifactIds: doc.evidenceArtifactIds,
+    evalSuiteId: doc.evalSuiteId,
+    evalRunId: doc.evalRunId,
+    evalResultId: doc.evalResultId,
+    remediationStatus: doc.remediationStatus,
+    remediationWorkstreamId: doc.remediationWorkstreamId,
+    remediationContextPackId: doc.remediationContextPackId,
+    remediationEvalRunId: doc.remediationEvalRunId,
     dismissedReason: doc.dismissedReason,
     dedupKey: doc.dedupKey,
     createdBy: doc.createdBy,
@@ -168,6 +189,13 @@ export async function createRecommendationDoc(
     evidencePlaybookIds: input.evidencePlaybookIds,
     evidenceInsightFindingIds: input.evidenceInsightFindingIds,
     evidenceArtifactIds: input.evidenceArtifactIds,
+    evalSuiteId: input.evalSuiteId,
+    evalRunId: input.evalRunId,
+    evalResultId: input.evalResultId,
+    remediationStatus: input.remediationStatus,
+    remediationWorkstreamId: input.remediationWorkstreamId,
+    remediationContextPackId: input.remediationContextPackId,
+    remediationEvalRunId: input.remediationEvalRunId,
     dismissedReason: input.dismissedReason,
     dedupKey: input.dedupKey,
     createdBy: input.createdBy,
@@ -321,6 +349,57 @@ export async function listRecommendationsForWorkspace(
 
   const limit = options?.limit ?? 100;
   return docs.slice(0, limit).map(docToRecommendation);
+}
+
+export async function listRemediationRecommendationsForWorkspace(
+  ctx: DbReadCtx,
+  workspaceId: Id<"workspaces">,
+  options?: {
+    status?: Doc<"recommendations">["status"];
+    remediationStatus?: Doc<"recommendations">["remediationStatus"];
+    limit?: number;
+  },
+): Promise<RecommendationRecord[]> {
+  let docs = await ctx.db
+    .query("recommendations")
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+    .order("desc")
+    .collect();
+
+  docs = docs.filter((doc) => doc.source === "eval_failure");
+
+  if (options?.status) {
+    docs = docs.filter((doc) => doc.status === options.status);
+  }
+  if (options?.remediationStatus) {
+    docs = docs.filter((doc) => doc.remediationStatus === options.remediationStatus);
+  }
+
+  docs.sort((a, b) => {
+    const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+    if (priorityDiff !== 0) return priorityDiff;
+    return b.createdAt - a.createdAt;
+  });
+
+  const limit = options?.limit ?? 100;
+  return docs.slice(0, limit).map(docToRecommendation);
+}
+
+export async function listRemediationForEvalRun(
+  ctx: DbReadCtx,
+  workspaceId: Id<"workspaces">,
+  evalRunId: Id<"evalRuns">,
+): Promise<RecommendationRecord[]> {
+  const docs = await ctx.db
+    .query("recommendations")
+    .withIndex("by_eval_run", (q) =>
+      q.eq("workspaceId", workspaceId).eq("evalRunId", evalRunId),
+    )
+    .collect();
+
+  return docs
+    .filter((doc) => doc.source === "eval_failure")
+    .map(docToRecommendation);
 }
 
 export async function listRecommendationsForProject(

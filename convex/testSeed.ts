@@ -71,7 +71,7 @@ import {
   loadPlaybookDraft,
   loadRecommendationDraft,
 } from "./lib/evalGeneration";
-import { insertDraftEvalSuite } from "./lib/evalLib";
+import { insertDraftEvalSuite, createEvalSuiteDoc, createEvalCaseDoc } from "./lib/evalLib";
 
 export const TEST_SHARE_TOKEN =
   "share_sortiri_e2e000000000000000000000000000000000000000000000000000000";
@@ -1539,6 +1539,113 @@ export const seedEvalStory = mutation({
       lessonId: lesson._id,
       evalSuiteIds,
     };
+  },
+});
+
+export const seedEvalRemediationStory = mutation({
+  args: {},
+  handler: async (ctx) => {
+    assertTestMode();
+    const workspace = await findTestWorkspace(ctx);
+    if (!workspace) {
+      throw new Error("Test workspace not found — run seedTestWorkspace first");
+    }
+
+    const project = await ctx.db
+      .query("projects")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
+      .collect()
+      .then((rows) => rows.find((row) => row.name === TEST_PROJECT_NAME) ?? null);
+    if (!project) throw new Error("Test project not found");
+
+    const workstream = await ctx.db
+      .query("workstreams")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
+      .collect()
+      .then((rows) => rows.find((row) => row.title === "Impact Story Workstream") ?? null);
+    if (!workstream) throw new Error("Impact story workstream not found");
+
+    const recommendation = await ctx.db
+      .query("recommendations")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
+      .order("desc")
+      .first();
+    if (!recommendation) throw new Error("Recommendation not found");
+
+    const playbook = await ctx.db
+      .query("playbooks")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
+      .first();
+    if (!playbook) throw new Error("Playbook not found");
+
+    const lesson = await ctx.db
+      .query("lessons")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
+      .order("desc")
+      .first();
+    if (!lesson) throw new Error("Lesson not found");
+
+    const contextPack = await ctx.db
+      .query("contextPacks")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace._id))
+      .order("desc")
+      .first();
+
+    const suiteId = await createEvalSuiteDoc(ctx, {
+      workspaceId: workspace._id,
+      projectId: project._id,
+      workstreamId: workstream._id,
+      recommendationId: recommendation._id,
+      contextPackId: contextPack?._id,
+      playbookId: playbook._id,
+      lessonId: lesson._id,
+      title: "Sprint 36 remediation failing eval suite",
+      summary: "Intentionally failing command case for remediation loop testing.",
+      source: "manual",
+      status: "active",
+      priority: "high",
+      dedupKey: `remediation-fail:${workspace._id}`,
+      tags: ["remediation", "sanity"],
+    });
+
+    const failingCaseId = await createEvalCaseDoc(ctx, {
+      workspaceId: workspace._id,
+      evalSuiteId: suiteId,
+      title: "Intentional failing validation command",
+      description: "Runs exit 1 to trigger remediation flow in sanity tests.",
+      type: "command",
+      required: true,
+      config: { command: "exit 1" },
+      expected: { exitCode: 0 },
+      order: 0,
+    });
+
+    return {
+      workspaceId: workspace.externalId,
+      projectId: project._id,
+      workstreamId: workstream._id,
+      recommendationId: recommendation._id,
+      contextPackId: contextPack?._id,
+      playbookId: playbook._id,
+      lessonId: lesson._id,
+      evalSuiteId: suiteId,
+      failingCaseId,
+    };
+  },
+});
+
+export const fixEvalRemediationCaseForRerun = mutation({
+  args: { evalCaseId: v.id("evalCases") },
+  handler: async (ctx, args) => {
+    assertTestMode();
+    const evalCase = await ctx.db.get(args.evalCaseId);
+    if (!evalCase) throw new Error("Eval case not found");
+    await ctx.db.patch(args.evalCaseId, {
+      config: { command: "true" },
+      expected: { exitCode: 0 },
+      updatedAt: Date.now(),
+    });
+    return { ok: true };
   },
 });
 

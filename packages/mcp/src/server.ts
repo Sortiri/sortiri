@@ -11,19 +11,24 @@ import {
   finishWorkstreamSchema,
   generateContextFromRecommendationSchema,
   generateEvalSuiteSchema,
+  generateRemediationFromEvalSchema,
   generateRecommendationsSchema,
   getContextPackSchema,
   getEntityMemorySchema,
   getEvalRunSchema,
   getEvalSuiteSchema,
+  getEvalRemediationSchema,
   getKnownFailuresSchema,
   getProjectMemorySchema,
   getRecommendationSchema,
   getRecommendedPlaybookSchema,
   getValidationRequirementsSchema,
   listEvalSuitesSchema,
+  listEvalRemediationsSchema,
   listRecommendationsSchema,
   recommendEvalsForWorkstreamSchema,
+  convertRemediationToWorkstreamSchema,
+  rerunEvalForRemediationSchema,
   recordEventSchema,
   runEvalSuiteSchema,
   startWorkstreamSchema,
@@ -327,6 +332,71 @@ async function main() {
     async (args) => {
       const input = recommendEvalsForWorkstreamSchema.parse(args);
       const result = await client.recommendEvalsForWorkstream(input.workstreamId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_generate_remediation_from_eval",
+    "Generate remediation recommendations from a failed eval run.",
+    generateRemediationFromEvalSchema.shape,
+    async (args) => {
+      const input = generateRemediationFromEvalSchema.parse(args);
+      const result = await client.generateRemediationFromEval(input.evalRunId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_list_eval_remediations",
+    "List open eval failure remediations for the workspace.",
+    listEvalRemediationsSchema.shape,
+    async (args) => {
+      const input = listEvalRemediationsSchema.parse(args);
+      const result = await client.listEvalRemediations(input);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_get_eval_remediation",
+    "Get a remediation recommendation with eval failure context.",
+    getEvalRemediationSchema.shape,
+    async (args) => {
+      const input = getEvalRemediationSchema.parse(args);
+      const result = await client.getEvalRemediation(input.recommendationId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_convert_remediation_to_workstream",
+    "Convert an eval remediation recommendation into a workstream with context pack.",
+    convertRemediationToWorkstreamSchema.shape,
+    async (args) => {
+      const input = convertRemediationToWorkstreamSchema.parse(args);
+      const result = await client.convertRemediationToWorkstream(input.recommendationId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_rerun_eval_for_remediation",
+    "Queue a remediation eval re-run linked to a recommendation.",
+    rerunEvalForRemediationSchema.shape,
+    async (args) => {
+      const input = rerunEvalForRemediationSchema.parse(args);
+      const result = await client.rerunEvalForRemediation(input);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

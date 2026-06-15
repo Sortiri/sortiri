@@ -181,4 +181,70 @@ export async function markEvalRunRunningViaIngest(
   });
 }
 
+export async function listEvalRemediationsViaIngest(
+  auth: IngestAuthContext,
+  workspaceId: string,
+  limit?: number,
+) {
+  const convex = getIngestConvexClient();
+  return convex.query(api.recommendationIngest.listRemediations, {
+    ...buildIngestArgs(auth, workspaceId),
+    limit,
+  });
+}
+
+export async function generateRemediationFromEvalViaIngest(
+  auth: IngestAuthContext,
+  workspaceId: string,
+  evalRunId: string,
+) {
+  const convex = getIngestConvexClient();
+  return convex.mutation(api.recommendationIngest.generateFromEvalRun, {
+    ...buildIngestArgs(auth, workspaceId),
+    evalRunId: evalRunId as Id<"evalRuns">,
+  });
+}
+
+export async function getEvalRemediationViaIngest(
+  auth: IngestAuthContext,
+  workspaceId: string,
+  recommendationId: string,
+) {
+  const convex = getIngestConvexClient();
+  return convex.query(api.recommendationIngest.getById, {
+    ...buildIngestArgs(auth, workspaceId),
+    recommendationId: recommendationId as Id<"recommendations">,
+  });
+}
+
+export async function rerunEvalForRemediationViaIngest(
+  auth: IngestAuthContext,
+  workspaceId: string,
+  input: {
+    recommendationId?: string;
+    workstreamId?: string;
+    evalSuiteId: string;
+  },
+) {
+  const convex = getIngestConvexClient();
+  return convex.mutation(api.evalIngest.rerunForRemediation, {
+    ...buildIngestArgs(auth, workspaceId),
+    recommendationId: input.recommendationId as Id<"recommendations"> | undefined,
+    workstreamId: input.workstreamId as Id<"workstreams"> | undefined,
+    evalSuiteId: input.evalSuiteId as Id<"evalSuites">,
+  });
+}
+
+export async function generateRemediationContextPackViaIngest(
+  auth: IngestAuthContext,
+  workspaceId: string,
+  recommendationId: string,
+) {
+  const convex = getIngestConvexClient();
+  return convex.mutation(api.recommendationIngest.generateRemediationContextPack, {
+    ...buildIngestArgs(auth, workspaceId),
+    recommendationId: recommendationId as Id<"recommendations">,
+  });
+}
+
 export type { IngestAuthContext };

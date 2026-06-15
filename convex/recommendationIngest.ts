@@ -12,8 +12,16 @@ import {
   docToRecommendation,
   filterRecommendationEvidence,
   listRecommendationsForWorkspace,
+  listRemediationForEvalRun,
+  listRemediationRecommendationsForWorkspace,
   patchRecommendationDoc,
+  createRecommendationDoc,
+  findOpenRecommendationByDedupKey,
 } from "./lib/recommendationLib";
+import {
+  buildRemediationDraft,
+  buildRemediationDraftsFromEvalRun,
+} from "./lib/evalRemediation";
 import {
   collectAllDraftRecommendations,
   insertDraftRecommendations,
@@ -273,11 +281,19 @@ export const convertToWorkstream = mutation({
     });
 
     const packResult = await generateContextPackItems(ctx, packId, actor.clerkUserId);
+    const isRemediation = doc.source === "eval_failure" && !!doc.evalRunId;
 
     await patchRecommendationDoc(ctx, args.recommendationId, {
       status: "converted_to_workstream",
       convertedWorkstreamId: workstreamId,
       generatedContextPackId: packId,
+      ...(isRemediation
+        ? {
+            remediationWorkstreamId: workstreamId,
+            remediationContextPackId: packId,
+            remediationStatus: "workstream_created" as const,
+          }
+        : {}),
     });
 
     await insertEvent(ctx, {
@@ -299,9 +315,13 @@ export const convertToWorkstream = mutation({
       workspaceId: doc.workspaceId,
       source: "system",
       category: "system_event",
-      type: "recommendation.converted_to_workstream",
+      type: isRemediation
+        ? "recommendation.converted_to_remediation_workstream"
+        : "recommendation.converted_to_workstream",
       actor: { type: "agent", name: actor.name, id: actor.clerkUserId },
-      title: `Recommendation converted to workstream: ${title}`,
+      title: isRemediation
+        ? `Remediation converted to workstream: ${title}`
+        : `Recommendation converted to workstream: ${title}`,
       summary: packResult.summary,
       entity: { type: "other", id: args.recommendationId, name: doc.title },
       visibility: "primary",
@@ -314,6 +334,195 @@ export const convertToWorkstream = mutation({
       contextPackId: packId,
       recommendedPlaybookId: doc.recommendedPlaybookId,
       validationRequirements: doc.validationRequirements,
+      evalRunId: doc.evalRunId,
+      evalResultId: doc.evalResultId,
+      remediationStatus: doc.source === "eval_failure" ? ("workstream_created" as const) : undefined,
     };
+  },
+});
+
+export const generateFromEvalRun = mutation({
+  args: {
+    ...ingestAuthArgs,
+    evalRunId: v.id("evalRuns"),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await resolveIngestWorkspace(ctx, args);
+    const actor = await resolveIngestActor(ctx, workspace._id, args.apiKeyId);
+    const { membership } = await getMembershipAndAccessible(
+      ctx,
+      workspace._id,
+      actor.clerkUserId,
+    );
+    assertNotAuditorWorkspaceBrowse(membership);
+    if (!canWriteWorkspaceData(membership.role)) throw new Error("Access denied");
+
+    const runDoc = await ctx.db.get(args.evalRunId);
+    if (!runDoc || runDoc.workspaceId !== workspace._id) {
+      throw new Error("Eval run not found");
+    }
+
+    if (!["failed", "error", "needs_review"].includes(runDoc.status)) {
+      throw new Error("Eval run does not need remediation");
+    }
+
+    const inputs = await buildRemediationDraftsFromEvalRun(ctx, args.evalRunId);
+    const createdIds: Id<"recommendations">[] = [];
+
+    for (const input of inputs) {
+      const draft = await buildRemediationDraft(ctx, input);
+      if (!draft) continue;
+
+      const existing = await findOpenRecommendationByDedupKey(
+        ctx,
+        draft.workspaceId,
+        draft.dedupKey!,
+      );
+      if (existing) continue;
+
+      const id = await createRecommendationDoc(ctx, {
+        ...draft,
+        status: "open",
+        createdBy: actor.createdBy,
+      });
+      createdIds.push(id);
+
+      await insertEvent(ctx, {
+        workspaceId: draft.workspaceId,
+        source: "system",
+        category: "system_event",
+        type: "recommendation.generated_from_eval_failure",
+        actor: { type: "agent", name: actor.name, id: actor.clerkUserId },
+        title: `Remediation recommendation created: ${draft.title}`,
+        summary: draft.summary,
+        entity: { type: "other", id, name: draft.title },
+        visibility: "primary",
+        importance: draft.priority === "critical" ? "high" : "normal",
+        occurredAt: Date.now(),
+      });
+    }
+
+    return { recommendationIds: createdIds, count: createdIds.length };
+  },
+});
+
+export const listRemediations = query({
+  args: {
+    ...ingestAuthArgs,
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await resolveIngestWorkspace(ctx, args);
+    const actor = await resolveIngestActor(ctx, workspace._id, args.apiKeyId);
+    const { membership, accessible } = await getMembershipAndAccessible(
+      ctx,
+      workspace._id,
+      actor.clerkUserId,
+    );
+    assertNotAuditorWorkspaceBrowse(membership);
+
+    const records = await listRemediationRecommendationsForWorkspace(ctx, workspace._id, {
+      status: "open",
+      limit: args.limit ?? 50,
+    });
+
+    const filtered = [];
+    for (const record of records) {
+      filtered.push(await filterRecommendationEvidence(ctx, record, accessible));
+    }
+    return filtered;
+  },
+});
+
+export const listForEvalRun = query({
+  args: {
+    ...ingestAuthArgs,
+    evalRunId: v.id("evalRuns"),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await resolveIngestWorkspace(ctx, args);
+    const actor = await resolveIngestActor(ctx, workspace._id, args.apiKeyId);
+    const { membership, accessible } = await getMembershipAndAccessible(
+      ctx,
+      workspace._id,
+      actor.clerkUserId,
+    );
+    assertNotAuditorWorkspaceBrowse(membership);
+
+    const run = await ctx.db.get(args.evalRunId);
+    if (!run || run.workspaceId !== workspace._id) throw new Error("Eval run not found");
+
+    const records = await listRemediationForEvalRun(ctx, workspace._id, args.evalRunId);
+    const filtered = [];
+    for (const record of records) {
+      filtered.push(await filterRecommendationEvidence(ctx, record, accessible));
+    }
+    return filtered;
+  },
+});
+
+export const generateRemediationContextPack = mutation({
+  args: {
+    ...ingestAuthArgs,
+    recommendationId: v.id("recommendations"),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await resolveIngestWorkspace(ctx, args);
+    const actor = await resolveIngestActor(ctx, workspace._id, args.apiKeyId);
+    const { membership } = await getMembershipAndAccessible(
+      ctx,
+      workspace._id,
+      actor.clerkUserId,
+    );
+    assertNotAuditorWorkspaceBrowse(membership);
+    if (!canWriteWorkspaceData(membership.role)) throw new Error("Access denied");
+
+    const doc = await ctx.db.get(args.recommendationId);
+    if (!doc || doc.workspaceId !== workspace._id) throw new Error("Recommendation not found");
+    if (!doc.evalRunId) throw new Error("Recommendation is not from an eval failure");
+
+    const goal = doc.suggestedGoal ?? doc.title;
+    const packId = await createContextPackDoc(ctx, {
+      workspaceId: doc.workspaceId,
+      projectId: doc.projectId,
+      workstreamId: doc.workstreamId,
+      entityId: doc.entityId,
+      viewId: doc.viewId,
+      playbookId: doc.recommendedPlaybookId,
+      title: `Context for fixing failed eval: ${doc.title.slice(0, 60)}`,
+      goal,
+      status: "generated",
+      requestedBy: {
+        type: "agent",
+        clerkUserId: actor.clerkUserId,
+        email: actor.email,
+        name: actor.name,
+        source: "eval_remediation",
+      },
+      request: { timeWindowMs: DEFAULT_CONTEXT_TIME_WINDOW_MS },
+    });
+
+    const result = await generateContextPackItems(ctx, packId, actor.clerkUserId);
+    await patchRecommendationDoc(ctx, args.recommendationId, {
+      generatedContextPackId: packId,
+      remediationContextPackId: packId,
+      remediationStatus: "context_generated",
+    });
+
+    await insertEvent(ctx, {
+      workspaceId: doc.workspaceId,
+      source: "system",
+      category: "system_event",
+      type: "recommendation.remediation_context_generated",
+      actor: { type: "agent", name: actor.name, id: actor.clerkUserId },
+      title: `Remediation context pack generated: ${doc.title}`,
+      summary: result.summary,
+      entity: { type: "other", id: args.recommendationId, name: doc.title },
+      visibility: "primary",
+      importance: doc.priority === "critical" ? "high" : "normal",
+      occurredAt: Date.now(),
+    });
+
+    return { contextPackId: packId, summary: result.summary, counts: result.counts };
   },
 });

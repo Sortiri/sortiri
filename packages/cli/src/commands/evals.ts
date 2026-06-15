@@ -11,6 +11,8 @@ export type EvalsCommandOptions = {
   source?: string;
   entityId?: string;
   limit?: number;
+  run?: string;
+  suiteId?: string;
 };
 
 export async function runEvals(options: EvalsCommandOptions): Promise<void> {
@@ -128,6 +130,99 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
       process.exit(1);
     }
     console.log(JSON.stringify(payload?.recentRuns ?? [], null, 2));
+    return;
+  }
+
+  if (subcommand === "remediation-list") {
+    const params = new URLSearchParams({ workspaceId: config.workspaceId });
+    if (options.limit !== undefined) params.set("limit", String(options.limit));
+    const response = await fetch(`${config.apiUrl}/api/cli/evals/remediation?${params.toString()}`, {
+      headers,
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { remediations?: unknown[]; error?: string }
+      | null;
+    if (!response.ok) {
+      console.error(payload?.error ?? `Request failed with status ${response.status}`);
+      process.exit(1);
+    }
+    console.log(JSON.stringify(payload?.remediations ?? [], null, 2));
+    return;
+  }
+
+  if (subcommand === "remediation-generate") {
+    const evalRunId = options.run ?? options.id;
+    if (!evalRunId) {
+      console.error("--run <evalRunId> is required for remediation generate");
+      process.exit(1);
+    }
+    const response = await fetch(`${config.apiUrl}/api/cli/evals/remediation/generate`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ workspaceId: config.workspaceId, evalRunId }),
+    });
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!response.ok) {
+      console.error((payload?.error as string) ?? `Request failed with status ${response.status}`);
+      process.exit(1);
+    }
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  if (subcommand === "remediation-convert") {
+    if (!options.id) {
+      console.error("recommendation id is required for remediation convert");
+      process.exit(1);
+    }
+    const response = await fetch(
+      `${config.apiUrl}/api/cli/recommendations/${options.id}/convert`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ workspaceId: config.workspaceId }),
+      },
+    );
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!response.ok) {
+      console.error((payload?.error as string) ?? `Request failed with status ${response.status}`);
+      process.exit(1);
+    }
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  if (subcommand === "remediation-rerun") {
+    if (!options.id) {
+      console.error("recommendation id is required for remediation rerun");
+      process.exit(1);
+    }
+    const recResponse = await fetch(
+      `${config.apiUrl}/api/cli/evals/remediation/${options.id}?workspaceId=${encodeURIComponent(config.workspaceId)}`,
+      { headers },
+    );
+    const rec = (await recResponse.json().catch(() => null)) as
+      | { evalSuiteId?: string; error?: string }
+      | null;
+    if (!recResponse.ok || !rec?.evalSuiteId) {
+      console.error(rec?.error ?? "Failed to load remediation recommendation");
+      process.exit(1);
+    }
+    const response = await fetch(`${config.apiUrl}/api/cli/evals/remediation/rerun`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        workspaceId: config.workspaceId,
+        recommendationId: options.id,
+        evalSuiteId: rec.evalSuiteId,
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!response.ok) {
+      console.error((payload?.error as string) ?? `Request failed with status ${response.status}`);
+      process.exit(1);
+    }
+    console.log(JSON.stringify(payload, null, 2));
     return;
   }
 
