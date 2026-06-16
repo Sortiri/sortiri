@@ -181,6 +181,40 @@ async function main(): Promise<void> {
       await runEvals({ subcommand: "get-run", id: runId });
     });
 
+  const remediation = evals
+    .command("remediation")
+    .description("Manage eval failure remediations");
+
+  remediation
+    .command("list")
+    .description("List open eval remediations")
+    .option("--limit <n>", "Max remediations", (value) => Number(value))
+    .action(async (options) => {
+      await runEvals({ subcommand: "remediation-list", limit: options.limit });
+    });
+
+  remediation
+    .command("generate")
+    .description("Generate remediation recommendations from a failed eval run")
+    .requiredOption("--run <evalRunId>", "Failed eval run ID")
+    .action(async (options) => {
+      await runEvals({ subcommand: "remediation-generate", run: options.run });
+    });
+
+  remediation
+    .command("convert <recommendationId>")
+    .description("Convert a remediation recommendation to a workstream")
+    .action(async (recommendationId: string) => {
+      await runEvals({ subcommand: "remediation-convert", id: recommendationId });
+    });
+
+  remediation
+    .command("rerun <recommendationId>")
+    .description("Re-run eval suite after remediation")
+    .action(async (recommendationId: string) => {
+      await runEvals({ subcommand: "remediation-rerun", id: recommendationId });
+    });
+
   await program.parseAsync(process.argv);
 }
 

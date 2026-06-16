@@ -465,6 +465,88 @@ export const recommendForWorkstream = query({
   },
 });
 
+export const rerunForRemediation = mutation({
+  args: {
+    recommendationId: v.optional(v.id("recommendations")),
+    workstreamId: v.optional(v.id("workstreams")),
+    evalSuiteId: v.id("evalSuites"),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    await assertEvalSuiteAccess(ctx, args.evalSuiteId, user.clerkUserId, { requireWrite: true });
+
+    let resolvedRecommendationId = args.recommendationId;
+    let workstreamId = args.workstreamId;
+    let contextPackId: Id<"contextPacks"> | undefined;
+
+    if (resolvedRecommendationId) {
+      const rec = await ctx.db.get(resolvedRecommendationId);
+      if (!rec) throw new Error("Recommendation not found");
+      workstreamId = workstreamId ?? rec.remediationWorkstreamId ?? rec.convertedWorkstreamId;
+      contextPackId = rec.remediationContextPackId ?? rec.generatedContextPackId;
+    } else if (workstreamId) {
+      const recs = await ctx.db
+        .query("recommendations")
+        .withIndex("by_workstream", (q) => q.eq("workstreamId", workstreamId))
+        .collect();
+      const remediationRec = recs.find((r) => r.source === "eval_failure" && r.evalSuiteId === args.evalSuiteId);
+      if (remediationRec) {
+        resolvedRecommendationId = remediationRec._id;
+        contextPackId = remediationRec.remediationContextPackId ?? remediationRec.generatedContextPackId;
+      }
+    }
+
+    const suite = await ctx.db.get(args.evalSuiteId);
+    if (!suite) throw new Error("Eval suite not found");
+
+    const runId = await createEvalRunDoc(ctx, {
+      workspaceId: suite.workspaceId,
+      evalSuiteId: args.evalSuiteId,
+      projectId: suite.projectId,
+      workstreamId: workstreamId ?? suite.workstreamId,
+      recommendationId: resolvedRecommendationId,
+      contextPackId,
+      createdBy: createdByFromUser(user),
+    });
+
+    if (resolvedRecommendationId) {
+      await ctx.db.patch(resolvedRecommendationId, {
+        remediationEvalRunId: runId,
+        remediationStatus: "fix_in_progress",
+        updatedAt: Date.now(),
+      });
+    }
+
+    await recordEvalRunStartedEvent(ctx, {
+      workspaceId: suite.workspaceId,
+      evalRunId: runId,
+      suiteTitle: suite.title,
+      actor: actorFromUser(user),
+    });
+
+    await insertEvent(ctx, {
+      workspaceId: suite.workspaceId,
+      source: "system",
+      category: "system_event",
+      type: "eval_run.remediation_rerun_started",
+      actor: actorFromUser(user),
+      title: `Remediation eval re-run started: ${suite.title}`,
+      entity: { type: "other", id: runId, name: suite.title },
+      visibility: "primary",
+      importance: "normal",
+      occurredAt: Date.now(),
+    });
+
+    const cases = await listEvalCasesForSuite(ctx, args.evalSuiteId);
+    return {
+      runId,
+      cases,
+      recommendationId: resolvedRecommendationId,
+      workstreamId,
+    };
+  },
+});
+
 export const createSuite = mutation({
   args: {
     workspaceId: v.string(),

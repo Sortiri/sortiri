@@ -39,7 +39,9 @@ export function RecommendationDetailPage({ recommendationId }: RecommendationDet
   }) as RecommendationRecord | undefined;
 
   const generateContextPack = useMutation(api.recommendations.generateContextPack);
+  const generateRemediationContext = useMutation(api.recommendations.generateRemediationContextPack);
   const convertToWorkstream = useMutation(api.recommendations.convertToWorkstream);
+  const rerunForRemediation = useMutation(api.evals.rerunForRemediation);
   const generateEvalSuite = useMutation(api.evals.generateFromRecommendation);
   const dismiss = useMutation(api.recommendations.dismiss);
   const archive = useMutation(api.recommendations.archive);
@@ -73,6 +75,7 @@ export function RecommendationDetailPage({ recommendationId }: RecommendationDet
   }
 
   const evidenceCount = countEvidence(recommendation);
+  const isEvalRemediation = recommendation.source === "eval_failure" && !!recommendation.evalRunId;
 
   return (
     <div className="recommendations-page">
@@ -93,13 +96,17 @@ export function RecommendationDetailPage({ recommendationId }: RecommendationDet
               disabled={busy}
               onClick={() =>
                 void runAction(() =>
-                  generateContextPack({
-                    recommendationId: recommendationId as Id<"recommendations">,
-                  }),
+                  isEvalRemediation
+                    ? generateRemediationContext({
+                        recommendationId: recommendationId as Id<"recommendations">,
+                      })
+                    : generateContextPack({
+                        recommendationId: recommendationId as Id<"recommendations">,
+                      }),
                 )
               }
             >
-              Generate Context Pack
+              {isEvalRemediation ? "Generate remediation context" : "Generate Context Pack"}
             </button>
             <button
               type="button"
@@ -113,8 +120,28 @@ export function RecommendationDetailPage({ recommendationId }: RecommendationDet
                 )
               }
             >
-              Convert to Workstream
+              {isEvalRemediation ? "Convert to remediation workstream" : "Convert to Workstream"}
             </button>
+            {isEvalRemediation && recommendation.evalSuiteId ? (
+              <button
+                type="button"
+                className="recommendations-btn"
+                disabled={busy}
+                onClick={() =>
+                  void runAction(async () => {
+                    const result = await rerunForRemediation({
+                      recommendationId: recommendationId as Id<"recommendations">,
+                      evalSuiteId: recommendation.evalSuiteId as Id<"evalSuites">,
+                    });
+                    if (result.runId) {
+                      window.location.href = `/intelligence/evals/runs/${result.runId}`;
+                    }
+                  })
+                }
+              >
+                Run eval again
+              </button>
+            ) : null}
             <button
               type="button"
               className="recommendations-btn"
@@ -168,6 +195,41 @@ export function RecommendationDetailPage({ recommendationId }: RecommendationDet
         <section className="recommendation-detail__section">
           <h2 className="recommendation-detail__section-title">Why Sortiri recommends this</h2>
           <p className="recommendations-page__subtitle">{recommendation.reason}</p>
+        </section>
+      ) : null}
+
+      {isEvalRemediation ? (
+        <section className="recommendation-detail__section">
+          <h2 className="recommendation-detail__section-title">Source: Failed eval</h2>
+          {recommendation.evalSuiteId ? (
+            <p className="recommendations-page__subtitle">
+              Eval suite:{" "}
+              <Link href={`/intelligence/evals/${recommendation.evalSuiteId}`}>
+                Open eval suite
+              </Link>
+            </p>
+          ) : null}
+          {recommendation.evalRunId ? (
+            <p className="recommendations-page__subtitle">
+              Eval run:{" "}
+              <Link href={`/intelligence/evals/runs/${recommendation.evalRunId}`}>
+                Open failed eval run
+              </Link>
+            </p>
+          ) : null}
+          {recommendation.remediationStatus ? (
+            <p className="recommendations-page__subtitle">
+              Remediation status: {recommendation.remediationStatus}
+            </p>
+          ) : null}
+          {recommendation.remediationEvalRunId ? (
+            <p className="recommendations-page__subtitle">
+              Re-run eval:{" "}
+              <Link href={`/intelligence/evals/runs/${recommendation.remediationEvalRunId}`}>
+                View re-run
+              </Link>
+            </p>
+          ) : null}
         </section>
       ) : null}
 

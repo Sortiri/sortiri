@@ -11,6 +11,9 @@ import type {
   EvalRunRecord,
   EvalSuiteRecord,
 } from "@/types/evals";
+import { useWorkspace } from "@/components/workspace/workspace-context";
+import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
+import { EvalRemediationPanel } from "@/components/evals/eval-remediation-panel";
 import "./evals.css";
 
 type EvalRunDetailPageProps = {
@@ -39,6 +42,10 @@ function resultStatusClass(status: EvalResultStatus): string {
 }
 
 export function EvalRunDetailPage({ evalRunId }: EvalRunDetailPageProps) {
+  const { activeWorkspaceId } = useWorkspace();
+  const { capabilities } = useWorkspaceMembership(activeWorkspaceId);
+  const canWrite = capabilities?.canWriteWorkspaceData ?? false;
+
   const data = useQuery(api.evals.getRun, {
     evalRunId: evalRunId as Id<"evalRuns">,
   });
@@ -126,6 +133,8 @@ export function EvalRunDetailPage({ evalRunId }: EvalRunDetailPageProps) {
           </section>
         ))
       )}
+
+      <EvalRemediationPanel evalRunId={evalRunId} run={run} canWrite={canWrite} />
     </div>
   );
 }

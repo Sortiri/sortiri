@@ -40,6 +40,7 @@
     "sanity:cli-recommendations": "tsx scripts/sanity-cli-recommendations.ts",
     "sanity:mcp-recommendation-tools": "tsx scripts/sanity-mcp-recommendation-tools.ts",
     "sanity:private-evals": "tsx scripts/sanity-private-evals.ts",
+    "sanity:eval-remediation-loop": "tsx scripts/sanity-eval-remediation-loop.ts",
     "sanity:cli-evals": "tsx scripts/sanity-cli-evals.ts",
     "sanity:mcp-eval-tools": "tsx scripts/sanity-mcp-eval-tools.ts",
     "eval:run": "tsx scripts/run-eval-suite.ts",

@@ -9,6 +9,7 @@ import { listLessonsForWorkspace } from "./lessonsLib";
 import { listPlaybooksForWorkspace } from "./playbooksLib";
 import { listContextPacksForWorkspace } from "./contextPackLib";
 import { listEvalSuitesForWorkspace } from "./evalLib";
+import { listRemediationRecommendationsForWorkspace } from "./recommendationLib";
 import { listRecommendationsForWorkspace } from "./recommendationLib";
 
 type DbReadCtx = Pick<QueryCtx, "db">;
@@ -57,6 +58,12 @@ export type IntelligenceHubResult = {
     latestTitle?: string;
     latestAt?: number;
   };
+  remediationSummary: {
+    openCount: number;
+    failedEvalsNeedingAction: number;
+    rerunsPassed: number;
+    rerunsStillFailing: number;
+  };
   recentEvalSuites: Array<{
     id: string;
     title: string;
@@ -101,6 +108,21 @@ export async function buildIntelligenceHub(
   });
   const recentEvalSuites = activeEvalSuites.slice(0, 5);
   const latestEvalSuite = activeEvalSuites[0];
+  const openRemediations = await listRemediationRecommendationsForWorkspace(ctx, workspaceId, {
+    status: "open",
+    limit: 100,
+  });
+  const remediationSummary = {
+    openCount: openRemediations.length,
+    failedEvalsNeedingAction: openRemediations.filter(
+      (rec) => !rec.remediationStatus || rec.remediationStatus === "not_started",
+    ).length,
+    rerunsPassed: openRemediations.filter((rec) => rec.remediationStatus === "eval_rerun_passed")
+      .length,
+    rerunsStillFailing: openRemediations.filter(
+      (rec) => rec.remediationStatus === "eval_rerun_failed",
+    ).length,
+  };
   let latestRunStatus: string | undefined;
   let latestEvalAt: number | undefined;
   if (latestEvalSuite) {
@@ -225,6 +247,7 @@ export async function buildIntelligenceHub(
       latestTitle: latestEvalSuite?.title,
       latestAt: latestEvalAt,
     },
+    remediationSummary,
     recentEvalSuites: recentEvalSuites.map((suite) => ({
       id: suite.id,
       title: suite.title,

@@ -146,6 +146,93 @@ export async function getEvalRunViaHttp(
   return payload ?? {};
 }
 
+export async function postRemediationGenerateViaHttp(
+  appUrl: string,
+  rawKey: string,
+  workspaceId: string,
+  evalRunId: string,
+): Promise<{ recommendationIds?: string[]; count?: number }> {
+  const response = await postEvalRoute(
+    appUrl,
+    "/api/cli/evals/remediation/generate",
+    { workspaceId, evalRunId },
+    rawKey,
+  );
+  const payload = (await response.json().catch(() => null)) as
+    | { recommendationIds?: string[]; count?: number; error?: string }
+    | null;
+  if (!response.ok) {
+    throw new Error(
+      `HTTP generate remediation failed: ${response.status} ${payload?.error ?? ""}`.trim(),
+    );
+  }
+  return payload ?? {};
+}
+
+export async function getRemediationViaHttp(
+  appUrl: string,
+  rawKey: string,
+  workspaceId: string,
+  recommendationId: string,
+): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams({ workspaceId });
+  const response = await fetch(
+    `${appUrl}/api/cli/evals/remediation/${recommendationId}?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${rawKey}` } },
+  );
+  const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!response.ok) {
+    throw new Error(`HTTP get remediation failed: ${response.status}`);
+  }
+  return payload ?? {};
+}
+
+export async function executeEvalSuiteLocally(input: {
+  appUrl: string;
+  rawApiKey: string;
+  workspaceId: string;
+  evalSuiteId: string;
+  runId?: string;
+}): Promise<{ exitCode: number; output: string }> {
+  const { spawnSync } = await import("node:child_process");
+  const args = [
+    "tsx",
+    "scripts/run-eval-suite.ts",
+    "--suite",
+    input.evalSuiteId,
+    "--api-key",
+    input.rawApiKey,
+    "--app-url",
+    input.appUrl,
+    "--workspace-id",
+    input.workspaceId,
+  ];
+  if (input.runId) {
+    args.push("--run", input.runId);
+  }
+
+  const result = spawnSync("npx", args, {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    shell: true,
+    env: {
+      ...process.env,
+      SORTIRI_API_URL: input.appUrl,
+      SORTIRI_API_KEY: input.rawApiKey,
+      SORTIRI_WORKSPACE_ID: input.workspaceId,
+    },
+  });
+
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
+  const exitCode = result.status ?? 1;
+
+  if (exitCode !== 0 && exitCode !== 1) {
+    throw new Error(output || `Eval runner exited with code ${exitCode}`);
+  }
+
+  return { exitCode, output };
+}
+
 export {
   assertNoSecrets,
   completeOnboarding,

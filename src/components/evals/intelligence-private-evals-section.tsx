@@ -10,6 +10,12 @@ type IntelligencePrivateEvalsSectionProps = {
     latestTitle?: string;
     latestAt?: number;
   };
+  remediationSummary?: {
+    openCount: number;
+    failedEvalsNeedingAction: number;
+    rerunsPassed: number;
+    rerunsStillFailing: number;
+  };
   recentEvalSuites: Array<{
     id: string;
     title: string;
@@ -21,6 +27,7 @@ type IntelligencePrivateEvalsSectionProps = {
 
 export function IntelligencePrivateEvalsSection({
   evalSummary,
+  remediationSummary,
   recentEvalSuites,
 }: IntelligencePrivateEvalsSectionProps) {
   return (
@@ -31,9 +38,24 @@ export function IntelligencePrivateEvalsSection({
         {evalSummary.latestRunStatus ? ` · Latest run: ${evalSummary.latestRunStatus}` : ""}
         {evalSummary.latestTitle ? ` · Latest: ${evalSummary.latestTitle}` : ""}
       </p>
+      {remediationSummary ? (
+        <p className="evals-page__subtitle">
+          {remediationSummary.openCount} open remediation
+          {remediationSummary.openCount === 1 ? "" : "s"} ·{" "}
+          {remediationSummary.failedEvalsNeedingAction} needing action ·{" "}
+          {remediationSummary.rerunsPassed} re-runs passed ·{" "}
+          {remediationSummary.rerunsStillFailing} still failing
+        </p>
+      ) : null}
       <div className="evals-page__actions">
         <Link href="/intelligence/evals" className="evals-btn">
           Open Evals
+        </Link>
+        <Link href="/intelligence/evals?status=failed" className="evals-btn">
+          Review failed evals
+        </Link>
+        <Link href="/intelligence/queue?source=eval_failure" className="evals-btn">
+          Open remediation queue
         </Link>
       </div>
       {recentEvalSuites.length > 0 ? (

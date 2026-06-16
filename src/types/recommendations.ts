@@ -21,8 +21,18 @@ export type RecommendationSource =
   | "posthog"
   | "stripe"
   | "github"
+  | "eval_failure"
   | "system"
   | "manual";
+
+export type RemediationStatus =
+  | "not_started"
+  | "context_generated"
+  | "workstream_created"
+  | "fix_in_progress"
+  | "eval_rerun_passed"
+  | "eval_rerun_failed"
+  | "dismissed";
 
 export type RecommendationStatus =
   | "open"
@@ -71,6 +81,13 @@ export type RecommendationRecord = {
   evidencePlaybookIds?: string[];
   evidenceInsightFindingIds?: string[];
   evidenceArtifactIds?: string[];
+  evalSuiteId?: string;
+  evalRunId?: string;
+  evalResultId?: string;
+  remediationStatus?: RemediationStatus;
+  remediationWorkstreamId?: string;
+  remediationContextPackId?: string;
+  remediationEvalRunId?: string;
   dismissedReason?: string;
   dedupKey?: string;
   createdBy?: {

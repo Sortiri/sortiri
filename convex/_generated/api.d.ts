@@ -57,6 +57,7 @@ import type * as lib_contextRelevance from "../lib/contextRelevance.js";
 import type * as lib_entitiesLib from "../lib/entitiesLib.js";
 import type * as lib_evalGeneration from "../lib/evalGeneration.js";
 import type * as lib_evalLib from "../lib/evalLib.js";
+import type * as lib_evalRemediation from "../lib/evalRemediation.js";
 import type * as lib_evalRunnerLib from "../lib/evalRunnerLib.js";
 import type * as lib_eventDisplay from "../lib/eventDisplay.js";
 import type * as lib_eventLinksLib from "../lib/eventLinksLib.js";
@@ -186,6 +187,7 @@ declare const fullApi: ApiFromModules<{
   "lib/entitiesLib": typeof lib_entitiesLib;
   "lib/evalGeneration": typeof lib_evalGeneration;
   "lib/evalLib": typeof lib_evalLib;
+  "lib/evalRemediation": typeof lib_evalRemediation;
   "lib/evalRunnerLib": typeof lib_evalRunnerLib;
   "lib/eventDisplay": typeof lib_eventDisplay;
   "lib/eventLinksLib": typeof lib_eventLinksLib;

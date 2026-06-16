@@ -68,6 +68,14 @@ function IntelligencePageContent() {
           />
           <IntelligencePrivateEvalsSection
             evalSummary={hub?.evalSummary ?? { activeCount: 0 }}
+            remediationSummary={
+              hub?.remediationSummary ?? {
+                openCount: 0,
+                failedEvalsNeedingAction: 0,
+                rerunsPassed: 0,
+                rerunsStillFailing: 0,
+              }
+            }
             recentEvalSuites={hub?.recentEvalSuites ?? []}
           />
           <IntelligenceAgentContextSection

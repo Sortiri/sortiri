@@ -364,4 +364,51 @@ export class SortiriApiClient {
       { method: "GET" },
     );
   }
+
+  async generateRemediationFromEval(evalRunId: string) {
+    return this.request<{ recommendationIds: string[]; count: number }>(
+      "/api/cli/evals/remediation/generate",
+      { body: { workspaceId: this.config.workspaceId, evalRunId } },
+    );
+  }
+
+  async listEvalRemediations(input: { limit?: number } = {}) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    if (input.limit !== undefined) params.set("limit", String(input.limit));
+    return this.request<{ remediations: unknown[] }>(
+      `/api/cli/evals/remediation?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async getEvalRemediation(recommendationId: string) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    return this.request<Record<string, unknown>>(
+      `/api/cli/evals/remediation/${recommendationId}?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async convertRemediationToWorkstream(recommendationId: string) {
+    return this.request<Record<string, unknown>>(
+      `/api/cli/recommendations/${recommendationId}/convert`,
+      { body: { workspaceId: this.config.workspaceId } },
+    );
+  }
+
+  async rerunEvalForRemediation(input: { recommendationId: string; evalSuiteId?: string }) {
+    let evalSuiteId = input.evalSuiteId;
+    if (!evalSuiteId) {
+      const rec = await this.getEvalRemediation(input.recommendationId);
+      evalSuiteId = rec.evalSuiteId as string | undefined;
+      if (!evalSuiteId) throw new Error("evalSuiteId not found on remediation recommendation");
+    }
+    return this.request<Record<string, unknown>>("/api/cli/evals/remediation/rerun", {
+      body: {
+        workspaceId: this.config.workspaceId,
+        recommendationId: input.recommendationId,
+        evalSuiteId,
+      },
+    });
+  }
 }

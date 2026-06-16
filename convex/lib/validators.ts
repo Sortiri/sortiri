@@ -566,8 +566,19 @@ export const recommendationSourceValidator = v.union(
   v.literal("posthog"),
   v.literal("stripe"),
   v.literal("github"),
+  v.literal("eval_failure"),
   v.literal("system"),
   v.literal("manual"),
+);
+
+export const remediationStatusValidator = v.union(
+  v.literal("not_started"),
+  v.literal("context_generated"),
+  v.literal("workstream_created"),
+  v.literal("fix_in_progress"),
+  v.literal("eval_rerun_passed"),
+  v.literal("eval_rerun_failed"),
+  v.literal("dismissed"),
 );
 
 export const recommendationStatusValidator = v.union(

@@ -145,3 +145,24 @@ export const getEvalRunSchema = z.object({
 export const recommendEvalsForWorkstreamSchema = z.object({
   workstreamId: z.string().describe("Workstream ID to recommend eval suites for"),
 });
+
+export const generateRemediationFromEvalSchema = z.object({
+  evalRunId: z.string().describe("Failed eval run ID"),
+});
+
+export const listEvalRemediationsSchema = z.object({
+  limit: z.number().optional().describe("Max remediations to return"),
+});
+
+export const getEvalRemediationSchema = z.object({
+  recommendationId: z.string().describe("Remediation recommendation ID"),
+});
+
+export const convertRemediationToWorkstreamSchema = z.object({
+  recommendationId: z.string().describe("Remediation recommendation ID to convert"),
+});
+
+export const rerunEvalForRemediationSchema = z.object({
+  recommendationId: z.string().describe("Remediation recommendation ID"),
+  evalSuiteId: z.string().optional().describe("Eval suite ID (resolved from recommendation if omitted)"),
+});

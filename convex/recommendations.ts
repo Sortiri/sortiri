@@ -16,9 +16,16 @@ import {
   findOpenRecommendationByDedupKey,
   listRecommendationsForProject,
   listRecommendationsForWorkspace,
+  listRemediationForEvalRun,
+  listRemediationRecommendationsForWorkspace,
   patchRecommendationDoc,
   type RecommendationRecord,
 } from "./lib/recommendationLib";
+import {
+  buildRemediationDraft,
+  buildRemediationDraftsFromEvalRun,
+} from "./lib/evalRemediation";
+import { assertEvalRunAccess } from "./lib/evalLib";
 import {
   collectAllDraftRecommendations,
   collectFailureRecommendations,
@@ -55,7 +62,10 @@ async function recordRecommendationEvent(
       | "recommendation.dismissed"
       | "recommendation.accepted"
       | "recommendation.context_pack_generated"
-      | "recommendation.converted_to_workstream";
+      | "recommendation.converted_to_workstream"
+      | "recommendation.generated_from_eval_failure"
+      | "recommendation.remediation_context_generated"
+      | "recommendation.converted_to_remediation_workstream";
     title: string;
     summary?: string;
     priority?: "low" | "normal" | "high" | "critical";
@@ -283,6 +293,200 @@ export const generateFromSourceHealth = mutation({
   },
 });
 
+export const generateFromEvalRun = mutation({
+  args: { evalRunId: v.id("evalRuns") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    await assertEvalRunAccess(ctx, args.evalRunId, user.clerkUserId);
+    const { membership } = await getMembershipAndAccessible(
+      ctx,
+      (await ctx.db.get(args.evalRunId))!.workspaceId,
+      user.clerkUserId,
+    );
+    assertNotAuditorWorkspaceBrowse(membership);
+    if (!canWriteWorkspaceData(membership.role)) throw new Error("Access denied");
+
+    const runDoc = await ctx.db.get(args.evalRunId);
+    if (!runDoc) throw new Error("Eval run not found");
+
+    if (!["failed", "error", "needs_review"].includes(runDoc.status)) {
+      throw new Error("Eval run does not need remediation");
+    }
+
+    const inputs = await buildRemediationDraftsFromEvalRun(ctx, args.evalRunId);
+    const createdIds: Id<"recommendations">[] = [];
+
+    for (const input of inputs) {
+      const draft = await buildRemediationDraft(ctx, input);
+      if (!draft) continue;
+
+      const existing = await findOpenRecommendationByDedupKey(
+        ctx,
+        draft.workspaceId,
+        draft.dedupKey!,
+      );
+      if (existing) continue;
+
+      const id = await createRecommendationDoc(ctx, {
+        ...draft,
+        status: "open",
+        createdBy: createdByFromUser(user),
+      });
+      createdIds.push(id);
+
+      await recordRecommendationEvent(ctx, {
+        workspaceId: draft.workspaceId,
+        recommendationId: id,
+        type: "recommendation.generated_from_eval_failure",
+        title: `Remediation recommendation created: ${draft.title}`,
+        summary: draft.summary,
+        priority: draft.priority,
+        actor: actorFromUser(user),
+      });
+    }
+
+    return { recommendationIds: createdIds, count: createdIds.length };
+  },
+});
+
+export const listForEvalRun = query({
+  args: { evalRunId: v.id("evalRuns") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const { doc: run } = await assertEvalRunAccess(ctx, args.evalRunId, user.clerkUserId);
+    const { accessible } = await getMembershipAndAccessible(
+      ctx,
+      run.workspaceId,
+      user.clerkUserId,
+    );
+
+    const records = await listRemediationForEvalRun(ctx, run.workspaceId, args.evalRunId);
+    const filtered: RecommendationRecord[] = [];
+    for (const record of records) {
+      filtered.push(await filterRecommendationEvidence(ctx, record, accessible));
+    }
+    return filtered;
+  },
+});
+
+export const listRemediations = query({
+  args: {
+    workspaceId: v.string(),
+    status: v.optional(recommendationStatusValidator),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, user.clerkUserId);
+    const { membership, accessible } = await getMembershipAndAccessible(
+      ctx,
+      workspace._id,
+      user.clerkUserId,
+    );
+    assertNotAuditorWorkspaceBrowse(membership);
+
+    const records = await listRemediationRecommendationsForWorkspace(ctx, workspace._id, {
+      status: args.status,
+      limit: args.limit ?? 100,
+    });
+
+    const filtered: RecommendationRecord[] = [];
+    for (const record of records) {
+      if (record.projectId) {
+        const projectId = record.projectId as Id<"projects">;
+        if (accessible !== "all" && !accessible.has(projectId)) continue;
+      }
+      filtered.push(await filterRecommendationEvidence(ctx, record, accessible));
+    }
+    return filtered;
+  },
+});
+
+export const getRemediationByWorkstream = query({
+  args: { workstreamId: v.id("workstreams") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const ws = await ctx.db.get(args.workstreamId);
+    if (!ws) return null;
+
+    const { membership, accessible } = await getMembershipAndAccessible(
+      ctx,
+      ws.workspaceId,
+      user.clerkUserId,
+    );
+    assertNotAuditorWorkspaceBrowse(membership);
+
+    const all = await ctx.db
+      .query("recommendations")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", ws.workspaceId))
+      .collect();
+
+    const doc = all.find(
+      (rec) =>
+        rec.source === "eval_failure" &&
+        (rec.remediationWorkstreamId === args.workstreamId ||
+          rec.convertedWorkstreamId === args.workstreamId),
+    );
+    if (!doc) return null;
+
+    return filterRecommendationEvidence(ctx, docToRecommendation(doc), accessible);
+  },
+});
+
+export const generateRemediationContextPack = mutation({
+  args: { recommendationId: v.id("recommendations") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const { doc } = await assertRecommendationAccess(ctx, args.recommendationId, user.clerkUserId, {
+      requireWrite: true,
+    });
+
+    if (!doc.evalRunId) {
+      throw new Error("Recommendation is not from an eval failure");
+    }
+
+    const goal = doc.suggestedGoal ?? doc.title;
+    const packId = await createContextPackDoc(ctx, {
+      workspaceId: doc.workspaceId,
+      projectId: doc.projectId,
+      workstreamId: doc.workstreamId,
+      entityId: doc.entityId,
+      viewId: doc.viewId,
+      playbookId: doc.recommendedPlaybookId,
+      title: `Context for fixing failed eval: ${doc.title.slice(0, 60)}`,
+      goal,
+      status: "generated",
+      requestedBy: {
+        type: "human",
+        clerkUserId: user.clerkUserId,
+        email: user.email,
+        name: user.name,
+        source: "eval_remediation",
+      },
+      request: { timeWindowMs: DEFAULT_CONTEXT_TIME_WINDOW_MS },
+    });
+
+    const result = await generateContextPackItems(ctx, packId, user.clerkUserId);
+    await patchRecommendationDoc(ctx, args.recommendationId, {
+      generatedContextPackId: packId,
+      remediationContextPackId: packId,
+      remediationStatus: "context_generated",
+    });
+
+    await recordRecommendationEvent(ctx, {
+      workspaceId: doc.workspaceId,
+      recommendationId: args.recommendationId,
+      type: "recommendation.remediation_context_generated",
+      title: `Remediation context pack generated: ${doc.title}`,
+      summary: result.summary,
+      priority: doc.priority,
+      actor: actorFromUser(user),
+    });
+
+    return { contextPackId: packId, summary: result.summary, counts: result.counts };
+  },
+});
+
 export const createManual = mutation({
   args: {
     workspaceId: v.string(),
@@ -455,6 +659,7 @@ export const dismiss = mutation({
     await patchRecommendationDoc(ctx, args.recommendationId, {
       status: "dismissed",
       dismissedReason: args.reason,
+      ...(doc.source === "eval_failure" ? { remediationStatus: "dismissed" as const } : {}),
     });
     await recordRecommendationEvent(ctx, {
       workspaceId: doc.workspaceId,
@@ -573,10 +778,19 @@ export const convertToWorkstream = mutation({
 
     const packResult = await generateContextPackItems(ctx, packId, user.clerkUserId);
 
+    const isRemediation = doc.source === "eval_failure" && !!doc.evalRunId;
+
     await patchRecommendationDoc(ctx, args.recommendationId, {
       status: "converted_to_workstream",
       convertedWorkstreamId: workstreamId,
       generatedContextPackId: packId,
+      ...(isRemediation
+        ? {
+            remediationWorkstreamId: workstreamId,
+            remediationContextPackId: packId,
+            remediationStatus: "workstream_created" as const,
+          }
+        : {}),
     });
 
     await insertEvent(ctx, {
@@ -597,8 +811,12 @@ export const convertToWorkstream = mutation({
     await recordRecommendationEvent(ctx, {
       workspaceId: doc.workspaceId,
       recommendationId: args.recommendationId,
-      type: "recommendation.converted_to_workstream",
-      title: `Recommendation converted to workstream: ${title}`,
+      type: isRemediation
+        ? "recommendation.converted_to_remediation_workstream"
+        : "recommendation.converted_to_workstream",
+      title: isRemediation
+        ? `Remediation converted to workstream: ${title}`
+        : `Recommendation converted to workstream: ${title}`,
       summary: packResult.summary,
       priority: doc.priority,
       actor: actorFromUser(user),
@@ -632,6 +850,9 @@ export const convertToWorkstream = mutation({
       recommendedPlaybookId: doc.recommendedPlaybookId,
       validationRequirements: doc.validationRequirements,
       evalSuiteId,
+      evalRunId: doc.evalRunId,
+      evalResultId: doc.evalResultId,
+      remediationStatus: isRemediation ? ("workstream_created" as const) : undefined,
     };
   },
 });

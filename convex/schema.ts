@@ -41,6 +41,7 @@ import {
   recommendationConfidenceValidator,
   recommendationCreatedByValidator,
   recommendationPriorityValidator,
+  remediationStatusValidator,
   recommendationSourceValidator,
   recommendationStatusValidator,
   recommendationTypeValidator,
@@ -725,6 +726,13 @@ export default defineSchema({
     evidencePlaybookIds: v.optional(v.array(v.id("playbooks"))),
     evidenceInsightFindingIds: v.optional(v.array(v.id("insightFindings"))),
     evidenceArtifactIds: v.optional(v.array(v.id("artifacts"))),
+    evalSuiteId: v.optional(v.id("evalSuites")),
+    evalRunId: v.optional(v.id("evalRuns")),
+    evalResultId: v.optional(v.id("evalResults")),
+    remediationStatus: v.optional(remediationStatusValidator),
+    remediationWorkstreamId: v.optional(v.id("workstreams")),
+    remediationContextPackId: v.optional(v.id("contextPacks")),
+    remediationEvalRunId: v.optional(v.id("evalRuns")),
     dismissedReason: v.optional(v.string()),
     dedupKey: v.optional(v.string()),
     createdBy: v.optional(recommendationCreatedByValidator),
@@ -737,7 +745,8 @@ export default defineSchema({
     .index("by_workspace_dedup_key", ["workspaceId", "dedupKey"])
     .index("by_project", ["projectId"])
     .index("by_entity", ["entityId"])
-    .index("by_workstream", ["workstreamId"]),
+    .index("by_workstream", ["workstreamId"])
+    .index("by_eval_run", ["workspaceId", "evalRunId"]),
 
   evalSuites: defineTable({
     workspaceId: v.id("workspaces"),

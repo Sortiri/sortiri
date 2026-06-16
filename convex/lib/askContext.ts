@@ -625,6 +625,19 @@ async function retrieveRecommendationAskContext(
     }
   }
 
+  if (recommendation.source === "eval_failure") {
+    lines.push("", "EVAL REMEDIATION CONTEXT");
+    if (recommendation.evalRunId) lines.push(`Source eval run: ${recommendation.evalRunId}`);
+    if (recommendation.evalSuiteId) lines.push(`Eval suite: ${recommendation.evalSuiteId}`);
+    if (recommendation.remediationStatus) {
+      lines.push(`Remediation status: ${recommendation.remediationStatus}`);
+    }
+    lines.push(
+      "Do not claim the fix worked unless remediationStatus is eval_rerun_passed.",
+      "Use eval evidence first.",
+    );
+  }
+
   const eventIds = (recommendation.evidenceEventIds ?? []).map((id) => id as Id<"events">);
   const workstreamIds = (recommendation.evidenceWorkstreamIds ?? []).map(
     (id) => id as Id<"workstreams">,
@@ -736,7 +749,9 @@ async function retrieveEvalRunAskContext(
     ),
     "",
     "Explain why this eval failed or what to fix next. Do not claim causation.",
+    "Use eval evidence first. Do not claim the fix worked unless a remediation re-run passed.",
     "Use cautious language. Do not infer redacted secrets.",
+    "Do not expose inaccessible or unsafe evidence.",
   ].filter(Boolean);
 
   const eventIds = results.flatMap((result) =>
