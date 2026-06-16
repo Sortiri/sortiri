@@ -4,7 +4,6 @@ export function LandingTimelineReplaySection() {
   return (
     <LandingAnimatedCopySection
       kicker="Timeline"
-      followsDiagram
       inViewAmount={0.28}
       lines={[
         {

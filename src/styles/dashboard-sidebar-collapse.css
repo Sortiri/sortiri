@@ -32,7 +32,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--ca-space-2);
-  min-height: 2rem;
+  min-height: 2.5rem;
+  padding-block: var(--ca-space-1);
 }
 
 .dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar-header {

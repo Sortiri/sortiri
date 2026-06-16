@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { landing } from "@/components/landing/typography";
 import { FOOTER_LINK_GROUPS } from "@/config/marketing-nav";
 
@@ -39,15 +39,9 @@ export function LandingSiteFooter() {
       </div>
 
       <div className="mt-10 flex flex-col items-start justify-between gap-5 border-t border-[var(--landing-grid-line)] pt-6 sm:flex-row sm:items-center">
-        <div className="flex items-center">
-          <Image
-            src="/sortiri-mark.png"
-            alt="Sortiri"
-            width={32}
-            height={32}
-            className="size-8"
-          />
-        </div>
+        <Link href="/" aria-label="Sortiri home">
+          <BrandLogo size="md" />
+        </Link>
 
         <p className={`${landing.footerTagline} text-right sm:text-left`}>
           The timeline layer for AI-native companies.

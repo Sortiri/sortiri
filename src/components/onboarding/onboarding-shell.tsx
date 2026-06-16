@@ -4,6 +4,7 @@ import Link from "next/link";
 import { landing } from "@/components/landing/typography";
 import { StepProgress } from "@/components/onboarding/step-progress";
 import { inter } from "@/lib/inter";
+import { departureMono } from "@/lib/landing-fonts";
 
 type OnboardingShellProps = {
   step: number;
@@ -21,14 +22,15 @@ export function OnboardingShell({
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col py-8 sm:py-12">
       <div className="mb-8 flex items-center justify-between gap-4">
-        <Link href="/" className="inline-flex items-center" aria-label="Sortiri home">
+        <Link href="/" className="inline-flex items-center gap-2" aria-label="Sortiri home">
           <img
-            src="/sortiri-mark.png"
+            src="/ChatGPT_Image_Jun_16__2026__04_50_53_PM-removebg-preview.png"
             alt=""
             width={28}
             height={28}
             className="h-7 w-7"
           />
+          <span className={`${departureMono.className} text-xl text-white`} style={{ fontWeight: 900 }}>Sortiri</span>
         </Link>
         <span className={`${inter.className} text-sm text-[var(--ca-muted)]`}>
           Onboarding

@@ -56,7 +56,7 @@ export function DashboardSidebar() {
                   aria-label="Sortiri home"
                   onClick={() => router.push("/home")}
                 >
-                  <BrandLogo width={20} />
+                  <BrandLogo size="sm" />
                 </button>
                 <button
                   type="button"

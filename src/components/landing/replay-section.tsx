@@ -4,7 +4,6 @@ export function LandingReplaySection() {
   return (
     <LandingAnimatedCopySection
       kicker="Replay"
-      followsDiagram
       lines={[
         { text: "Ask your company what happened." },
         { text: "Get the replay, not the guess.", accent: "replay" },

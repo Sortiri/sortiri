@@ -4,7 +4,6 @@ export function LandingEnterpriseSection() {
   return (
     <LandingAnimatedCopySection
       kicker="Enterprise"
-      followsDiagram
       lines={[
         {
           text: "When every employee has agents,",

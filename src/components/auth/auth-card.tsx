@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 import {
   Card,
   CardContent,
@@ -19,13 +20,7 @@ export function AuthCard({ title, subtitle, children }: AuthCardProps) {
     <Card>
       <CardHeader>
         <Link href="/" className="auth-card__brand" aria-label="Sortiri home">
-          <img
-            src="/sortiri-mark.png"
-            alt=""
-            width={28}
-            height={28}
-            className="h-7 w-7"
-          />
+          <BrandLogo size="md" />
         </Link>
         <CardTitle>{title}</CardTitle>
         {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}

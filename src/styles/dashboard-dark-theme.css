@@ -58,12 +58,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: var(--ca-space-2);
   flex-shrink: 1;
   min-width: 0;
   width: auto;
-  height: 2rem;
-  padding-inline: var(--ca-space-2);
+  min-height: 2rem;
+  margin: 0;
+  padding: 0.25rem 0.375rem 0.25rem 0;
   border: none;
   border-radius: 0;
   background: transparent;

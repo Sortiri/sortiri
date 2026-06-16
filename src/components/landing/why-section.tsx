@@ -1,19 +1,5 @@
-import { LandingAnimatedCopySection } from "@/components/landing/animated-copy-section";
-
-const WHY_LINES = [
-  { text: "Sortiri turns every agent action, product event," },
-  {
-    text: "and company decision into a searchable history.",
-    accent: "searchable history",
-  },
-];
+import { WhySortiriInteractive } from "@/components/landing/why-sortiri/why-sortiri-interactive";
 
 export function LandingWhySection() {
-  return (
-    <LandingAnimatedCopySection
-      kicker="Why Sortiri"
-      lines={WHY_LINES}
-      followsDiagram
-    />
-  );
+  return <WhySortiriInteractive />;
 }

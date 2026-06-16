@@ -45,7 +45,7 @@ export function DashboardMobileHeader() {
               aria-label="Home"
               onClick={() => router.push("/home")}
             >
-              <BrandLogo width={24} />
+              <BrandLogo size="sm" />
             </button>
           </div>
 

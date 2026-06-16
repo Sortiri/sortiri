@@ -7,7 +7,12 @@ import {
   type Variants,
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { LearnMoreButton } from "@/components/landing/learn-more-button";
+import { UseCaseDiagramPanel } from "@/components/landing/use-cases/use-case-diagram-panel";
+import { UseCaseSelector } from "@/components/landing/use-cases/use-case-selector";
+import {
+  DEFAULT_USE_CASE_ID,
+  type UseCaseId,
+} from "@/components/landing/use-cases/use-cases";
 import { landing } from "@/components/landing/typography";
 import { inter } from "@/lib/inter";
 import { ppMondwest } from "@/lib/landing-fonts";
@@ -16,6 +21,13 @@ const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const ACCENT_CLASS = "text-[#00E013]";
 const ACCENT_FONT_CLASS = ppMondwest.className;
 const BASE_FONT_CLASS = inter.className;
+
+const HEADLINE_LINES: Array<{ text: string; accent?: string }> = [
+  {
+    text: "The company timeline becomes useful everywhere agents touch work.",
+    accent: "agents touch work",
+  },
+];
 
 const cascadeVariants: Variants = {
   hidden: {
@@ -38,20 +50,6 @@ const wordVariants: Variants = {
     y: 0,
     transition: { duration: 0.55, ease: EASE_OUT },
   },
-};
-
-export type AnimatedCopyLine = {
-  text: string;
-  accent?: string;
-};
-
-type LandingAnimatedCopySectionProps = {
-  kicker: string;
-  lines: AnimatedCopyLine[];
-  className?: string;
-  inViewAmount?: number;
-  followsDiagram?: boolean;
-  showLearnMore?: boolean;
 };
 
 function stripTrailingPunctuation(word: string) {
@@ -89,23 +87,17 @@ function tokenizeWithAccent(
   return result;
 }
 
-export function LandingAnimatedCopySection({
-  kicker,
-  lines,
-  className = "",
-  inViewAmount = 0.32,
-  followsDiagram = false,
-  showLearnMore = false,
-}: LandingAnimatedCopySectionProps) {
+export function UseCasesInteractive() {
   const sectionRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
   const inView = useInView(sectionRef, {
     once: false,
-    amount: inViewAmount,
-    margin: "0px 0px -12% 0px",
+    amount: 0.2,
+    margin: "0px 0px -10% 0px",
   });
   const [cycle, setCycle] = useState(0);
   const wasInViewRef = useRef(false);
+  const [selectedId, setSelectedId] = useState<UseCaseId>(DEFAULT_USE_CASE_ID);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -121,7 +113,8 @@ export function LandingAnimatedCopySection({
   return (
     <section
       ref={sectionRef}
-      className={`${followsDiagram ? landing.copyBlockPaired : landing.copyBlock} min-w-0 overflow-x-clip ${className}`}
+      className="use-cases min-w-0 overflow-x-clip pt-10 pb-16 sm:pt-12 sm:pb-20"
+      aria-labelledby="use-cases-heading"
     >
       <motion.div
         key={cycle}
@@ -134,16 +127,33 @@ export function LandingAnimatedCopySection({
           className={`${landing.sectionKicker} ${landing.labelAccent}`}
           variants={wordVariants}
         >
-          {kicker}
+          USE CASES
         </motion.p>
-        {lines.map((line) => {
+      </motion.div>
+
+      <motion.div
+        key={`${cycle}-text`}
+        id="use-cases-heading"
+        className="mx-auto mb-8 flex w-full max-w-3xl flex-col gap-2 sm:mb-10"
+        variants={cascadeVariants}
+        initial="hidden"
+        animate={motionState}
+      >
+        {HEADLINE_LINES.map((line) => {
           const tokens = tokenizeWithAccent(line.text, line.accent);
           return (
-            <p key={line.text} className={`${BASE_FONT_CLASS} text-center text-[clamp(1.5rem,3vw+0.5rem,2.5rem)] font-normal leading-[1.12] text-white`}>
+            <p
+              key={line.text}
+              className={`${BASE_FONT_CLASS} text-center text-[clamp(1.5rem,3vw+0.5rem,2.5rem)] font-normal leading-[1.12] text-white`}
+            >
               {tokens.map((token, index) => (
                 <motion.span
                   key={`${token.word}-${index}`}
-                  className={`inline${token.accent ? ` ${ACCENT_CLASS} ${ACCENT_FONT_CLASS} text-[clamp(1.625rem,3.2vw+0.5rem,2.75rem)]` : ""}`}
+                  className={`inline${
+                    token.accent
+                      ? ` ${ACCENT_CLASS} ${ACCENT_FONT_CLASS} text-[clamp(1.625rem,3.2vw+0.5rem,2.75rem)]`
+                      : ""
+                  }`}
                   variants={wordVariants}
                 >
                   {token.word}
@@ -155,11 +165,10 @@ export function LandingAnimatedCopySection({
         })}
       </motion.div>
 
-      {showLearnMore ? (
-        <div className="mx-auto mt-8 flex w-full max-w-3xl justify-center sm:mt-10">
-          <LearnMoreButton />
-        </div>
-      ) : null}
+      <div className="use-cases__layout mx-auto w-full max-w-6xl">
+        <UseCaseSelector selectedId={selectedId} onSelect={setSelectedId} />
+        <UseCaseDiagramPanel useCaseId={selectedId} />
+      </div>
     </section>
   );
 }

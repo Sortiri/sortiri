@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BrandLogo } from "@/components/brand-logo";
 import { LoginButton } from "@/components/landing/login-button";
 import { StartButton } from "@/components/landing/start-button";
 import { landing } from "@/components/landing/typography";
@@ -37,13 +38,7 @@ export function LandingHeader() {
           })}
         </nav>
         <Link href="/" aria-label="Sortiri home" className="justify-self-center">
-          <img
-            src="/sortiri-mark.png"
-            alt=""
-            width={28}
-            height={28}
-            className="h-7 w-7"
-          />
+          <BrandLogo size="md" />
         </Link>
         <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-2.5">
           <StartButton size="sm" />
