@@ -1,0 +1,11 @@
+{
+  "source": "generic",
+  "signalType": "incident_opened",
+  "title": "Production outage: API latency spike",
+  "severity": "critical",
+  "service": "api",
+  "environment": "production",
+  "id": "obs-inc-open-1",
+  "fingerprint": "api-latency-spike",
+  "occurredAt": 1718650000000
+}

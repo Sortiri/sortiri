@@ -24,6 +24,7 @@ function loadEnvFile(filePath: string) {
 }
 
 loadEnvFile(e2eEnvFile);
+loadEnvFile(path.join(".env.local"));
 
 export default defineConfig({
   testDir: "tests/e2e",

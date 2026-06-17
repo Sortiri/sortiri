@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type {
@@ -114,7 +115,7 @@ export function EvalSuiteDetailPage({ evalSuiteId }: EvalSuiteDetailPageProps) {
   }, [cases, suite]);
 
   if (data === undefined) {
-    return <p className="evals-page__subtitle">Loading eval suite…</p>;
+    return <PageLoader />;
   }
 
   if (!suite) {

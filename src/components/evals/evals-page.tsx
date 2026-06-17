@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { EvalFilters } from "@/components/evals/eval-filters";
 import { EvalSuiteCard } from "@/components/evals/eval-suite-card";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { EvalSuiteFilters, EvalSuiteRecord } from "@/types/evals";
 import "./evals.css";
@@ -42,7 +43,7 @@ export function EvalsPage() {
 
       <EvalFilters filters={filters} onChange={setFilters} />
 
-      {loading ? <p className="evals-page__subtitle">Loading eval suites…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
       {!loading && filtered.length === 0 ? (
         <p className="evals-page__subtitle">No eval suites match these filters.</p>
       ) : null}

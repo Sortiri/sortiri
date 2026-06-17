@@ -21,6 +21,7 @@ import { GenerateContextPackButton } from "@/components/context/generate-context
 import type { TimelineViewMode } from "@/lib/events/display";
 import { groupEventsByDay } from "@/lib/events/format";
 import type { TimelineEvent, Workstream } from "@/types/events";
+import { PageLoader } from "@/components/ui/page-loader";
 import "./entities.css";
 
 type EntityDetailPageProps = {
@@ -75,7 +76,7 @@ export function EntityDetailPage({ entityId }: EntityDetailPageProps) {
   if (loading) {
     return (
       <div className="entity-detail-page">
-        <p className="entities-page__loading">Loading entity…</p>
+        <PageLoader variant="inline" />
       </div>
     );
   }

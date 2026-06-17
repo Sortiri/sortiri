@@ -13,6 +13,11 @@ const GROUP_LABELS: Record<AuditReportItemType, string> = {
   impact_analysis: "Impact Analysis",
   lesson: "Lessons",
   playbook: "Playbooks",
+  decision: "Decisions",
+  rollback: "Rollbacks",
+  decision_candidate: "Decision Candidates",
+  incident: "Incidents",
+  observability_signal: "Observability Signals",
   note: "Notes",
 };
 
@@ -25,6 +30,11 @@ const GROUP_ORDER: AuditReportItemType[] = [
   "impact_analysis",
   "lesson",
   "playbook",
+  "decision",
+  "rollback",
+  "decision_candidate",
+  "incident",
+  "observability_signal",
   "note",
 ];
 
@@ -74,6 +84,24 @@ export function AuditEvidenceSection({ items, reportId }: AuditEvidenceSectionPr
                   className="audit-evidence-item__link"
                 >
                   Open workstream replay
+                </Link>
+              ) : null}
+              {item.decisionId ? (
+                <Link href={`/decisions/${item.decisionId}`} className="audit-evidence-item__link">
+                  Open decision
+                </Link>
+              ) : null}
+              {item.incidentId ? (
+                <Link href={`/incidents/${item.incidentId}`} className="audit-evidence-item__link">
+                  Open incident
+                </Link>
+              ) : null}
+              {item.observabilitySignalId && item.incidentId ? (
+                <Link
+                  href={`/incidents/${item.incidentId}`}
+                  className="audit-evidence-item__link"
+                >
+                  Open observability signal
                 </Link>
               ) : null}
             </article>

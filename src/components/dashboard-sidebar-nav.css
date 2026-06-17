@@ -44,7 +44,7 @@
   margin: 0;
   padding: var(--ca-space-2, 0.5rem);
   border: 1px solid transparent;
-  border-radius: 0;
+  border-radius: var(--ca-radius-sm);
   background: transparent;
   font-family: inherit;
   color: var(--ca-muted);

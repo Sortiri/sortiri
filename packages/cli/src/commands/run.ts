@@ -2,7 +2,7 @@ import path from "node:path";
 import {
   findRepoRoot,
   formatDurationMs,
-  loadConfig,
+  loadCloudConfig as loadConfig,
   loadSession,
   redactSensitiveContent,
   truncateCommandOutput,

@@ -12,6 +12,7 @@ import {
   EvidenceSafetyBadges,
   EvidenceSafetyNote,
 } from "@/components/security/evidence-safety-badges";
+import { PageLoader } from "@/components/ui/page-loader";
 import "./artifacts.css";
 
 function getCommandMetadata(metadata: unknown): {
@@ -82,7 +83,7 @@ export function ArtifactDrawer() {
           <div>
             <p className="artifact-drawer-eyebrow">{eyebrow}</p>
             <h2 className="artifact-drawer-title">
-              {artifact === undefined ? "Loading…" : artifact?.title ?? "Artifact not found"}
+              {artifact === undefined ? "\u00a0" : artifact?.title ?? "Artifact not found"}
             </h2>
             {artifact ? <EvidenceSafetyBadges item={artifact} /> : null}
           </div>
@@ -92,7 +93,7 @@ export function ArtifactDrawer() {
         </header>
 
         {artifact === undefined ? (
-          <p className="artifact-drawer-loading">Loading artifact…</p>
+          <PageLoader variant="section" />
         ) : artifact === null ? (
           <p className="artifact-drawer-empty">Artifact not found.</p>
         ) : (

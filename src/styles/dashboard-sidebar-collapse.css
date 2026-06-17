@@ -50,7 +50,7 @@
   margin: 0;
   padding: 0;
   border: 1px solid var(--ca-hairline);
-  border-radius: 0;
+  border-radius: var(--ca-radius-sm);
   background: var(--ca-surface);
   color: var(--ca-muted);
   cursor: pointer;

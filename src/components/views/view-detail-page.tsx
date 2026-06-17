@@ -13,6 +13,7 @@ import { ViewForm } from "@/components/views/view-form";
 import { ViewPulse } from "@/components/views/view-pulse";
 import { InsightsWindowFilter } from "@/components/insights/insights-window-filter";
 import { AnalyzeImpactButton } from "@/components/impact/analyze-impact-button";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { EntityRecord } from "@/types/entities";
@@ -123,7 +124,7 @@ export function ViewDetailPage({ viewId }: ViewDetailPageProps) {
   if (loading) {
     return (
       <div className="view-detail-page">
-        <p className="projects-page__loading">Loading view…</p>
+        <PageLoader variant="inline" />
       </div>
     );
   }

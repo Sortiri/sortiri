@@ -1,10 +1,27 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { clearSessionSafe, saveSessionSafe } from "@sortiri/local";
+import { asCloudConfig, isLocalMode, loadConfig, clearSessionSafe, saveSessionSafe } from "@sortiri/local";
+import { SortiriLocalClient } from "./localClient.js";
+import { registerLocalMcpTools } from "./localServer.js";
 import { SortiriApiClient } from "./client.js";
-import { loadConfig } from "./config.js";
 import {
+  confirmDecisionCandidateSchema,
+  createIncidentRollbackSchema,
+  createRollbackSchema,
+  dismissDecisionCandidateSchema,
+  getDecisionSchema,
+  getIncidentSchema,
+  linkDecisionToWorkstreamSchema,
+  linkIncidentToDecisionSchema,
+  linkIncidentToWorkstreamSchema,
+  listDecisionCandidatesSchema,
+  listDecisionsSchema,
+  listIncidentsSchema,
+  listObservabilitySignalsSchema,
+  recordDecisionSchema,
+  recordIncidentSchema,
+  resolveIncidentSchema,
   attachArtifactSchema,
   convertRecommendationSchema,
   createContextPackSchema,
@@ -18,14 +35,19 @@ import {
   getEvalRunSchema,
   getEvalSuiteSchema,
   getEvalRemediationSchema,
+  getIngestDeliverySchema,
   getKnownFailuresSchema,
   getProjectMemorySchema,
   getRecommendationSchema,
   getRecommendedPlaybookSchema,
+  getSourceHealthSchema,
   getValidationRequirementsSchema,
+  listDeadLettersSchema,
   listEvalSuitesSchema,
   listEvalRemediationsSchema,
+  listIngestDeliveriesSchema,
   listRecommendationsSchema,
+  replayIngestDeliverySchema,
   recommendEvalsForWorkstreamSchema,
   convertRemediationToWorkstreamSchema,
   rerunEvalForRemediationSchema,
@@ -36,11 +58,20 @@ import {
 
 async function main() {
   const config = loadConfig();
-  const client = new SortiriApiClient(config);
   const server = new McpServer({
     name: "sortiri",
     version: "0.1.0",
   });
+
+  if (isLocalMode(config)) {
+    const localClient = new SortiriLocalClient();
+    registerLocalMcpTools(server, localClient);
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    return;
+  }
+
+  const client = new SortiriApiClient(asCloudConfig(config));
 
   server.tool(
     "start_workstream",
@@ -400,6 +431,246 @@ async function main() {
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
+    },
+  );
+
+  server.tool(
+    "sortiri_list_ingest_deliveries",
+    "List ingest deliveries with optional status and source filters.",
+    listIngestDeliveriesSchema.shape,
+    async (args) => {
+      const input = listIngestDeliveriesSchema.parse(args);
+      const result = await client.listIngestDeliveries(input);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_get_ingest_delivery",
+    "Get a single ingest delivery by ID.",
+    getIngestDeliverySchema.shape,
+    async (args) => {
+      const input = getIngestDeliverySchema.parse(args);
+      const result = await client.getIngestDelivery(input.deliveryId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_list_dead_letters",
+    "List ingest dead letters for failed deliveries.",
+    listDeadLettersSchema.shape,
+    async (args) => {
+      const input = listDeadLettersSchema.parse(args);
+      const result = await client.listDeadLetters(input);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_replay_ingest_delivery",
+    "Replay an ingest delivery or dead letter from journal or payload.",
+    replayIngestDeliverySchema.shape,
+    async (args) => {
+      const input = replayIngestDeliverySchema.parse(args);
+      const result = await client.replayIngestDelivery(input);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_get_source_health",
+    "Get per-source ingest delivery health summary (last 24h).",
+    getSourceHealthSchema.shape,
+    async () => {
+      const result = await client.getSourceHealth();
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.tool(
+    "sortiri_record_decision",
+    "Record a company decision with rationale and rollback plan.",
+    recordDecisionSchema.shape,
+    async (args) => {
+      const input = recordDecisionSchema.parse(args);
+      const result = await client.recordDecision(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_list_decisions",
+    "List company decisions in the workspace.",
+    listDecisionsSchema.shape,
+    async (args) => {
+      const input = listDecisionsSchema.parse(args);
+      const result = await client.listDecisions(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_get_decision",
+    "Get a decision by ID.",
+    getDecisionSchema.shape,
+    async (args) => {
+      const input = getDecisionSchema.parse(args);
+      const result = await client.getDecision(input.decisionId);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_link_decision_to_workstream",
+    "Link a decision to a workstream.",
+    linkDecisionToWorkstreamSchema.shape,
+    async (args) => {
+      const input = linkDecisionToWorkstreamSchema.parse(args);
+      const result = await client.linkDecisionToWorkstream(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_create_rollback",
+    "Record a rollback linked to a decision.",
+    createRollbackSchema.shape,
+    async (args) => {
+      const input = createRollbackSchema.parse(args);
+      const result = await client.createRollback(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_list_decision_candidates",
+    "List pending decision candidates from Slack or system.",
+    listDecisionCandidatesSchema.shape,
+    async (args) => {
+      const input = listDecisionCandidatesSchema.parse(args);
+      const result = await client.listDecisionCandidates(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_confirm_decision_candidate",
+    "Confirm a decision candidate into a recorded decision.",
+    confirmDecisionCandidateSchema.shape,
+    async (args) => {
+      const input = confirmDecisionCandidateSchema.parse(args);
+      const result = await client.confirmDecisionCandidate(input.candidateId);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_dismiss_decision_candidate",
+    "Dismiss a decision candidate.",
+    dismissDecisionCandidateSchema.shape,
+    async (args) => {
+      const input = dismissDecisionCandidateSchema.parse(args);
+      const result = await client.dismissDecisionCandidate(input.candidateId);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_record_incident",
+    "Record a production incident (deploy failure, outage, or error).",
+    recordIncidentSchema.shape,
+    async (args) => {
+      const input = recordIncidentSchema.parse(args);
+      const result = await client.recordIncident(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_list_incidents",
+    "List incidents in the workspace.",
+    listIncidentsSchema.shape,
+    async (args) => {
+      const input = listIncidentsSchema.parse(args);
+      const result = await client.listIncidents(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_get_incident",
+    "Get an incident by ID.",
+    getIncidentSchema.shape,
+    async (args) => {
+      const input = getIncidentSchema.parse(args);
+      const result = await client.getIncident(input.incidentId);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_resolve_incident",
+    "Resolve an incident with root cause and mitigation.",
+    resolveIncidentSchema.shape,
+    async (args) => {
+      const input = resolveIncidentSchema.parse(args);
+      const result = await client.resolveIncident(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_create_incident_rollback",
+    "Record a rollback linked to an incident.",
+    createIncidentRollbackSchema.shape,
+    async (args) => {
+      const input = createIncidentRollbackSchema.parse(args);
+      const result = await client.createIncidentRollback(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_link_incident_to_workstream",
+    "Link an incident to a remediation workstream.",
+    linkIncidentToWorkstreamSchema.shape,
+    async (args) => {
+      const input = linkIncidentToWorkstreamSchema.parse(args);
+      const result = await client.linkIncidentToWorkstream(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_link_incident_to_decision",
+    "Link an incident to a related decision.",
+    linkIncidentToDecisionSchema.shape,
+    async (args) => {
+      const input = linkIncidentToDecisionSchema.parse(args);
+      const result = await client.linkIncidentToDecision(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "sortiri_list_observability_signals",
+    "List observability signals (deploy failures, alerts, rollbacks).",
+    listObservabilitySignalsSchema.shape,
+    async (args) => {
+      const input = listObservabilitySignalsSchema.parse(args);
+      const result = await client.listObservabilitySignals(input);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
   );
 

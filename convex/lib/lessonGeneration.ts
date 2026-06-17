@@ -243,3 +243,72 @@ export async function scanValidationLessonsFromEvents(
     tags: ["validation-from-evidence"],
   };
 }
+
+export function lessonFromDecisionContext(input: {
+  workspaceId: Id<"workspaces">;
+  projectId?: Id<"projects">;
+  decisionId: Id<"decisions">;
+  title: string;
+  summary: string;
+  rollbackIds?: Id<"rollbackEvents">[];
+  evidenceEventIds?: Id<"events">[];
+}): LessonInput {
+  validateLessonCopy({
+    title: input.title,
+    summary: input.summary,
+    recommendation: "Review linked decision and rollback evidence before repeating this change.",
+  });
+
+  return {
+    workspaceId: input.workspaceId,
+    projectId: input.projectId,
+    title: input.title,
+    summary: input.summary,
+    type: "process_learning",
+    status: "active",
+    confidence: "possible",
+    importance: "normal",
+    source: "system",
+    recommendation:
+      "Review linked decision and rollback evidence before repeating this change.",
+    evidenceEventIds: input.evidenceEventIds,
+    evidenceDecisionIds: [input.decisionId],
+    evidenceRollbackIds: input.rollbackIds,
+    tags: ["decision-memory"],
+  };
+}
+
+export function lessonFromIncidentContext(input: {
+  workspaceId: Id<"workspaces">;
+  projectId?: Id<"projects">;
+  incidentId: Id<"incidents">;
+  title: string;
+  summary: string;
+  rollbackIds?: Id<"rollbackEvents">[];
+  evidenceEventIds?: Id<"events">[];
+}): LessonInput {
+  validateLessonCopy({
+    title: input.title,
+    summary: input.summary,
+    recommendation:
+      "Review linked incident, signal, and rollback evidence before repeating this change.",
+  });
+
+  return {
+    workspaceId: input.workspaceId,
+    projectId: input.projectId,
+    title: input.title,
+    summary: input.summary,
+    type: "process_learning",
+    status: "active",
+    confidence: "possible",
+    importance: "normal",
+    source: "system",
+    recommendation:
+      "Review linked incident, signal, and rollback evidence before repeating this change.",
+    evidenceEventIds: input.evidenceEventIds,
+    evidenceIncidentIds: [input.incidentId],
+    evidenceRollbackIds: input.rollbackIds,
+    tags: ["incident-memory"],
+  };
+}

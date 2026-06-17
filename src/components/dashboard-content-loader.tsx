@@ -1,7 +1,9 @@
+import { PageLoader } from "@/components/ui/page-loader";
+
 export function DashboardContentLoader() {
   return (
-    <div className="dashboard-app flex min-h-dvh items-center justify-center bg-[#0c0c0c] px-6">
-      <p className="text-sm text-[var(--ca-muted)]">Loading…</p>
+    <div className="dashboard-app min-h-dvh bg-[#0c0c0c]">
+      <PageLoader variant="viewport" size="lg" />
     </div>
   );
 }

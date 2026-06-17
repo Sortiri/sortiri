@@ -6,26 +6,48 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { GenerateRelatedHistoryButton } from "@/components/links/generate-related-history-button";
 import { SearchResultItem } from "@/components/search/search-result-item";
 import { TimelineEmptyState } from "@/components/timeline/timeline-empty-state";
 import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
 import { TimelineFilters } from "@/components/timeline/timeline-filters";
-import { TimelineSearch } from "@/components/timeline/timeline-search";
+import {
+  TIMELINE_DENSITY_STORAGE_KEY,
+  TimelineDensityToggle,
+  type TimelineDensity,
+} from "@/components/timeline/timeline-density-toggle";
 import { TimelineSearchEmptyState } from "@/components/timeline/timeline-search-empty";
+import {
+  PlatformFilterBar,
+  PlatformOverflowMenu,
+  PlatformPage,
+  PlatformPageActions,
+  PlatformPageHeader,
+} from "@/components/platform";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { getTimelineEventDomId } from "@/lib/links/navigation";
-import { groupEventsByDay } from "@/lib/events/format";
+import {
+  filterEventsByTimeRange,
+  groupEventsByRecency,
+} from "@/lib/platform/timeline-grouping";
 import type { TimelineViewMode } from "@/lib/events/display";
 import type { TimelineFilterValue } from "@/lib/events/labels";
 import { ProjectFilter } from "@/components/projects/project-filter";
 import { useProjectFilter } from "@/hooks/use-project-filter";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { TimelineEvent } from "@/types/events";
 import { buildEntityResolveCandidates } from "@/components/entities/entity-link";
 import "./timeline.css";
 
 const isDev = process.env.NODE_ENV === "development";
+
+type TimeRange = "24h" | "7d" | "30d" | "all";
+
+function readStoredTimelineDensity(): TimelineDensity {
+  if (typeof window === "undefined") return "comfortable";
+  const stored = localStorage.getItem(TIMELINE_DENSITY_STORAGE_KEY);
+  return stored === "compact" || stored === "comfortable" ? stored : "comfortable";
+}
 
 export function TimelinePage() {
   const searchParams = useSearchParams();
@@ -35,6 +57,8 @@ export function TimelinePage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<TimelineFilterValue>(null);
   const [viewMode, setViewMode] = useState<TimelineViewMode>("primary");
+  const [density, setDensity] = useState<TimelineDensity>(readStoredTimelineDensity);
+  const [timeRange, setTimeRange] = useState<TimeRange>("all");
   const [seedError, setSeedError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [backfillError, setBackfillError] = useState<string | null>(null);
@@ -43,6 +67,7 @@ export function TimelinePage() {
   const [displayBackfilling, setDisplayBackfilling] = useState(false);
   const [entitiesBackfillError, setEntitiesBackfillError] = useState<string | null>(null);
   const [entitiesBackfilling, setEntitiesBackfilling] = useState(false);
+  const [relatedGenerating, setRelatedGenerating] = useState(false);
 
   const debouncedQuery = useDebouncedValue(query, 250);
   const isSearching = debouncedQuery.trim().length > 0;
@@ -66,6 +91,7 @@ export function TimelinePage() {
   const backfillMutation = useMutation(api.devSeed.backfillSearchText);
   const backfillDisplayMutation = useMutation(api.events.backfillDisplayFields);
   const backfillEntitiesMutation = useMutation(api.entities.backfillForWorkspace);
+  const generateRelatedMutation = useMutation(api.eventLinks.generateForWorkspace);
 
   const handleSeed = useCallback(async () => {
     if (!activeWorkspaceId) return;
@@ -123,8 +149,22 @@ export function TimelinePage() {
     }
   }, [activeWorkspaceId, backfillEntitiesMutation]);
 
+  const handleGenerateRelated = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    setRelatedGenerating(true);
+    try {
+      await generateRelatedMutation({ workspaceId: activeWorkspaceId, window: "7d" });
+    } finally {
+      setRelatedGenerating(false);
+    }
+  }, [activeWorkspaceId, generateRelatedMutation]);
+
   const loading = wsLoading || (activeWorkspaceId !== null && events === undefined);
-  const eventList = (events ?? []) as TimelineEvent[];
+  const rawEventList = (events ?? []) as TimelineEvent[];
+  const eventList = useMemo(
+    () => (isSearching ? rawEventList : filterEventsByTimeRange(rawEventList, timeRange)),
+    [rawEventList, timeRange, isSearching],
+  );
   const eventIds = useMemo(
     () => eventList.map((event) => event.id as Id<"events">),
     [eventList],
@@ -149,10 +189,15 @@ export function TimelinePage() {
       : "skip",
   );
 
-  const dayGroups = groupEventsByDay(eventList);
+  const recencyGroups = useMemo(() => groupEventsByRecency(eventList), [eventList]);
   const isEmpty = !loading && eventList.length === 0;
   const showTimelineEmpty = isEmpty && !isSearching;
   const showSearchEmpty = isEmpty && isSearching;
+
+  const handleDensityChange = useCallback((next: TimelineDensity) => {
+    setDensity(next);
+    localStorage.setItem(TIMELINE_DENSITY_STORAGE_KEY, next);
+  }, []);
 
   useEffect(() => {
     if (!focusEventId) return;
@@ -161,61 +206,53 @@ export function TimelinePage() {
     element.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusEventId, eventList]);
 
+  const devOverflowItems = isDev
+    ? [
+        {
+          label: relatedGenerating ? "Generating…" : "Generate related history",
+          onClick: () => void handleGenerateRelated(),
+          disabled: relatedGenerating || !activeWorkspaceId,
+        },
+        {
+          label: entitiesBackfilling ? "Backfilling…" : "Backfill entities",
+          onClick: () => void handleBackfillEntities(),
+          disabled: entitiesBackfilling,
+        },
+        {
+          label: displayBackfilling ? "Backfilling…" : "Backfill display",
+          onClick: () => void handleBackfillDisplay(),
+          disabled: displayBackfilling,
+        },
+        {
+          label: backfilling ? "Backfilling…" : "Backfill search",
+          onClick: () => void handleBackfill(),
+          disabled: backfilling,
+        },
+        {
+          label: seeding ? "Adding…" : "Add sample events",
+          onClick: () => void handleSeed(),
+          disabled: seeding,
+        },
+      ]
+    : [];
+
   return (
-    <div className="timeline-page">
-      <header className="timeline-page__header">
-        <div className="timeline-page__header-row">
-          <h1 className="timeline-page__title">Timeline</h1>
-          <div className="timeline-page__header-actions">
-            {activeWorkspaceId ? (
-              <GenerateRelatedHistoryButton workspaceId={activeWorkspaceId} />
-            ) : null}
-            {isDev && activeWorkspaceId ? (
-              <div className="timeline-page__dev-actions">
-              <button
-                type="button"
-                className="timeline-page__dev-action"
-                onClick={() => void handleBackfillEntities()}
-                disabled={entitiesBackfilling}
-              >
-                {entitiesBackfilling ? "Backfilling…" : "Backfill entities"}
-              </button>
-              <button
-                type="button"
-                className="timeline-page__dev-action"
-                onClick={() => void handleBackfillDisplay()}
-                disabled={displayBackfilling}
-              >
-                {displayBackfilling ? "Backfilling…" : "Backfill display"}
-              </button>
-              <button
-                type="button"
-                className="timeline-page__dev-action"
-                onClick={() => void handleBackfill()}
-                disabled={backfilling}
-              >
-                {backfilling ? "Backfilling…" : "Backfill search"}
-              </button>
-              <button
-                type="button"
-                className="timeline-page__dev-action"
-                onClick={() => void handleSeed()}
-                disabled={seeding}
-              >
-                {seeding ? "Adding…" : "Add sample events"}
-              </button>
-            </div>
-            ) : null}
-          </div>
-        </div>
-        <p className="timeline-page__subtitle">
-          Every agent action, product event, and company decision in one searchable
-          history.
-        </p>
-        <Link href="/ask" className="timeline-page__ask-link">
-          Ask about this timeline
-        </Link>
-      </header>
+    <PlatformPage className="timeline-page">
+      <PlatformPageHeader
+        title="Timeline"
+        subtitle="Every agent action, product event, decision, incident, and outcome in one searchable history."
+        actions={
+          <PlatformPageActions
+            secondary={[{ label: "Ask about this timeline", href: "/ask" }]}
+            primary={{ label: "Add event", href: "/sources" }}
+            overflow={
+              devOverflowItems.length > 0 ? (
+                <PlatformOverflowMenu items={devOverflowItems} label="Developer actions" />
+              ) : undefined
+            }
+          />
+        }
+      />
 
       {seedError ? <p className="timeline-page__error">{seedError}</p> : null}
       {backfillError ? <p className="timeline-page__error">{backfillError}</p> : null}
@@ -226,19 +263,57 @@ export function TimelinePage() {
         <p className="timeline-page__error">{entitiesBackfillError}</p>
       ) : null}
 
-      <TimelineSearch value={query} onChange={setQuery} />
-      {projectList.length > 0 ? (
-        <ProjectFilter
-          projects={projectList}
-          value={projectId ?? null}
-          onChange={setProjectId}
-        />
-      ) : null}
-      <TimelineFilters
-        value={category}
-        onChange={setCategory}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
+      <PlatformFilterBar
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search company history…",
+          label: "Search timeline",
+        }}
+        controls={
+          <>
+            {projectList.length > 0 ? (
+              <ProjectFilter
+                projects={projectList}
+                value={projectId ?? null}
+                onChange={setProjectId}
+              />
+            ) : null}
+            <label className="timeline-page__filter">
+              <span className="timeline-page__filter-label">Time range</span>
+              <select
+                className="timeline-page__filter-select"
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+              >
+                <option value="24h">24h</option>
+                <option value="7d">7d</option>
+                <option value="30d">30d</option>
+                <option value="all">All</option>
+              </select>
+            </label>
+            <TimelineDensityToggle value={density} onChange={handleDensityChange} />
+          </>
+        }
+        chips={
+          <TimelineFilters
+            value={category}
+            onChange={setCategory}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            hideHubLinks
+          />
+        }
+        secondary={
+          <div className="platform-hub-pills">
+            <Link href="/timeline/decisions" className="platform-hub-pill">
+              Decision hub
+            </Link>
+            <Link href="/timeline/incidents" className="platform-hub-pill">
+              Incident hub
+            </Link>
+          </div>
+        }
       />
 
       {isSearching && !loading ? (
@@ -253,7 +328,7 @@ export function TimelinePage() {
       ) : null}
 
       {loading ? (
-        <p className="timeline-page__loading">Loading events…</p>
+        <PageLoader variant="inline" />
       ) : showSearchEmpty ? (
         <TimelineSearchEmptyState />
       ) : showTimelineEmpty ? (
@@ -274,8 +349,10 @@ export function TimelinePage() {
           ))}
         </div>
       ) : (
-        <div className="timeline-feed">
-          {dayGroups.map((group) => (
+        <div
+          className={`timeline-feed${density === "compact" ? " timeline-feed--compact" : ""}`}
+        >
+          {recencyGroups.map((group) => (
             <section key={group.label} className="timeline-day-group">
               <h2 className="timeline-day-group__label">{group.label}</h2>
               <div className="timeline-day-group__events">
@@ -294,6 +371,6 @@ export function TimelinePage() {
           ))}
         </div>
       )}
-    </div>
+    </PlatformPage>
   );
 }

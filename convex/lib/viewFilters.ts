@@ -161,7 +161,10 @@ export function buildViewPulseCounts(events: EventRecord[]) {
     agentActions: events.filter((e) => e.category === "agent_action").length,
     codeChanges: events.filter((e) => e.category === "code_change").length,
     productEvents: events.filter((e) => e.category === "product_event").length,
-    decisions: events.filter((e) => e.category === "company_decision").length,
+    decisions: events.filter(
+      (e) => e.category === "company_decision" || e.category === "decision",
+    ).length,
+    observabilityEvents: events.filter((e) => e.category === "observability").length,
     revenueEvents: events.filter((e) => e.category === "revenue_event").length,
     systemEvents: events.filter((e) => e.category === "system_event").length,
   };

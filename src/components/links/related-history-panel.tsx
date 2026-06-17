@@ -10,6 +10,7 @@ import { getEventTypeLabel } from "@/lib/events/labels";
 import { getConfidenceClassName, getConfidenceLabel } from "@/lib/links/confidence";
 import { getRelatedEventHref } from "@/lib/links/navigation";
 import type { RelatedHistoryItem } from "@/types/event-links";
+import { PageLoader } from "@/components/ui/page-loader";
 import "./related-history.css";
 
 type RelatedHistoryPanelProps = {
@@ -72,7 +73,7 @@ export function RelatedHistoryPanel({ eventId, relatedCount }: RelatedHistoryPan
       {open ? (
         <div className="related-history__body">
           {items === undefined ? (
-            <p className="related-history__reason">Loading related history…</p>
+            <PageLoader variant="section" />
           ) : items.length === 0 ? (
             <p className="related-history__reason">No related history found.</p>
           ) : (

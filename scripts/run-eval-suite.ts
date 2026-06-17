@@ -86,9 +86,15 @@ async function main() {
   const apiKey = cliArgs.apiKey ?? config.apiKey;
   const workspaceId = cliArgs.workspaceId ?? config.workspaceId;
 
+  if (!appUrl || !apiKey || !workspaceId) {
+    throw new Error(
+      "Cloud eval runner requires SORTIRI_API_URL, SORTIRI_API_KEY, and SORTIRI_WORKSPACE_ID.",
+    );
+  }
+
   const suitePayload = (await getJson(
     appUrl,
-    `/api/cli/evals/${cliArgs.suiteId}?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `/cli/evals/${cliArgs.suiteId}?workspaceId=${encodeURIComponent(workspaceId)}`,
     apiKey,
   )) as {
     suite?: { title?: string };
@@ -102,7 +108,7 @@ async function main() {
 
   let runId = cliArgs.runId;
   if (!runId) {
-    const runPayload = (await postJson(appUrl, `/api/cli/evals/${cliArgs.suiteId}/run`, apiKey, {
+    const runPayload = (await postJson(appUrl, `/cli/evals/${cliArgs.suiteId}/run`, apiKey, {
       workspaceId,
     })) as { runId?: string };
     runId = runPayload.runId;
@@ -112,7 +118,7 @@ async function main() {
     throw new Error("Failed to create eval run");
   }
 
-  await postJson(appUrl, `/api/cli/evals/runs/${runId}/mark-running`, apiKey, { workspaceId });
+  await postJson(appUrl, `/cli/evals/runs/${runId}/mark-running`, apiKey, { workspaceId });
 
   const executorCtx = {
     appUrl,
@@ -127,7 +133,7 @@ async function main() {
     const result = await executeEvalCase(evalCase, executorCtx);
     const completedAt = Date.now();
 
-    await postJson(appUrl, `/api/cli/evals/runs/${runId}/results`, apiKey, {
+    await postJson(appUrl, `/cli/evals/runs/${runId}/results`, apiKey, {
       workspaceId,
       evalCaseId: evalCase.id,
       status: result.status,
@@ -142,7 +148,7 @@ async function main() {
     console.log(`[${result.status.toUpperCase()}] ${evalCase.title}`);
   }
 
-  const finalized = (await postJson(appUrl, `/api/cli/evals/runs/${runId}/finalize`, apiKey, {
+  const finalized = (await postJson(appUrl, `/cli/evals/runs/${runId}/finalize`, apiKey, {
     workspaceId,
   })) as {
     run?: { status?: string; summary?: string };

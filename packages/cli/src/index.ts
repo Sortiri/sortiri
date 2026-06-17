@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runContext } from "./commands/context.js";
+import { runDecisions, runSlackTestWebhook } from "./commands/decisions.js";
+import { runIncidents, runObservabilityTestWebhook } from "./commands/incidents.js";
 import { runEvals } from "./commands/evals.js";
 import { runRecommendations } from "./commands/recommendations.js";
+import { runReliability } from "./commands/reliability.js";
 import { runDev } from "./commands/dev.js";
 import { runDoctor } from "./commands/doctor.js";
+import { runExport } from "./commands/export.js";
 import { runInit } from "./commands/init.js";
+import { runMcp } from "./commands/mcp.js";
+import { runRecord } from "./commands/record.js";
 import { runRun } from "./commands/run.js";
 
 async function main(): Promise<void> {
@@ -18,7 +24,7 @@ async function main(): Promise<void> {
 
   program
     .name("sortiri")
-    .description("Sortiri CLI — local project setup and file watcher")
+    .description("Sortiri CLI — open-source timeline layer for AI-native companies")
     .version("0.1.0");
 
   program
@@ -30,7 +36,9 @@ async function main(): Promise<void> {
     .option("--workspace-id <id>", "Workspace external ID (advanced manual setup)")
     .option("--project-id <id>", "Optional Convex project ID")
     .option("--editor <editor>", "Editor name", "cursor")
-    .option("--yes", "Skip prompts and use defaults + flags", false)
+    .option("--yes", "Initialize local mode without prompts", false)
+    .option("--local", "Force local mode", false)
+    .option("--force-rules", "Overwrite Cursor Sortiri rule", false)
     .action(async (options) => {
       await runInit({
         apiUrl: options.apiUrl,
@@ -40,22 +48,66 @@ async function main(): Promise<void> {
         projectId: options.projectId,
         editor: options.editor,
         yes: options.yes,
+        local: options.local,
+        forceRules: options.forceRules,
       });
     });
 
   program
     .command("doctor")
-    .description("Verify local Sortiri setup and record a test event")
-    .option("--no-record", "Skip recording cli.doctor_passed test event")
+    .description("Verify local Sortiri setup")
+    .option("--no-record", "Skip recording doctor validation event")
     .action(async (options) => {
       await runDoctor({ record: options.record });
     });
 
   program
     .command("dev")
-    .description("Start the Sortiri file watcher")
+    .description("Start local timeline viewer (or cloud file watcher with --watch)")
+    .option("--smoke", "Smoke-check viewer bind and exit", false)
+    .option("--watch", "Start cloud file watcher in cloud mode", false)
+    .option("--port <port>", "Viewer port", (value) => Number(value))
+    .option("--host <host>", "Viewer host")
+    .action(async (options) => {
+      await runDev({
+        smoke: options.smoke,
+        watch: options.watch,
+        port: options.port,
+        host: options.host,
+      });
+    });
+
+  program
+    .command("record")
+    .description("Record a local timeline event")
+    .requiredOption("--type <type>", "Event type (e.g. agent.action)")
+    .requiredOption("--title <title>", "Event title")
+    .option("--summary <text>", "Event summary")
+    .option("--workstream <id>", "Workstream ID")
+    .option("--source <source>", "Event source")
+    .action(async (options) => {
+      await runRecord({
+        type: options.type,
+        title: options.title,
+        summary: options.summary,
+        workstream: options.workstream,
+        source: options.source,
+      });
+    });
+
+  program
+    .command("export")
+    .description("Export local timeline JSONL")
+    .option("--out <path>", "Write export to file instead of stdout")
+    .action(async (options) => {
+      await runExport({ out: options.out });
+    });
+
+  program
+    .command("mcp")
+    .description("Start Sortiri MCP server (stdio)")
     .action(async () => {
-      await runDev();
+      await runMcp();
     });
 
   program
@@ -123,6 +175,168 @@ async function main(): Promise<void> {
     .description("Convert a recommendation to a workstream")
     .action(async (id: string) => {
       await runRecommendations({ subcommand: "convert", id });
+    });
+
+  const decisions = program.command("decisions").description("Record and inspect company decisions");
+
+  decisions
+    .command("record")
+    .description("Record a manual decision")
+    .requiredOption("--title <title>", "Decision title")
+    .option("--rationale <text>", "Why this decision was made")
+    .option("--workstream <id>", "Link to workstream ID")
+    .action(async (options) => {
+      await runDecisions({
+        subcommand: "record",
+        title: options.title,
+        rationale: options.rationale,
+        workstreamId: options.workstream,
+      });
+    });
+
+  decisions
+    .command("list")
+    .description("List decisions")
+    .option("--limit <n>", "Max decisions", (value) => Number(value))
+    .action(async (options) => {
+      await runDecisions({ subcommand: "list", limit: options.limit });
+    });
+
+  decisions
+    .command("get <id>")
+    .description("Get a decision by ID")
+    .action(async (id: string) => {
+      await runDecisions({ subcommand: "get", id });
+    });
+
+  decisions
+    .command("link")
+    .description("Link a decision to a workstream")
+    .requiredOption("--decision <id>", "Decision ID")
+    .requiredOption("--workstream <id>", "Workstream ID")
+    .action(async (options) => {
+      await runDecisions({
+        subcommand: "link",
+        decisionId: options.decision,
+        workstreamId: options.workstream,
+      });
+    });
+
+  decisions
+    .command("rollback")
+    .description("Record a rollback for a decision")
+    .requiredOption("--title <title>", "Rollback title")
+    .option("--decision <id>", "Decision ID")
+    .action(async (options) => {
+      await runDecisions({
+        subcommand: "rollback",
+        title: options.title,
+        decisionId: options.decision,
+      });
+    });
+
+  const slack = program.command("slack").description("Slack integration helpers");
+
+  slack
+    .command("test-webhook")
+    .description("Send a signed Slack test event to Convex HTTP")
+    .option("--secret <secret>", "Slack signing secret (or SORTIRI_SLACK_SIGNING_SECRET)")
+    .action(async (options) => {
+      await runSlackTestWebhook(options.secret);
+    });
+
+  const incidents = program
+    .command("incidents")
+    .description("Record and manage production incidents");
+
+  incidents
+    .command("record")
+    .description("Record a manual incident")
+    .requiredOption("--title <title>", "Incident title")
+    .option("--summary <text>", "Incident summary")
+    .option("--severity <level>", "Severity: info, warning, error, critical", "error")
+    .option("--workstream <id>", "Link to workstream ID")
+    .option("--service <name>", "Affected service")
+    .option("--environment <name>", "Environment (e.g. production)")
+    .action(async (options) => {
+      await runIncidents({
+        subcommand: "record",
+        title: options.title,
+        summary: options.summary,
+        severity: options.severity,
+        workstreamId: options.workstream,
+        service: options.service,
+        environment: options.environment,
+      });
+    });
+
+  incidents
+    .command("list")
+    .description("List incidents")
+    .option("--limit <n>", "Max incidents", (value) => Number(value))
+    .option("--status <status>", "Filter by status")
+    .option("--severity <level>", "Filter by severity")
+    .action(async (options) => {
+      await runIncidents({
+        subcommand: "list",
+        limit: options.limit,
+        status: options.status,
+        severity: options.severity,
+      });
+    });
+
+  incidents
+    .command("get <id>")
+    .description("Get an incident by ID")
+    .action(async (id: string) => {
+      await runIncidents({ subcommand: "get", id });
+    });
+
+  incidents
+    .command("resolve <id>")
+    .description("Resolve an incident")
+    .option("--root-cause <text>", "Root cause summary")
+    .option("--mitigation <text>", "Mitigation applied")
+    .option("--rollback-summary <text>", "Rollback summary if applicable")
+    .action(async (id: string, options) => {
+      await runIncidents({
+        subcommand: "resolve",
+        id,
+        rootCause: options.rootCause,
+        mitigation: options.mitigation,
+        rollbackSummary: options.rollbackSummary,
+      });
+    });
+
+  incidents
+    .command("rollback <id>")
+    .description("Record a rollback for an incident")
+    .requiredOption("--title <title>", "Rollback title")
+    .option("--summary <text>", "Rollback summary")
+    .option("--reason <text>", "Why rolling back")
+    .action(async (id: string, options) => {
+      await runIncidents({
+        subcommand: "rollback",
+        id,
+        title: options.title,
+        summary: options.summary,
+        reason: options.reason,
+      });
+    });
+
+  const observability = program
+    .command("observability")
+    .description("Observability integration helpers");
+
+  observability
+    .command("test-webhook")
+    .description("Send a signed observability test event to Convex HTTP")
+    .option(
+      "--secret <secret>",
+      "Observability signing secret (or SORTIRI_OBSERVABILITY_SIGNING_SECRET)",
+    )
+    .action(async (options) => {
+      await runObservabilityTestWebhook(options.secret);
     });
 
   const evals = program.command("evals").description("List, generate, run, or inspect private eval suites");
@@ -213,6 +427,68 @@ async function main(): Promise<void> {
     .description("Re-run eval suite after remediation")
     .action(async (recommendationId: string) => {
       await runEvals({ subcommand: "remediation-rerun", id: recommendationId });
+    });
+
+  const reliability = program
+    .command("reliability")
+    .description("Inspect ingest deliveries, dead letters, journal, and replay");
+
+  reliability
+    .command("deliveries")
+    .description("List ingest deliveries")
+    .option("--status <status>", "Filter by delivery status")
+    .option("--source <source>", "Filter by source")
+    .option("--limit <n>", "Max deliveries", (value) => Number(value))
+    .action(async (options) => {
+      await runReliability({
+        subcommand: "deliveries",
+        status: options.status,
+        source: options.source,
+        limit: options.limit,
+      });
+    });
+
+  reliability
+    .command("dead-letters")
+    .description("List ingest dead letters")
+    .option("--status <status>", "Filter by dead letter status")
+    .option("--limit <n>", "Max dead letters", (value) => Number(value))
+    .action(async (options) => {
+      await runReliability({
+        subcommand: "dead-letters",
+        status: options.status,
+        limit: options.limit,
+      });
+    });
+
+  reliability
+    .command("replay")
+    .description("Replay a delivery or dead letter from journal")
+    .option("--delivery <id>", "Delivery ID to replay")
+    .option("--dead-letter <id>", "Dead letter ID to replay")
+    .option("--payload <json>", "Optional payload override (JSON)")
+    .action(async (options) => {
+      await runReliability({
+        subcommand: "replay",
+        deliveryId: options.delivery,
+        deadLetterId: options.deadLetter,
+        payload: options.payload,
+      });
+    });
+
+  const journal = reliability.command("journal").description("Durable ingest journal");
+
+  journal
+    .command("list")
+    .description("List journaled envelope refs")
+    .option("--source <source>", "Filter by source")
+    .option("--limit <n>", "Max entries", (value) => Number(value))
+    .action(async (options) => {
+      await runReliability({
+        subcommand: "journal-list",
+        source: options.source,
+        limit: options.limit,
+      });
     });
 
   await program.parseAsync(process.argv);

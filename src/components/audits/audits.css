@@ -1,7 +1,7 @@
 .audits-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--ca-space-4);
 }
 
 .audits-page__header-row {

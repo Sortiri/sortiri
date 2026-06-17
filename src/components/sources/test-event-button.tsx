@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { buildIngestEventsUrl } from "@/lib/sortiri/apiUrl";
 
 type TestEventButtonProps = {
   apiKey: string | null;
@@ -26,7 +27,7 @@ export function TestEventButton({ apiKey, onPasteKey }: TestEventButtonProps) {
     setMessage(null);
 
     try {
-      const response = await fetch("/api/ingest/events", {
+      const response = await fetch(buildIngestEventsUrl(), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${effectiveKey}`,

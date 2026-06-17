@@ -1,4 +1,4 @@
-import { loadConfig } from "@sortiri/local";
+import { loadCloudConfig as loadConfig } from "@sortiri/local";
 
 export type ContextCommandOptions = {
   goal?: string;
@@ -28,7 +28,7 @@ export async function runContext(options: ContextCommandOptions): Promise<void> 
   if (options.packId) {
     const params = new URLSearchParams({ workspaceId: config.workspaceId });
     const response = await fetch(
-      `${config.apiUrl}/api/cli/context/packs/${options.packId}?${params.toString()}`,
+      `${config.apiUrl}/cli/context/packs/${options.packId}?${params.toString()}`,
       { headers },
     );
     const payload = (await response.json().catch(() => null)) as
@@ -47,7 +47,7 @@ export async function runContext(options: ContextCommandOptions): Promise<void> 
     process.exit(1);
   }
 
-  const response = await fetch(`${config.apiUrl}/api/cli/context/packs`, {
+  const response = await fetch(`${config.apiUrl}/cli/context/packs`, {
     method: "POST",
     headers,
     body: JSON.stringify({

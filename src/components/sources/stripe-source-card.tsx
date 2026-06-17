@@ -8,6 +8,7 @@ import { STRIPE_WEBHOOK_EVENTS } from "@/types/stripe-integration";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { SourceTimelineLink } from "@/components/sources/source-timeline-link";
 import { SetupBlock } from "@/components/sources/setup-block";
+import { buildWebhookUrl } from "@/lib/sortiri/apiUrl";
 
 type StripeSourceCardProps = {
   workspaceId: string;
@@ -40,10 +41,7 @@ export function StripeSourceCard({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const apiUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://app.sortiri.com";
-
-  const webhookUrl = `${apiUrl}/api/integrations/stripe/webhook?workspaceId=${workspaceId}`;
+  const webhookUrl = buildWebhookUrl("stripe", workspaceId);
 
   const statusLabel = useMemo(() => {
     const status = stripeStatus?.connectionStatus;

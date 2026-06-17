@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sortiri docs & website
+    url: https://sortiri.com
+    about: Product overview, pricing, and getting started
+  - name: Security advisory
+    url: https://github.com/sortiri/sortiri/security/advisories/new
+    about: Report a security vulnerability privately

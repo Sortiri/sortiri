@@ -27,7 +27,7 @@ describeE2E("posthog source", () => {
     const card = posthogCard(page);
     await expect(card.getByRole("heading", { name: "PostHog", exact: true })).toBeVisible();
     await expect(card.getByRole("button", { name: "Webhook URL" })).toBeVisible();
-    await expect(card.getByText(/api\/integrations\/posthog\/webhook/i)).toBeVisible();
+    await expect(card.getByText(/webhooks\/posthog/i)).toBeVisible();
 
     await card.getByRole("button", { name: "Create webhook secret" }).click();
     await expect(card.getByText(/Webhook secret created/i).first()).toBeVisible({

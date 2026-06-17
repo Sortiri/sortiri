@@ -22,7 +22,9 @@ import {
 import {
   buildProjectPulse,
   getActiveProjectsForWorkspace,
+  listProjectSummariesForWorkspace,
   type ActiveProjectSummary,
+  type ProjectListSummary,
   type ProjectPulseResult,
 } from "./lib/projectPulse";
 import type { ProjectRecord } from "./lib/projectsLib";
@@ -238,6 +240,37 @@ export const getActiveProjects = query({
     }
     const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
     const summaries = await getActiveProjectsForWorkspace(ctx, workspace._id, args.limit ?? 3);
+    if (accessible === "all") {
+      return summaries;
+    }
+    return summaries.filter((summary) =>
+      accessible.has(summary.projectId as Id<"projects">),
+    );
+  },
+});
+
+const projectListStatusValidator = v.optional(
+  v.union(v.literal("active"), v.literal("archived"), v.literal("all")),
+);
+
+export const listProjectSummaries = query({
+  args: {
+    workspaceId: v.string(),
+    status: projectListStatusValidator,
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<ProjectListSummary[]> => {
+    const userId = await requireUserId(ctx);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const membership = await getWorkspaceMembership(ctx, workspace._id, userId);
+    if (!membership) {
+      return [];
+    }
+    const accessible = await getAccessibleProjectIds(ctx, workspace._id, membership);
+    const summaries = await listProjectSummariesForWorkspace(ctx, workspace._id, {
+      status: args.status ?? "all",
+      limit: args.limit,
+    });
     if (accessible === "all") {
       return summaries;
     }

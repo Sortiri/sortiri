@@ -14,7 +14,7 @@ import { inter } from "@/lib/inter";
 import { ppMondwest } from "@/lib/landing-fonts";
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-const ACCENT_CLASS = "text-[#00E013]";
+const ACCENT_CLASS = "text-[#c490e8]";
 const ACCENT_FONT_CLASS = ppMondwest.className;
 const BASE_FONT_CLASS = inter.className;
 
@@ -107,7 +107,7 @@ export function HighlightsSection() {
   return (
     <section
       ref={sectionRef}
-      className="highlights min-w-0 overflow-x-clip pt-10 pb-16 sm:pt-12 sm:pb-20"
+      className={`highlights ${landing.landingSection}`}
       aria-labelledby="highlights-heading"
     >
       <motion.div

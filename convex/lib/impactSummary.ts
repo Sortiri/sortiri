@@ -2,6 +2,8 @@ import type { ImpactFindingInput } from "./impactAnalysesLib";
 import { assertCautiousCopy } from "./impactFindings";
 import type { ImpactMetricsResult } from "./impactMetrics";
 import { formatWindowLabel } from "./impactWindows";
+import { formatImpactDecisionContextSection, type ImpactDecisionContext } from "./decisionContext";
+import { formatImpactIncidentContextSection, type ImpactIncidentContext } from "./incidentContext";
 
 export function buildDeterministicImpactSummary(input: {
   anchorTitle: string;
@@ -10,6 +12,8 @@ export function buildDeterministicImpactSummary(input: {
   metrics: ImpactMetricsResult;
   findings: ImpactFindingInput[];
   truncated?: boolean;
+  decisionContext?: ImpactDecisionContext;
+  incidentContext?: ImpactIncidentContext;
 }): string {
   const windowLabel = formatWindowLabel(input.beforeMs, input.afterMs);
   const topFindings = input.findings.slice(0, 3);
@@ -39,6 +43,20 @@ export function buildDeterministicImpactSummary(input: {
       "",
       "Note: event scan limit was reached; metrics may be incomplete for large workspaces.",
     );
+  }
+
+  if (input.decisionContext) {
+    const decisionSection = formatImpactDecisionContextSection(input.decisionContext);
+    if (decisionSection) {
+      lines.push(decisionSection);
+    }
+  }
+
+  if (input.incidentContext) {
+    const incidentSection = formatImpactIncidentContextSection(input.incidentContext);
+    if (incidentSection) {
+      lines.push(incidentSection);
+    }
   }
 
   const summary = lines.join("\n");

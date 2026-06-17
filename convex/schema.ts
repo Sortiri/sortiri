@@ -21,6 +21,7 @@ import {
   impactFindingTypeValidator,
   impactWindowValidator,
   integrationCreatedByValidator,
+  integrationSourceValidator,
   insightFindingSeverityValidator,
   insightFindingTypeValidator,
   insightRunStatusValidator,
@@ -54,6 +55,21 @@ import {
   evalRunStatusValidator,
   evalResultStatusValidator,
   auditReportItemTypeValidator,
+  decidedByValidator,
+  decisionCandidateConfidenceValidator,
+  decisionCandidateStatusValidator,
+  decisionSourceRefValidator,
+  decisionSourceValidator,
+  decisionStatusValidator,
+  decisionTypeValidator,
+  rollbackSourceValidator,
+  slackCaptureModeValidator,
+  observabilitySourceValidator,
+  observabilitySignalTypeValidator,
+  incidentStatusValidator,
+  incidentSeverityValidator,
+  incidentSourceValidator,
+  incidentSourceRefValidator,
   redactionStatusValidator,
   sensitivityValidator,
   sensitiveFindingValidator,
@@ -254,6 +270,11 @@ export default defineSchema({
     impactAnalysisId: v.optional(v.id("impactAnalyses")),
     lessonId: v.optional(v.id("lessons")),
     playbookId: v.optional(v.id("playbooks")),
+    decisionId: v.optional(v.id("decisions")),
+    rollbackId: v.optional(v.id("rollbackEvents")),
+    decisionCandidateId: v.optional(v.id("decisionCandidates")),
+    incidentId: v.optional(v.id("incidents")),
+    observabilitySignalId: v.optional(v.id("observabilitySignals")),
     title: v.string(),
     summary: v.optional(v.string()),
     reason: v.optional(v.string()),
@@ -609,6 +630,9 @@ export default defineSchema({
     evidenceImpactAnalysisIds: v.optional(v.array(v.id("impactAnalyses"))),
     evidenceInsightFindingIds: v.optional(v.array(v.id("insightFindings"))),
     evidenceArtifactIds: v.optional(v.array(v.id("artifacts"))),
+    evidenceDecisionIds: v.optional(v.array(v.id("decisions"))),
+    evidenceRollbackIds: v.optional(v.array(v.id("rollbackEvents"))),
+    evidenceIncidentIds: v.optional(v.array(v.id("incidents"))),
     tags: v.optional(v.array(v.string())),
     createdBy: v.optional(integrationCreatedByValidator),
     createdAt: v.number(),
@@ -637,6 +661,8 @@ export default defineSchema({
     evidenceEventIds: v.optional(v.array(v.id("events"))),
     evidenceWorkstreamIds: v.optional(v.array(v.id("workstreams"))),
     evidenceImpactAnalysisIds: v.optional(v.array(v.id("impactAnalyses"))),
+    evidenceDecisionIds: v.optional(v.array(v.id("decisions"))),
+    evidenceIncidentIds: v.optional(v.array(v.id("incidents"))),
     tags: v.optional(v.array(v.string())),
     createdBy: v.optional(integrationCreatedByValidator),
     createdAt: v.number(),
@@ -867,6 +893,81 @@ export default defineSchema({
     .index("by_workspace", ["workspaceId"])
     .index("by_workspace_status", ["workspaceId", "status"]),
 
+  ingestJournalEntries: defineTable({
+    workspaceId: v.id("workspaces"),
+    envelopeId: v.string(),
+    journalRef: v.string(),
+    source: v.string(),
+    sourceEventId: v.string(),
+    idempotencyKey: v.string(),
+    receivedAt: v.number(),
+    envelope: v.any(),
+    createdAt: v.number(),
+  })
+    .index("by_journal_ref", ["journalRef"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_envelope_id", ["envelopeId"])
+    .index("by_idempotency_key", ["idempotencyKey"]),
+
+  ingestDeliveries: defineTable({
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    envelopeId: v.string(),
+    idempotencyKey: v.string(),
+    source: v.string(),
+    sourceEventId: v.string(),
+    status: v.union(
+      v.literal("received"),
+      v.literal("journaled"),
+      v.literal("convex_written"),
+      v.literal("retry_pending"),
+      v.literal("dead_lettered"),
+      v.literal("replayed"),
+      v.literal("duplicate"),
+    ),
+    eventId: v.optional(v.id("events")),
+    journalRef: v.optional(v.string()),
+    attempts: v.number(),
+    lastAttemptAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    redacted: v.optional(v.boolean()),
+    sensitiveFindings: v.optional(v.array(v.string())),
+    receivedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_idempotency_key", ["idempotencyKey"])
+    .index("by_source_event", ["workspaceId", "source", "sourceEventId"]),
+
+  ingestDeadLetters: defineTable({
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    envelopeId: v.string(),
+    idempotencyKey: v.string(),
+    source: v.string(),
+    sourceEventId: v.string(),
+    journalRef: v.optional(v.string()),
+    deliveryId: v.optional(v.id("ingestDeliveries")),
+    reason: v.string(),
+    error: v.optional(v.string()),
+    payloadPreview: v.optional(v.string()),
+    sensitiveFindings: v.optional(v.array(v.string())),
+    redacted: v.optional(v.boolean()),
+    attempts: v.number(),
+    status: v.union(
+      v.literal("open"),
+      v.literal("replayed"),
+      v.literal("ignored"),
+      v.literal("archived"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_idempotency_key", ["idempotencyKey"]),
+
   integrationDeliveries: defineTable({
     workspaceId: v.id("workspaces"),
     source: v.string(),
@@ -881,14 +982,7 @@ export default defineSchema({
 
   integrationConnections: defineTable({
     workspaceId: v.id("workspaces"),
-    source: v.union(
-      v.literal("github"),
-      v.literal("stripe"),
-      v.literal("posthog"),
-      v.literal("slack"),
-      v.literal("linear"),
-      v.literal("other"),
-    ),
+    source: integrationSourceValidator,
     name: v.string(),
     status: v.union(
       v.literal("connected"),
@@ -916,14 +1010,7 @@ export default defineSchema({
   integrationSecrets: defineTable({
     workspaceId: v.id("workspaces"),
     connectionId: v.optional(v.id("integrationConnections")),
-    source: v.union(
-      v.literal("github"),
-      v.literal("stripe"),
-      v.literal("posthog"),
-      v.literal("slack"),
-      v.literal("linear"),
-      v.literal("other"),
-    ),
+    source: integrationSourceValidator,
     name: v.string(),
     encryptedSecret: v.string(),
     secretLast4: v.string(),
@@ -1022,6 +1109,8 @@ export default defineSchema({
             v.literal("code_change"),
             v.literal("product_event"),
             v.literal("company_decision"),
+            v.literal("decision"),
+            v.literal("observability"),
             v.literal("revenue_event"),
             v.literal("system_event"),
           ),
@@ -1055,4 +1144,145 @@ export default defineSchema({
     .index("by_workspace_type", ["workspaceId", "type"])
     .index("by_workspace_pinned", ["workspaceId", "isPinned"])
     .index("by_owner", ["ownerUserId"]),
+
+  decisions: defineTable({
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    workstreamId: v.optional(v.id("workstreams")),
+    title: v.string(),
+    summary: v.optional(v.string()),
+    status: decisionStatusValidator,
+    decisionType: decisionTypeValidator,
+    source: decisionSourceValidator,
+    sourceRef: v.optional(decisionSourceRefValidator),
+    decidedBy: v.optional(decidedByValidator),
+    entities: v.optional(v.array(v.string())),
+    tags: v.optional(v.array(v.string())),
+    linkedEventIds: v.optional(v.array(v.id("events"))),
+    linkedWorkstreamIds: v.optional(v.array(v.id("workstreams"))),
+    linkedEntityIds: v.optional(v.array(v.id("entities"))),
+    linkedArtifactIds: v.optional(v.array(v.id("artifacts"))),
+    rationale: v.optional(v.string()),
+    expectedOutcome: v.optional(v.string()),
+    rollbackPlan: v.optional(v.string()),
+    timelineEventId: v.optional(v.id("events")),
+    decidedAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_project", ["projectId"])
+    .index("by_workstream", ["workstreamId"])
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_workspace_created_at", ["workspaceId", "createdAt"]),
+
+  decisionCandidates: defineTable({
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    workstreamId: v.optional(v.id("workstreams")),
+    source: v.union(v.literal("slack"), v.literal("system")),
+    status: decisionCandidateStatusValidator,
+    confidence: decisionCandidateConfidenceValidator,
+    title: v.string(),
+    summary: v.optional(v.string()),
+    rawTextPreview: v.optional(v.string()),
+    sourceRef: decisionSourceRefValidator,
+    extractedSignals: v.optional(v.array(v.string())),
+    suggestedDecisionType: v.optional(v.string()),
+    suggestedEntities: v.optional(v.array(v.string())),
+    suggestedTags: v.optional(v.array(v.string())),
+    confirmedDecisionId: v.optional(v.id("decisions")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_project", ["projectId"]),
+
+  rollbackEvents: defineTable({
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    workstreamId: v.optional(v.id("workstreams")),
+    decisionId: v.optional(v.id("decisions")),
+    title: v.string(),
+    summary: v.optional(v.string()),
+    source: rollbackSourceValidator,
+    reason: v.optional(v.string()),
+    revertedEventIds: v.optional(v.array(v.id("events"))),
+    revertedArtifactIds: v.optional(v.array(v.id("artifacts"))),
+    sourceRef: v.optional(v.any()),
+    timelineEventId: v.optional(v.id("events")),
+    rolledBackAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_project", ["projectId"])
+    .index("by_decision", ["decisionId"]),
+
+  observabilitySignals: defineTable({
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    workstreamId: v.optional(v.id("workstreams")),
+    incidentId: v.optional(v.id("incidents")),
+    source: observabilitySourceValidator,
+    signalType: observabilitySignalTypeValidator,
+    severity: incidentSeverityValidator,
+    title: v.string(),
+    summary: v.optional(v.string()),
+    service: v.optional(v.string()),
+    environment: v.optional(v.string()),
+    region: v.optional(v.string()),
+    fingerprint: v.optional(v.string()),
+    sourceSignalId: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    occurredAt: v.number(),
+    metadata: v.optional(v.any()),
+    linkedEventIds: v.optional(v.array(v.id("events"))),
+    linkedWorkstreamIds: v.optional(v.array(v.id("workstreams"))),
+    linkedDecisionIds: v.optional(v.array(v.id("decisions"))),
+    linkedRollbackIds: v.optional(v.array(v.id("rollbackEvents"))),
+    linkedArtifactIds: v.optional(v.array(v.id("artifacts"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_project", ["projectId"])
+    .index("by_incident", ["incidentId"])
+    .index("by_workspace_type", ["workspaceId", "signalType"])
+    .index("by_workspace_severity", ["workspaceId", "severity"])
+    .index("by_fingerprint", ["workspaceId", "fingerprint"])
+    .index("by_source_signal", ["workspaceId", "source", "sourceSignalId"]),
+
+  incidents: defineTable({
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    workstreamId: v.optional(v.id("workstreams")),
+    title: v.string(),
+    summary: v.optional(v.string()),
+    status: incidentStatusValidator,
+    severity: incidentSeverityValidator,
+    source: incidentSourceValidator,
+    service: v.optional(v.string()),
+    environment: v.optional(v.string()),
+    startedAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+    rootCause: v.optional(v.string()),
+    mitigation: v.optional(v.string()),
+    rollbackSummary: v.optional(v.string()),
+    sourceRef: v.optional(incidentSourceRefValidator),
+    linkedSignalIds: v.optional(v.array(v.id("observabilitySignals"))),
+    linkedEventIds: v.optional(v.array(v.id("events"))),
+    linkedWorkstreamIds: v.optional(v.array(v.id("workstreams"))),
+    linkedDecisionIds: v.optional(v.array(v.id("decisions"))),
+    linkedRollbackIds: v.optional(v.array(v.id("rollbackEvents"))),
+    linkedArtifactIds: v.optional(v.array(v.id("artifacts"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_project", ["projectId"])
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_workspace_severity", ["workspaceId", "severity"])
+    .index("by_source_ref", ["workspaceId", "source", "sourceRef.sourceIncidentId"]),
 });

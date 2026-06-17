@@ -2,6 +2,10 @@
   "name": "sortiri-timeline",
   "version": "0.1.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sortiri/sortiri.git"
+  },
   "workspaces": [
     "packages/*"
   ],
@@ -41,6 +45,21 @@
     "sanity:mcp-recommendation-tools": "tsx scripts/sanity-mcp-recommendation-tools.ts",
     "sanity:private-evals": "tsx scripts/sanity-private-evals.ts",
     "sanity:eval-remediation-loop": "tsx scripts/sanity-eval-remediation-loop.ts",
+    "sanity:enterprise-reliability": "tsx scripts/sanity-enterprise-reliability.ts",
+    "sanity:slack-decision-memory": "tsx scripts/sanity-slack-decision-memory.ts",
+    "sanity:observability-incident-memory": "tsx scripts/sanity-observability-incident-memory.ts",
+    "sanity:platform-ui-ux": "tsx scripts/sanity-platform-ui-ux.ts",
+    "sanity:platform-pages-ui": "tsx scripts/sanity-platform-pages-ui.ts",
+    "sanity:convex-api-surface": "tsx scripts/sanity-convex-api-surface.ts",
+    "sanity:open-source-project": "tsx scripts/sanity-open-source-project.ts",
+    "sanity:github-open-source-infra": "tsx scripts/sanity-github-open-source-infra.ts",
+    "sanity:open-source-star-readiness": "tsx scripts/sanity-open-source-star-readiness.ts",
+    "demo:oss": "tsx scripts/demo-open-source-local.ts",
+    "scan:oss-trust": "tsx scripts/scan-oss-trust.ts",
+    "generate:oss-assets": "tsx scripts/generate-oss-launch-assets.ts",
+    "assert:no-next-backend-routes": "tsx scripts/assert-no-next-backend-routes.ts",
+    "assert:no-landing-changes": "tsx scripts/assert-no-landing-changes.ts",
+    "audit:next-api-routes": "tsx scripts/audit-next-api-routes.ts",
     "sanity:cli-evals": "tsx scripts/sanity-cli-evals.ts",
     "sanity:mcp-eval-tools": "tsx scripts/sanity-mcp-eval-tools.ts",
     "eval:run": "tsx scripts/run-eval-suite.ts",

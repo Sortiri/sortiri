@@ -2,22 +2,18 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { WorkspaceHeader } from "@/components/platform";
 import { ActiveProjectsSection } from "@/components/home/active-projects-section";
-import { ActiveWorkstreamsSection } from "@/components/home/active-workstreams-section";
 import { HomeEmptyState } from "@/components/home/home-empty-state";
-import { LatestInsightsSection } from "@/components/home/latest-insights-section";
-import { PinnedReplaysSection } from "@/components/home/pinned-replays-section";
-import { PinnedViewsSection } from "@/components/home/pinned-views-section";
-import { PulseSummaryCards } from "@/components/home/pulse-summary-cards";
+import { HomeNeedsAttention } from "@/components/home/home-needs-attention";
+import { HomePulseCards } from "@/components/home/home-pulse-cards";
 import { QuickActions } from "@/components/home/quick-actions";
 import { RecentHistorySection } from "@/components/home/recent-history-section";
 import { SourceHealthSection } from "@/components/home/source-health-section";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import type { CompanyPulse, PulseCounts, SourceHealthItem } from "@/types/home";
-import type { TimelineEvent, Workstream } from "@/types/events";
-import type { InsightFindingDetail } from "@/types/insights";
-import type { PinnedReplayWithWorkstream } from "@/types/pinned-replays";
-import type { PinnedViewSummary } from "@/types/saved-views";
+import type { CompanyPulse, SourceHealthItem } from "@/types/home";
+import type { TimelineEvent } from "@/types/events";
 import "./home.css";
 
 export function HomePage() {
@@ -33,7 +29,7 @@ export function HomePage() {
   if (loading) {
     return (
       <div className="home-page">
-        <p className="home-page__loading">Loading company pulse…</p>
+        <PageLoader variant="inline" />
       </div>
     );
   }
@@ -47,48 +43,31 @@ export function HomePage() {
   }
 
   const data = pulse as CompanyPulse;
+  const subtitle = data.scopedAccess
+    ? "A live summary of your timeline, workstreams, sources, and insights. Showing activity you have access to."
+    : "A live summary of your timeline, workstreams, sources, and insights.";
 
   return (
     <div className="home-page">
-      <header className="home-page__header">
-        <h1 className="home-page__title">Company Pulse</h1>
-        <p className="home-page__subtitle">
-          A live summary of your timeline, workstreams, sources, and insights.
-          {data.scopedAccess ? " Showing activity you have access to." : ""}
-        </p>
-      </header>
+      <WorkspaceHeader subtitle={subtitle} />
+      <HomePulseCards counts={data.counts} />
 
-      {data.isEmpty ? (
+      {data.isEmpty ? <HomeEmptyState /> : null}
+
+      <QuickActions />
+
+      {!data.isEmpty ? (
         <>
-          <HomeEmptyState />
-          <PulseSummaryCards counts={data.counts as PulseCounts} />
-          <QuickActions />
-          <SourceHealthSection sourceStatus={data.sourceStatus as SourceHealthItem[]} />
-        </>
-      ) : (
-        <>
-          <PulseSummaryCards counts={data.counts as PulseCounts} />
-          <QuickActions />
           <ActiveProjectsSection workspaceId={activeWorkspaceId} />
+          <HomeNeedsAttention workspaceId={activeWorkspaceId} />
           <RecentHistorySection events={data.recentEvents as TimelineEvent[]} />
-          <ActiveWorkstreamsSection
-            workstreams={data.activeWorkstreams as Workstream[]}
-            workspaceId={activeWorkspaceId}
-          />
-          <PinnedReplaysSection
-            pinnedReplays={data.pinnedReplays as PinnedReplayWithWorkstream[]}
-            workspaceId={activeWorkspaceId}
-          />
-          <PinnedViewsSection
-            pinnedViews={data.pinnedViews as PinnedViewSummary[]}
-          />
-          <LatestInsightsSection
-            findings={data.latestFindings as InsightFindingDetail[]}
-            hasCompletedRun={Boolean(data.latestInsightRun)}
-          />
-          <SourceHealthSection sourceStatus={data.sourceStatus as SourceHealthItem[]} />
         </>
-      )}
+      ) : null}
+
+      <SourceHealthSection
+        compact
+        sourceStatus={data.sourceStatus as SourceHealthItem[]}
+      />
     </div>
   );
 }

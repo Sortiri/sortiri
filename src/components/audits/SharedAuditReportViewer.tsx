@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { ShareableEventExport, ShareableReportExportInput } from "@/types/audit-sharing";
 import { EXPORT_SAFETY_NOTICE } from "@/types/audit-sharing";
+import { PageLoader } from "@/components/ui/page-loader";
 import type { AuditReportItemRecord } from "@/types/audit-reports";
 import "@/components/audits/audits.css";
 import "@/components/security/security.css";
@@ -227,7 +228,7 @@ export function SharedAuditReportViewer({
             Close
           </button>
           {artifactLoading ? (
-            <p className="audit-detail__summary">Loading…</p>
+            <PageLoader variant="section" />
           ) : (
             <pre className="shared-audit-artifact-content">{artifactContent}</pre>
           )}

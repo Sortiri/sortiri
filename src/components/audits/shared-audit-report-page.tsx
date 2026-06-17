@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { SharedAuditReportViewer } from "@/components/audits/SharedAuditReportViewer";
+import { PageLoader } from "@/components/ui/page-loader";
 
 type SharedAuditReportPageProps = {
   token: string;
@@ -15,7 +16,7 @@ export function SharedAuditReportPage({ token }: SharedAuditReportPageProps) {
   if (verification === undefined || payload === undefined) {
     return (
       <main className="shared-audit-shell">
-        <p className="audit-detail__summary">Loading audit report…</p>
+        <PageLoader />
       </main>
     );
   }

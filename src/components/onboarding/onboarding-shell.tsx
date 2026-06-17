@@ -40,7 +40,11 @@ export function OnboardingShell({
       <StepProgress current={step} />
 
       <div className="mt-10 space-y-4 sm:mt-12">
-        <h1 className={landing.onboardingTitle}>{title}</h1>
+        <h1
+          className={`${inter.className} text-[clamp(1.75rem,3.5vw+0.5rem,2.75rem)] font-semibold tracking-[-0.025em] leading-[1.12] text-white`}
+        >
+          {title}
+        </h1>
         {description ? (
           <p className={landing.onboardingLead}>{description}</p>
         ) : null}

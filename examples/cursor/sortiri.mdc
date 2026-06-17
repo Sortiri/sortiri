@@ -1,0 +1,45 @@
+# Sortiri Agent Rules
+
+When working in a Sortiri-recorded project, use Sortiri to record meaningful work.
+
+## Before starting
+
+1. Read existing Sortiri context if available (`sortiri context` or MCP context tools when cloud is connected).
+2. Start or continue a workstream with `start_workstream`.
+3. Run `sortiri doctor` before setup changes.
+
+## During work
+
+Record events when you:
+- create a plan
+- make a decision (include rationale and rollback plan for architecture, product, security, or pricing choices)
+- change code
+- create or modify an important file
+- run validation commands (build, lint, tests, typecheck)
+- find or fix an error
+- open or resolve an incident
+- record a rollback
+- complete a major step
+- change direction
+
+When useful output is created (diff, document, URL, command output, log), call `attach_artifact`.
+
+Prefer wrapping validation commands:
+
+```bash
+sortiri run -- npm run build
+sortiri run -- npm test
+sortiri run -- npx tsc --noEmit
+```
+
+## After finishing
+
+1. Record what changed and what validation passed.
+2. Call `finish_workstream`.
+3. Use `sortiri export` if the user wants a portable timeline.
+
+## Local-first
+
+Local mode does not require Sortiri Cloud. Events are stored in `.sortiri/events.jsonl` and can be exported at any time.
+
+Keep event titles short and clear. Use summaries to explain why the action mattered. Do not record every tiny thought. Record meaningful work history.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { WorkstreamDetailPage } from "@/components/workstreams/workstream-detail-page";
+import { PageLoader } from "@/components/ui/page-loader";
 
 export const metadata: Metadata = {
   title: "Replay — Sortiri Timeline",
@@ -15,7 +16,7 @@ export default async function WorkstreamDetailRoutePage({
 }: WorkstreamDetailRoutePageProps) {
   const { id } = await params;
   return (
-    <Suspense fallback={<p className="workstreams-page__loading">Loading workstream…</p>}>
+    <Suspense fallback={<PageLoader variant="inline" />}>
       <WorkstreamDetailPage workstreamId={id} />
     </Suspense>
   );

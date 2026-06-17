@@ -46,6 +46,7 @@ describe("saved views functions helpers", () => {
       codeChanges: 1,
       productEvents: 0,
       decisions: 0,
+      observabilityEvents: 0,
       revenueEvents: 1,
       systemEvents: 0,
     });

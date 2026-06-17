@@ -8,6 +8,7 @@ import { api } from "../../../convex/_generated/api";
 import { CreateLessonModal } from "@/components/lessons/create-lesson-modal";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
+import { PageLoader } from "@/components/ui/page-loader";
 import {
   LESSON_TYPE_LABELS,
   type LessonRecord,
@@ -90,7 +91,7 @@ export function LessonsPage() {
         ))}
       </div>
 
-      {loading ? <p className="lessons-page__subtitle">Loading lessons…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
 
       {!loading && lessonList.length === 0 ? (
         <p className="lessons-page__subtitle">

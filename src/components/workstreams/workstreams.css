@@ -1,8 +1,7 @@
 .workstreams-page {
   display: flex;
   flex-direction: column;
-  gap: var(--ca-space-6);
-  max-width: 42rem;
+  gap: var(--ca-space-4);
 }
 
 .workstreams-page__header {
@@ -20,7 +19,7 @@
 
 .workstreams-page__title {
   margin: 0;
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.75rem;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -277,7 +276,7 @@
 
 .workstream-detail-header__title {
   margin: 0;
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.5rem;
   font-weight: 400;
   letter-spacing: -0.02em;

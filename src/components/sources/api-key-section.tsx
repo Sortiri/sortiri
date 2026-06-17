@@ -7,7 +7,9 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { formatEventTime } from "@/lib/events/format";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { API_KEY_PREFIX } from "@/types/api-keys";
+import { PageLoader } from "@/components/ui/page-loader";
 import { SetupBlock } from "@/components/sources/setup-block";
+import { getSortiriApiUrl } from "@/lib/sortiri/apiUrl";
 
 type ApiKeySectionProps = {
   workspaceId: string;
@@ -27,8 +29,7 @@ export function ApiKeySection({ workspaceId, onRawKeyChange }: ApiKeySectionProp
   const [createdRawKey, setCreatedRawKey] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
-  const apiUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://your-sortiri-app.com";
+  const apiUrl = getSortiriApiUrl();
 
   const envBlock = createdRawKey
     ? `SORTIRI_API_URL=${apiUrl}
@@ -122,7 +123,7 @@ SORTIRI_API_KEY=${createdRawKey}
       ) : null}
 
       {keys === undefined ? (
-        <p className="sources-section__loading">Loading keys…</p>
+        <PageLoader variant="section" />
       ) : keys.length > 0 ? (
         <div className="api-key-table-wrap">
           <table className="api-key-table">

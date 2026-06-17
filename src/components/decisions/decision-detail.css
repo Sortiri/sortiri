@@ -1,0 +1,30 @@
+@import "../../styles/platform.css";
+
+.decision-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-2);
+  max-width: 42rem;
+}
+
+.decision-detail-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ca-space-2);
+  margin-block-start: var(--ca-space-2);
+}
+
+.decision-detail-page__ask-link {
+  font-size: 0.875rem;
+  color: var(--ca-brand-text);
+  text-decoration: none;
+}
+
+.decision-detail-page__ask-link:hover {
+  text-decoration: underline;
+}
+
+.decision-detail-page__rollback-list {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}

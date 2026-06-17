@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { EvidenceReviewItem } from "@/components/security/evidence-review-item";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import "./security.css";
@@ -39,7 +40,7 @@ export function EvidenceReviewPage() {
   }, [activeWorkspaceId, backfill]);
 
   if (wsLoading) {
-    return <p className="evidence-review-page__subtitle">Loading…</p>;
+    return <PageLoader />;
   }
 
   if (!canManage) {
@@ -54,7 +55,7 @@ export function EvidenceReviewPage() {
   }
 
   if (reviewList === undefined) {
-    return <p className="evidence-review-page__subtitle">Loading evidence review…</p>;
+    return <PageLoader />;
   }
 
   const sections = [

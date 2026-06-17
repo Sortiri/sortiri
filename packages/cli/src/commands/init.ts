@@ -2,6 +2,7 @@ import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import {
   clearSession,
+  ensureEventsJournal,
   findRepoRoot,
   getConfigPath,
   saveConfig,
@@ -22,10 +23,15 @@ export type InitOptions = {
   editor?: string;
   token?: string;
   yes?: boolean;
+  local?: boolean;
+  forceRules?: boolean;
 };
 
 const DEFAULTS = {
-  apiUrl: "http://localhost:3000",
+  apiUrl:
+    process.env.SORTIRI_API_URL ??
+    process.env.NEXT_PUBLIC_CONVEX_SITE_URL ??
+    "http://127.0.0.1:3210",
   editor: "cursor",
 };
 
@@ -62,7 +68,7 @@ async function consumeSetupToken(
   editor: string,
 ): Promise<SetupConsumeResponse> {
   const repo = detectRepoInfo(repoRoot);
-  const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/cli/setup/consume`, {
+  const response = await fetch(`${apiUrl.replace(/\/$/, "")}/cli/setup/consume`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -84,6 +90,35 @@ async function consumeSetupToken(
   return payload;
 }
 
+function printNextSteps(): void {
+  console.log("\nNext steps:");
+  console.log("  1. Run sortiri doctor");
+  console.log("  2. Run sortiri dev");
+  console.log("  3. Ask your agent to use the Sortiri rules");
+}
+
+async function runLocalInit(options: InitOptions, repoRoot: string): Promise<void> {
+  const editor = options.editor ?? DEFAULTS.editor;
+
+  const config: SortiriConfig = {
+    mode: "local",
+    editor,
+    projectId: null,
+  };
+
+  saveConfig(config, repoRoot);
+  clearSession(repoRoot);
+  ensureEventsJournal(repoRoot, true);
+  mergeCursorMcpConfig(repoRoot);
+  ensureCursorSortiriRule(repoRoot, options.forceRules ?? false);
+  ensureGitignore(repoRoot);
+
+  console.log("\nSortiri initialized (local mode).");
+  console.log(`Config: ${getConfigPath(repoRoot)}`);
+  console.log("Timeline: .sortiri/events.jsonl");
+  printNextSteps();
+}
+
 async function runTokenInit(
   options: InitOptions,
   repoRoot: string,
@@ -101,6 +136,7 @@ async function runTokenInit(
   const result = await consumeSetupToken(apiUrl, setupToken, repoRoot, editor);
 
   const config: SortiriConfig = {
+    mode: "cloud",
     apiUrl: result.apiUrl || apiUrl,
     apiKey: result.apiKey,
     workspaceId: result.workspaceId,
@@ -111,17 +147,15 @@ async function runTokenInit(
 
   saveConfig(config, repoRoot);
   clearSession(repoRoot);
+  ensureEventsJournal(repoRoot, true);
   mergeCursorMcpConfig(repoRoot);
-  ensureCursorSortiriRule(repoRoot);
+  ensureCursorSortiriRule(repoRoot, options.forceRules ?? false);
   ensureGitignore(repoRoot);
 
   console.log("\nSortiri initialized.");
   console.log(`Config: ${getConfigPath(repoRoot)}`);
   console.log(`Project: ${result.projectName}`);
-  console.log("\nNext steps:");
-  console.log("  1. npx sortiri doctor");
-  console.log("  2. npx sortiri dev");
-  console.log("  3. Restart the Sortiri MCP server in Cursor");
+  printNextSteps();
 }
 
 async function runManualInit(
@@ -139,10 +173,10 @@ async function runManualInit(
     apiUrl = apiUrl ?? DEFAULTS.apiUrl;
     editor = editor ?? DEFAULTS.editor;
     if (!apiKey) {
-      throw new Error("--api-key is required with --yes");
+      throw new Error("--api-key is required with --yes for cloud manual setup");
     }
     if (!workspaceId) {
-      throw new Error("--workspace-id is required with --yes");
+      throw new Error("--workspace-id is required with --yes for cloud manual setup");
     }
   } else {
     apiUrl = await prompt(rl, "Sortiri API URL", apiUrl ?? DEFAULTS.apiUrl);
@@ -158,6 +192,7 @@ async function runManualInit(
   }
 
   const config: SortiriConfig = {
+    mode: "cloud",
     apiUrl: apiUrl!,
     apiKey: apiKey!,
     workspaceId: workspaceId!,
@@ -167,25 +202,38 @@ async function runManualInit(
 
   saveConfig(config, repoRoot);
   clearSession(repoRoot);
+  ensureEventsJournal(repoRoot, true);
   mergeCursorMcpConfig(repoRoot);
-  ensureCursorSortiriRule(repoRoot);
+  ensureCursorSortiriRule(repoRoot, options.forceRules ?? false);
   ensureGitignore(repoRoot);
 
-  console.log("\nSortiri initialized (manual config).");
+  console.log("\nSortiri initialized (cloud config).");
   console.log(`Config: ${getConfigPath(repoRoot)}`);
+  printNextSteps();
 }
 
 export async function runInit(options: InitOptions = {}): Promise<void> {
   const repoRoot = findRepoRoot();
-  const rl = readline.createInterface({ input, output });
 
-  try {
-    if (options.token || (!options.yes && !options.apiKey && !options.workspaceId)) {
+  if (options.token) {
+    const rl = readline.createInterface({ input, output });
+    try {
       await runTokenInit(options, repoRoot, rl);
-    } else {
-      await runManualInit(options, repoRoot, rl);
+    } finally {
+      rl.close();
     }
-  } finally {
-    rl.close();
+    return;
   }
+
+  if (options.apiKey || options.workspaceId) {
+    const rl = readline.createInterface({ input, output });
+    try {
+      await runManualInit(options, repoRoot, rl);
+    } finally {
+      rl.close();
+    }
+    return;
+  }
+
+  await runLocalInit(options, repoRoot);
 }

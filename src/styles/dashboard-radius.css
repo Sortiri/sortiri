@@ -1,0 +1,134 @@
+/**
+ * GitHub-like border radius across dashboard chrome, cards, and controls.
+ * Tokens live on .dashboard-app in dashboard-dark-theme.css.
+ */
+
+/* Sidebar & shell chrome */
+.dashboard-app .dashboard-sidebar-nav-item,
+.dashboard-app .dashboard-sidebar-toggle,
+.dashboard-app .dashboard-sidebar-search,
+.dashboard-app .dashboard-sidebar-brand,
+.dashboard-app .sidebar-context-panel,
+.dashboard-app .workspace-switcher-trigger,
+.dashboard-app .workspace-switcher-menu,
+.dashboard-app .workspace-switcher-menu-item,
+.dashboard-app .workspace-switcher-create,
+.dashboard-app .dashboard-bottom-nav-tab,
+.dashboard-app .dashboard-mobile-header-menu,
+.dashboard-app .dashboard-mobile-nav-drawer-close,
+.dashboard-app .dashboard-mobile-nav-drawer-panel {
+  border-radius: var(--ca-radius-sm);
+}
+
+.dashboard-app .dashboard-mobile-nav-drawer-panel {
+  border-top-right-radius: var(--ca-radius-lg);
+  border-bottom-right-radius: var(--ca-radius-lg);
+}
+
+/* Platform primitives */
+.dashboard-app .object-tab,
+.dashboard-app .platform-subnav__link,
+.dashboard-app .object-action-bar__primary,
+.dashboard-app .object-action-bar__secondary,
+.dashboard-app .timeline-density-toggle button,
+.dashboard-app .timeline-filter,
+.dashboard-app .timeline-filter--link,
+.dashboard-app .timeline-view-mode__option,
+.dashboard-app .pin-replay-button,
+.dashboard-app .needs-attention__item,
+.dashboard-app .platform-empty-state,
+.dashboard-app .platform-project-card,
+.dashboard-app .activity-card,
+.dashboard-app .intent-section,
+.dashboard-app .pulse-card,
+.dashboard-app .pulse-summary__card,
+.dashboard-app .workspace-stat {
+  border-radius: var(--ca-radius-md);
+}
+
+.dashboard-app .object-meta-row__chip,
+.dashboard-app .status-badge,
+.dashboard-app .source-badge,
+.dashboard-app .signal-badge,
+.dashboard-app .timeline-event-card__badge,
+.dashboard-app .search-result-item__badge {
+  border-radius: var(--ca-radius-xs);
+}
+
+/* Form controls */
+.dashboard-app :where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select
+) {
+  border-radius: var(--ca-radius-sm);
+}
+
+.dashboard-app :where(button, [role="button"]) {
+  border-radius: var(--ca-radius-sm);
+}
+
+/* Bordered surfaces — cards, rows, panels, empty states */
+.dashboard-app :where(
+  [class$="__card"],
+  [class*="-card"]:not([class*="__"]),
+  [class$="__row"],
+  [class$="__empty"],
+  [class$="__panel"],
+  [class$="__section"]:is(.decisions-section, .incidents-section),
+  [class$="__item"]:not(.activity-feed__item),
+  [class$="__link"]:is(.quick-actions__link, .home-section__link),
+  [class$="__action"],
+  [class$="__shortcut"],
+  [class$="__result"],
+  [class$="__nav-shortcut"],
+  [class$="__filter"],
+  [class$="__chip"],
+  [class$="__badge"]:not([class*="timeline-event-card__badge"]),
+  [class$="__stat"],
+  [class$="__tile"],
+  [class$="__group"],
+  [class$="__block"],
+  [class$="__callout"],
+  [class$="__banner"],
+  [class$="__alert"],
+  [class$="__notice"],
+  [class$="__box"],
+  [class$="__well"],
+  [class$="__drawer"],
+  [class$="__modal"],
+  [class$="__dialog"],
+  [class$="__popover"],
+  [class$="__menu"],
+  [class$="__list-item"],
+  [class$="__table-row"],
+  [class$="__source-card"],
+  [class$="__integration-card"],
+  [class$="__health-row"],
+  [class$="__event-row"],
+  [class$="__workstream-card"]
+) {
+  border-radius: var(--ca-radius-md);
+}
+
+/* Timeline feed cards */
+.dashboard-app .timeline-event-card,
+.dashboard-app .search-result-item {
+  border-radius: var(--ca-radius-md);
+}
+
+/* Search palette (portaled but dashboard-only) */
+.search-palette {
+  border-radius: var(--ca-radius-lg);
+  overflow: hidden;
+}
+
+.search-palette__nav-shortcut,
+.search-palette__result {
+  border-radius: var(--ca-radius-sm);
+}
+
+/* Tooltips in dashboard */
+.dashboard-app .app-tooltip {
+  border-radius: var(--ca-radius-sm);
+}

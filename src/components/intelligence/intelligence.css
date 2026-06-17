@@ -1,8 +1,7 @@
 .intelligence-page {
   display: flex;
   flex-direction: column;
-  gap: var(--ca-space-6);
-  max-width: 42rem;
+  gap: var(--ca-space-4);
 }
 
 .intelligence-page__header {
@@ -34,7 +33,13 @@
 .intelligence-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--ca-space-2);
+  gap: var(--ca-space-3);
+}
+
+@media (min-width: 64rem) {
+  .intelligence-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .intelligence-summary__card {
@@ -42,8 +47,15 @@
   flex-direction: column;
   gap: var(--ca-space-2);
   padding: var(--ca-space-4);
-  border: 1px solid var(--ca-hairline);
-  background: var(--ca-surface);
+  border: 1px solid var(--ca-border-soft);
+  border-radius: var(--ca-radius-md);
+  background: var(--ca-surface-2);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.intelligence-summary__card:hover {
+  border-color: var(--ca-brand-text-muted);
+  background: var(--ca-surface-3);
 }
 
 .intelligence-summary__card.is-active {
@@ -94,12 +106,13 @@
 }
 
 .intelligence-tab {
-  border: 1px solid var(--ca-hairline);
-  background: var(--ca-surface);
+  border: 1px solid var(--ca-border-soft);
+  border-radius: var(--ca-radius-sm);
+  background: var(--ca-surface-2);
   padding: var(--ca-space-2) var(--ca-space-3);
   font-size: 0.8125rem;
   font-family: inherit;
-  color: var(--ca-muted);
+  color: var(--ca-ink-muted);
   cursor: pointer;
 }
 
@@ -125,6 +138,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--ca-space-3);
+  padding: var(--ca-space-4);
+  border: 1px solid var(--ca-border-soft);
+  border-radius: var(--ca-radius-md);
+  background: var(--ca-surface-2);
 }
 
 .intelligence-section__title {

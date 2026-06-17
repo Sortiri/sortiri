@@ -5,8 +5,6 @@
  */
 
 import { createHmac } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
 import { buildStripeSignatureHeader } from "../src/lib/integrations/stripe/verifySignature";
@@ -14,31 +12,10 @@ import {
   TEST_GITHUB_WEBHOOK_SECRET,
   TEST_STRIPE_WEBHOOK_SECRET,
 } from "../convex/testSeed";
+import { getConvexHttpUrl, loadEnvLocal } from "./lib/sanity-reliability-helpers.js";
 
 const PASSWORD = "SortiriSanity!integration-secrets-2026";
 const OWNER_EMAIL = "sortiri-sanity-integration-owner@agentmail.to";
-
-function loadEnvLocal() {
-  const envPath = path.join(process.cwd(), ".env.local");
-  if (!fs.existsSync(envPath)) return;
-  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const index = trimmed.indexOf("=");
-    if (index === -1) continue;
-    const key = trimmed.slice(0, index);
-    let value = trimmed.slice(index + 1);
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
-  }
-}
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -146,7 +123,7 @@ async function postGithubWebhook(apiUrl: string, workspaceId: string, secret: st
   const signature =
     "sha256=" + createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
   const response = await fetch(
-    `${apiUrl}/api/integrations/github/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/github?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {
@@ -185,7 +162,7 @@ async function postStripeWebhook(apiUrl: string, workspaceId: string) {
   const rawBody = JSON.stringify(payload);
   const signature = buildStripeSignatureHeader(rawBody, TEST_STRIPE_WEBHOOK_SECRET);
   const response = await fetch(
-    `${apiUrl}/api/integrations/stripe/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/stripe?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {
@@ -204,7 +181,7 @@ async function main() {
   loadEnvLocal();
   console.log("Sprint 28 integration secrets sanity check\n");
 
-  const apiUrl = process.env.API_URL ?? "http://localhost:3000";
+  const apiUrl = getConvexHttpUrl();
   const serverKey = requireEnv("SORTIRI_INTEGRATION_SERVER_KEY");
   const anonClient = new ConvexHttpClient(requireEnv("NEXT_PUBLIC_CONVEX_URL"));
 

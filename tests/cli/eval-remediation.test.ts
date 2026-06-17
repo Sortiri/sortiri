@@ -4,6 +4,7 @@ const loadConfigMock = vi.fn();
 
 vi.mock("@sortiri/local", () => ({
   loadConfig: () => loadConfigMock(),
+  loadCloudConfig: () => loadConfigMock(),
 }));
 
 describe("CLI eval remediation commands", () => {
@@ -13,6 +14,7 @@ describe("CLI eval remediation commands", () => {
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockReset();
     loadConfigMock.mockReturnValue({
+      mode: "cloud",
       apiUrl: "http://localhost:3000",
       apiKey: "sk_sortiri_test_key_1234567890",
       workspaceId: "ws_test",
@@ -31,7 +33,7 @@ describe("CLI eval remediation commands", () => {
     });
     const { runEvals } = await import("../../packages/cli/src/commands/evals.js");
     await runEvals({ subcommand: "remediation-list" });
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/cli/evals/remediation");
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("/cli/evals/remediation");
   });
 
   it("remediation generate requires run id", async () => {
@@ -63,6 +65,6 @@ describe("CLI eval remediation commands", () => {
     });
     const { runEvals } = await import("../../packages/cli/src/commands/evals.js");
     await runEvals({ subcommand: "remediation-convert", id: "rec1" });
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/cli/recommendations/rec1/convert");
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("/cli/recommendations/rec1/convert");
   });
 });

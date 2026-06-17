@@ -1,4 +1,5 @@
 import * as React from "react";
+import { PixelLoader } from "@/components/ui/pixel-loader";
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary";
@@ -30,8 +31,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading ? (
-          <span className="auth-button__loading" aria-hidden>
-            <span className="auth-button__spinner" />
+          <span className="inline-flex items-center mr-1.5" aria-hidden>
+            <PixelLoader size="sm" />
           </span>
         ) : null}
         {children}

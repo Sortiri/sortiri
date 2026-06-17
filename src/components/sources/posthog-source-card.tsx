@@ -8,6 +8,7 @@ import { POSTHOG_RECOMMENDED_EVENTS } from "@/types/posthog-integration";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { SourceTimelineLink } from "@/components/sources/source-timeline-link";
 import { SetupBlock } from "@/components/sources/setup-block";
+import { buildWebhookUrl } from "@/lib/sortiri/apiUrl";
 
 type PosthogSourceCardProps = {
   workspaceId: string;
@@ -43,10 +44,7 @@ export function PosthogSourceCard({
   const [message, setMessage] = useState<string | null>(null);
   const [createdRawSecret, setCreatedRawSecret] = useState<string | null>(null);
 
-  const apiUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://app.sortiri.com";
-
-  const webhookUrl = `${apiUrl}/api/integrations/posthog/webhook?workspaceId=${workspaceId}`;
+  const webhookUrl = buildWebhookUrl("posthog", workspaceId);
 
   const statusLabel = useMemo(() => {
     const status = posthogStatus?.connectionStatus;

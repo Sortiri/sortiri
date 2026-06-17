@@ -28,16 +28,20 @@ export default function Home() {
             <div className="flex flex-col items-center gap-6 sm:gap-8">
               <h1 className={`${inter.className} max-w-3xl text-[clamp(2.25rem,5vw+0.75rem,4rem)] font-normal leading-[1.08] text-white`}>
                 The{" "}
-                <span className={`${ppMondwest.className} text-[#00E013] text-[clamp(2.5rem,5.5vw+0.75rem,4.25rem)]`}>timeline layer</span> for
+                <span className={`${ppMondwest.className} text-[#c490e8] text-[clamp(2.5rem,5.5vw+0.75rem,4.25rem)]`}>timeline layer</span> for
                 AI-native companies
               </h1>
-              <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
-                <div className="flex items-center gap-1.5">
-                  <Zap width={14} height={14} className="text-[#00E013]" />
-                  <span className={`${inter.className} text-xs font-medium text-white`}>1 min setup</span>
+              <div className="flex w-full max-w-md flex-col items-center gap-4">
+                <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
+                  <StartButton>Get started for free</StartButton>
+                  <ViewDocsButton />
                 </div>
-                <StartButton>Get started for free</StartButton>
-                <ViewDocsButton />
+                <div className="mt-1 flex items-center gap-1.5 sm:mt-2">
+                  <Zap width={14} height={14} className="text-[#c490e8]" />
+                  <span className={`${inter.className} text-xs font-medium text-white`}>
+                    1 min setup
+                  </span>
+                </div>
               </div>
               <HeroInstallCard tabs={INSTALL_CODE_TABS} defaultTabId="npm" />
               <HeroCodeCard />

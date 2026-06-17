@@ -41,7 +41,7 @@ export async function getRecommendationsRoute(
   rawKey: string,
 ): Promise<Response> {
   const params = new URLSearchParams({ workspaceId });
-  return fetch(`${appUrl}/api/cli/recommendations?${params.toString()}`, {
+  return fetch(`${appUrl}/cli/recommendations?${params.toString()}`, {
     headers: { Authorization: `Bearer ${rawKey}` },
   });
 }
@@ -62,7 +62,7 @@ export async function generateRecommendationsViaHttp(
 ): Promise<HttpRecommendationResponse> {
   const response = await postRecommendationRoute(
     appUrl,
-    "/api/cli/recommendations/generate",
+    "/cli/recommendations/generate",
     { workspaceId },
     rawKey,
   );
@@ -83,7 +83,7 @@ export async function getRecommendationViaHttp(
 ): Promise<HttpRecommendationResponse> {
   const params = new URLSearchParams({ workspaceId });
   const response = await fetch(
-    `${appUrl}/api/cli/recommendations/${recommendationId}?${params.toString()}`,
+    `${appUrl}/cli/recommendations/${recommendationId}?${params.toString()}`,
     { headers: { Authorization: `Bearer ${rawKey}` } },
   );
   const payload = (await response.json().catch(() => null)) as HttpRecommendationResponse | null;
@@ -103,7 +103,7 @@ export async function convertRecommendationViaHttp(
 ): Promise<HttpRecommendationResponse> {
   const response = await postRecommendationRoute(
     appUrl,
-    `/api/cli/recommendations/${recommendationId}/convert`,
+    `/cli/recommendations/${recommendationId}/convert`,
     { workspaceId },
     rawKey,
   );

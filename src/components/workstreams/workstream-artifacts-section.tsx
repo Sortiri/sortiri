@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useArtifactDrawer } from "@/components/artifacts/artifact-context";
 
 type WorkstreamArtifactsSectionProps = {
@@ -19,7 +20,7 @@ export function WorkstreamArtifactsSection({ workstreamId }: WorkstreamArtifacts
     return (
       <section className="workstream-artifacts">
         <h2 className="workstream-artifacts__title">Artifacts</h2>
-        <p className="workstream-artifacts__empty">Loading artifacts…</p>
+        <PageLoader variant="section" />
       </section>
     );
   }

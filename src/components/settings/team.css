@@ -16,7 +16,7 @@
 .settings-page__title,
 .team-page__title {
   margin: 0;
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.75rem;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -282,7 +282,7 @@
 
 .invite-accept-card__title {
   margin: 0;
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.5rem;
   color: var(--ca-ink);
 }

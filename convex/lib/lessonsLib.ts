@@ -26,6 +26,9 @@ export type LessonInput = {
   evidenceImpactAnalysisIds?: Id<"impactAnalyses">[];
   evidenceInsightFindingIds?: Id<"insightFindings">[];
   evidenceArtifactIds?: Id<"artifacts">[];
+  evidenceDecisionIds?: Id<"decisions">[];
+  evidenceRollbackIds?: Id<"rollbackEvents">[];
+  evidenceIncidentIds?: Id<"incidents">[];
   tags?: string[];
   createdBy?: Doc<"lessons">["createdBy"];
 };
@@ -128,6 +131,9 @@ export async function createLessonDoc(
     evidenceImpactAnalysisIds: input.evidenceImpactAnalysisIds,
     evidenceInsightFindingIds: input.evidenceInsightFindingIds,
     evidenceArtifactIds: input.evidenceArtifactIds,
+    evidenceDecisionIds: input.evidenceDecisionIds,
+    evidenceRollbackIds: input.evidenceRollbackIds,
+    evidenceIncidentIds: input.evidenceIncidentIds,
     tags: input.tags,
     createdBy: input.createdBy,
     createdAt: now,

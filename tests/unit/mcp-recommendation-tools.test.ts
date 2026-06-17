@@ -28,7 +28,7 @@ describe("mcp recommendation tools client", () => {
 
     const result = await client.listRecommendations({ limit: 10 });
     expect(result.recommendations).toHaveLength(1);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/recommendations");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/mcp/recommendations");
   });
 
   it("converts recommendation to workstream", async () => {

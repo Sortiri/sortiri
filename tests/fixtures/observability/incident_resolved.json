@@ -1,0 +1,10 @@
+{
+  "source": "generic",
+  "signalType": "incident_resolved",
+  "title": "Incident resolved: API latency spike",
+  "severity": "info",
+  "service": "api",
+  "environment": "production",
+  "id": "obs-inc-resolved-1",
+  "fingerprint": "api-latency-spike"
+}

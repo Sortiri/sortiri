@@ -2,6 +2,13 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@sortiri/local", () => ({
   loadConfig: () => ({
+    mode: "cloud",
+    apiUrl: "https://example.com",
+    apiKey: "key",
+    workspaceId: "ws-ext",
+  }),
+  loadCloudConfig: () => ({
+    mode: "cloud",
     apiUrl: "https://example.com",
     apiKey: "key",
     workspaceId: "ws-ext",
@@ -29,7 +36,7 @@ describe("evals cli", () => {
 
     const { runEvals } = await import("../../packages/cli/src/commands/evals.js");
     await runEvals({ subcommand: "list" });
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/evals");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/cli/evals");
   });
 
   it("generates eval suite from entity", async () => {
@@ -44,7 +51,7 @@ describe("evals cli", () => {
       source: "recommendation",
       entityId: "rec1",
     });
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/evals/generate");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/cli/evals/generate");
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(body.source).toBe("recommendation");
     expect(body.entityId).toBe("rec1");
@@ -58,6 +65,6 @@ describe("evals cli", () => {
 
     const { runEvals } = await import("../../packages/cli/src/commands/evals.js");
     await runEvals({ subcommand: "get-run", id: "run1" });
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/evals/runs/run1");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/cli/evals/runs/run1");
   });
 });

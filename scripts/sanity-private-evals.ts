@@ -179,7 +179,7 @@ async function main() {
 
   const viewerHttpRun = await postEvalRoute(
     appUrl,
-    `/api/cli/evals/${evalSuiteId}/run`,
+    `/cli/evals/${evalSuiteId}/run`,
     { workspaceId: story.workspaceId },
     rawApiKey,
   );

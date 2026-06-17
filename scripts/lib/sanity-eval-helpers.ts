@@ -47,7 +47,7 @@ export async function getEvalsRoute(
 ): Promise<Response> {
   const params = new URLSearchParams({ workspaceId });
   if (limit !== undefined) params.set("limit", String(limit));
-  return fetch(`${appUrl}/api/cli/evals?${params.toString()}`, {
+  return fetch(`${appUrl}/cli/evals?${params.toString()}`, {
     headers: { Authorization: `Bearer ${rawKey}` },
   });
 }
@@ -69,7 +69,7 @@ export async function getEvalSuiteViaHttp(
 ): Promise<HttpEvalResponse> {
   const params = new URLSearchParams({ workspaceId });
   const response = await fetch(
-    `${appUrl}/api/cli/evals/${evalSuiteId}?${params.toString()}`,
+    `${appUrl}/cli/evals/${evalSuiteId}?${params.toString()}`,
     { headers: { Authorization: `Bearer ${rawKey}` } },
   );
   const payload = (await response.json().catch(() => null)) as HttpEvalResponse | null;
@@ -92,7 +92,7 @@ export async function generateEvalSuiteViaHttp(
 ): Promise<HttpEvalResponse> {
   const response = await postEvalRoute(
     appUrl,
-    "/api/cli/evals/generate",
+    "/cli/evals/generate",
     { workspaceId, ...input },
     rawKey,
   );
@@ -113,7 +113,7 @@ export async function runEvalSuiteViaHttp(
 ): Promise<HttpEvalResponse> {
   const response = await postEvalRoute(
     appUrl,
-    `/api/cli/evals/${evalSuiteId}/run`,
+    `/cli/evals/${evalSuiteId}/run`,
     { workspaceId },
     rawKey,
   );
@@ -134,7 +134,7 @@ export async function getEvalRunViaHttp(
 ): Promise<HttpEvalResponse> {
   const params = new URLSearchParams({ workspaceId });
   const response = await fetch(
-    `${appUrl}/api/cli/evals/runs/${evalRunId}?${params.toString()}`,
+    `${appUrl}/cli/evals/runs/${evalRunId}?${params.toString()}`,
     { headers: { Authorization: `Bearer ${rawKey}` } },
   );
   const payload = (await response.json().catch(() => null)) as HttpEvalResponse | null;
@@ -154,7 +154,7 @@ export async function postRemediationGenerateViaHttp(
 ): Promise<{ recommendationIds?: string[]; count?: number }> {
   const response = await postEvalRoute(
     appUrl,
-    "/api/cli/evals/remediation/generate",
+    "/cli/evals/remediation/generate",
     { workspaceId, evalRunId },
     rawKey,
   );
@@ -177,7 +177,7 @@ export async function getRemediationViaHttp(
 ): Promise<Record<string, unknown>> {
   const params = new URLSearchParams({ workspaceId });
   const response = await fetch(
-    `${appUrl}/api/cli/evals/remediation/${recommendationId}?${params.toString()}`,
+    `${appUrl}/cli/evals/remediation/${recommendationId}?${params.toString()}`,
     { headers: { Authorization: `Bearer ${rawKey}` } },
   );
   const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;

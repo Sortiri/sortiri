@@ -217,7 +217,7 @@ async function main() {
 
   const viewerHttpConvert = await postRecommendationRoute(
     appUrl,
-    `/api/cli/recommendations/${convertTarget}/convert`,
+    `/cli/recommendations/${convertTarget}/convert`,
     { workspaceId: story.workspaceId },
     rawApiKey,
   );

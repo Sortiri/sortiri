@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { describeE2E, skipForAuditor } from "./helpers/auth";
 
 const pages = [
-  { path: "/home", heading: /Company Pulse|Home/i },
+  { path: "/home", heading: /Timeline/i },
   { path: "/timeline", heading: /Timeline/i },
   { path: "/projects", heading: /Projects/i },
   { path: "/workstreams", heading: /Workstreams/i },

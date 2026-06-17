@@ -103,14 +103,14 @@ async function main() {
     assert(doctorOutput.includes("Your Sortiri project is ready"), "Doctor did not pass");
 
     const healthResponse = await fetch(
-      `${apiUrl}/api/cli/health?projectId=${encodeURIComponent(config.projectId!)}`,
+      `${apiUrl}/cli/health?projectId=${encodeURIComponent(config.projectId!)}`,
       { headers: { Authorization: `Bearer ${config.apiKey}` } },
     );
     assert(healthResponse.ok, `Health check failed: ${healthResponse.status}`);
     const health = (await healthResponse.json()) as { ok?: boolean; workspaceId?: string };
     assert(Boolean(health.ok) && health.workspaceId === workspaceId, "Health response invalid");
 
-    const reuseResponse = await fetch(`${apiUrl}/api/cli/setup/consume`, {
+    const reuseResponse = await fetch(`${apiUrl}/cli/setup/consume`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ setupToken: tokenResult.rawToken }),

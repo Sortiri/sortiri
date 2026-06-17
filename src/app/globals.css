@@ -13,12 +13,13 @@
   --color-ca-border: var(--ca-border);
   --color-ca-danger: var(--ca-danger);
   --color-ca-brand: var(--ca-brand);
-  --font-sans: var(--font-pp-mondwest);
-  --font-display: var(--font-pp-mondwest);
+  --font-sans: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-departure-mono, ui-monospace, monospace);
 }
 
 body {
   background: var(--ca-canvas);
   color: var(--ca-ink);
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }

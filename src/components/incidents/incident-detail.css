@@ -1,0 +1,41 @@
+@import "../../styles/platform.css";
+
+.incident-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-2);
+  max-width: 42rem;
+}
+
+.incident-detail-page__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ca-space-2);
+}
+
+.incident-detail-page__actions button,
+.incident-detail-page__actions textarea {
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.incident-detail-page__actions textarea {
+  padding: var(--ca-space-2) var(--ca-space-3);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+  color: var(--ca-ink);
+}
+
+.incident-detail-page__actions button {
+  align-self: flex-start;
+  padding: var(--ca-space-2) var(--ca-space-3);
+  border: 1px solid var(--ca-hairline);
+  background: var(--ca-surface);
+  color: var(--ca-ink);
+  cursor: pointer;
+}
+
+.incident-detail-page__actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

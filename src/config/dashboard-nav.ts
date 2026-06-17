@@ -55,15 +55,13 @@ export function isIntelligenceRoute(pathname: string): boolean {
 
 export const dashboardPrimaryNavItems: DashboardNavItem[] = [
   { href: "/home", label: "Home", icon: "home" },
-  { href: "/timeline", label: "Timeline", icon: "timeline" },
   { href: "/projects", label: "Projects", icon: "projects" },
+  { href: "/timeline", label: "Timeline", icon: "timeline" },
   { href: "/workstreams", label: "Workstreams", icon: "workstreams" },
-  { href: "/entities", label: "Entities", icon: "entities" },
-  { href: "/views", label: "Views", icon: "views" },
   { href: "/intelligence", label: "Intelligence", icon: "intelligence" },
-  { href: "/ask", label: "Ask Sortiri", icon: "ask" },
-  { href: "/audits", label: "Audits", icon: "audits" },
   { href: "/sources", label: "Sources", icon: "sources" },
+  { href: "/audits", label: "Audits", icon: "audits" },
+  { href: "/ask", label: "Ask Sortiri", icon: "ask" },
 ];
 
 export const auditorNavItems: DashboardNavItem[] = [
@@ -94,7 +92,7 @@ export const dashboardNavItems: DashboardNavItem[] = [
   dashboardSettingsNavItem,
 ];
 
-export const dashboardBottomNavItems = dashboardPrimaryNavItems;
+export const dashboardBottomNavItems = dashboardPrimaryNavItems.slice(0, 5);
 
 export function isDashboardNavItemActive(pathname: string, href: string): boolean {
   if (href === INTELLIGENCE_NAV_HREF) {
@@ -104,7 +102,7 @@ export function isDashboardNavItemActive(pathname: string, href: string): boolea
 }
 
 export function getDashboardPageTitle(pathname: string): string {
-  if (pathname === "/home") return "Company Pulse";
+  if (pathname === "/home") return "Timeline";
   if (pathname.startsWith("/views")) return "Views";
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/audits")) return "Audits";

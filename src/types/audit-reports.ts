@@ -12,6 +12,11 @@ export type AuditReportItemType =
   | "impact_analysis"
   | "lesson"
   | "playbook"
+  | "decision"
+  | "rollback"
+  | "decision_candidate"
+  | "incident"
+  | "observability_signal"
   | "note";
 
 export type AuditReportAccessLevel = "viewer" | "reviewer";
@@ -67,6 +72,11 @@ export type AuditReportItemRecord = {
   impactAnalysisId?: string;
   lessonId?: string;
   playbookId?: string;
+  decisionId?: string;
+  rollbackId?: string;
+  decisionCandidateId?: string;
+  incidentId?: string;
+  observabilitySignalId?: string;
   title: string;
   summary?: string;
   reason?: string;

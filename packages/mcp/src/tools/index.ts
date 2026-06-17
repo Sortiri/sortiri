@@ -166,3 +166,143 @@ export const rerunEvalForRemediationSchema = z.object({
   recommendationId: z.string().describe("Remediation recommendation ID"),
   evalSuiteId: z.string().optional().describe("Eval suite ID (resolved from recommendation if omitted)"),
 });
+
+export const listIngestDeliveriesSchema = z.object({
+  status: z.string().optional().describe("Filter by delivery status"),
+  source: z.string().optional().describe("Filter by source"),
+  limit: z.number().optional().describe("Max deliveries to return"),
+});
+
+export const getIngestDeliverySchema = z.object({
+  deliveryId: z.string().describe("Ingest delivery ID"),
+});
+
+export const listDeadLettersSchema = z.object({
+  status: z.string().optional().describe("Filter by dead letter status"),
+  limit: z.number().optional().describe("Max dead letters to return"),
+});
+
+export const replayIngestDeliverySchema = z.object({
+  deliveryId: z.string().optional().describe("Delivery ID to replay"),
+  deadLetterId: z.string().optional().describe("Dead letter ID to replay"),
+  payload: z.unknown().optional().describe("Optional payload override"),
+});
+
+export const getSourceHealthSchema = z.object({});
+
+export const recordDecisionSchema = z.object({
+  title: z.string().describe("Decision title"),
+  summary: z.string().optional().describe("Short summary"),
+  decisionType: z
+    .enum([
+      "product",
+      "engineering",
+      "design",
+      "pricing",
+      "go_to_market",
+      "security",
+      "audit",
+      "ops",
+      "model",
+      "other",
+    ])
+    .optional()
+    .describe("Decision type"),
+  rationale: z.string().optional().describe("Why this decision was made"),
+  expectedOutcome: z.string().optional().describe("Expected outcome"),
+  rollbackPlan: z.string().optional().describe("Rollback plan if wrong"),
+  workstreamId: z.string().optional().describe("Linked workstream ID"),
+});
+
+export const listDecisionsSchema = z.object({
+  limit: z.number().optional().describe("Max decisions to return"),
+});
+
+export const getDecisionSchema = z.object({
+  decisionId: z.string().describe("Decision ID"),
+});
+
+export const linkDecisionToWorkstreamSchema = z.object({
+  decisionId: z.string().describe("Decision ID"),
+  workstreamId: z.string().describe("Workstream ID to link"),
+});
+
+export const createRollbackSchema = z.object({
+  decisionId: z.string().optional().describe("Decision being rolled back"),
+  title: z.string().describe("Rollback title"),
+  summary: z.string().optional().describe("Rollback summary"),
+  reason: z.string().optional().describe("Why rolling back"),
+});
+
+export const listDecisionCandidatesSchema = z.object({
+  limit: z.number().optional().describe("Max candidates to return"),
+});
+
+export const confirmDecisionCandidateSchema = z.object({
+  candidateId: z.string().describe("Decision candidate ID"),
+});
+
+export const dismissDecisionCandidateSchema = z.object({
+  candidateId: z.string().describe("Decision candidate ID"),
+});
+
+export const recordIncidentSchema = z.object({
+  title: z.string().describe("Incident title"),
+  summary: z.string().optional().describe("Incident summary"),
+  severity: z
+    .enum(["info", "warning", "error", "critical"])
+    .optional()
+    .describe("Incident severity"),
+  workstreamId: z.string().optional().describe("Linked workstream ID"),
+  service: z.string().optional().describe("Affected service"),
+  environment: z.string().optional().describe("Environment (e.g. production)"),
+});
+
+export const listIncidentsSchema = z.object({
+  status: z
+    .enum(["open", "investigating", "mitigated", "resolved", "rolled_back", "archived"])
+    .optional()
+    .describe("Filter by status"),
+  severity: z
+    .enum(["info", "warning", "error", "critical"])
+    .optional()
+    .describe("Filter by severity"),
+  limit: z.number().optional().describe("Max incidents to return"),
+});
+
+export const getIncidentSchema = z.object({
+  incidentId: z.string().describe("Incident ID"),
+});
+
+export const resolveIncidentSchema = z.object({
+  incidentId: z.string().describe("Incident ID"),
+  rootCause: z.string().optional().describe("Root cause summary"),
+  mitigation: z.string().optional().describe("Mitigation applied"),
+  rollbackSummary: z.string().optional().describe("Rollback summary if applicable"),
+});
+
+export const createIncidentRollbackSchema = z.object({
+  incidentId: z.string().describe("Incident ID"),
+  title: z.string().describe("Rollback title"),
+  summary: z.string().optional().describe("Rollback summary"),
+  reason: z.string().optional().describe("Why rolling back"),
+});
+
+export const linkIncidentToWorkstreamSchema = z.object({
+  incidentId: z.string().describe("Incident ID"),
+  workstreamId: z.string().describe("Workstream ID to link"),
+});
+
+export const linkIncidentToDecisionSchema = z.object({
+  incidentId: z.string().describe("Incident ID"),
+  decisionId: z.string().describe("Decision ID to link"),
+});
+
+export const listObservabilitySignalsSchema = z.object({
+  incidentId: z.string().optional().describe("Filter signals linked to incident"),
+  severity: z
+    .enum(["info", "warning", "error", "critical"])
+    .optional()
+    .describe("Filter by severity"),
+  limit: z.number().optional().describe("Max signals to return"),
+});

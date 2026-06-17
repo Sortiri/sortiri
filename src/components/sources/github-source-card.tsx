@@ -7,6 +7,7 @@ import { formatEventTime } from "@/lib/events/format";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { SourceTimelineLink } from "@/components/sources/source-timeline-link";
 import { SetupBlock } from "@/components/sources/setup-block";
+import { buildWebhookUrl } from "@/lib/sortiri/apiUrl";
 
 type GithubSourceCardProps = {
   workspaceId: string;
@@ -39,10 +40,7 @@ export function GithubSourceCard({
   const [message, setMessage] = useState<string | null>(null);
   const [createdRawSecret, setCreatedRawSecret] = useState<string | null>(null);
 
-  const apiUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://your-sortiri-app.com";
-
-  const webhookUrl = `${apiUrl}/api/integrations/github/webhook?workspaceId=${workspaceId}`;
+  const webhookUrl = buildWebhookUrl("github", workspaceId);
 
   const statusLabel = useMemo(() => {
     const status = githubStatus?.connectionStatus;

@@ -1,5 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import {
+  TimelineDensityToggle,
+  type TimelineDensity,
+} from "@/components/timeline/timeline-density-toggle";
 import type { TimelineFilterValue } from "@/lib/events/labels";
 import { FILTER_OPTIONS } from "@/lib/events/labels";
 import type { TimelineViewMode } from "@/lib/events/display";
@@ -9,6 +14,9 @@ type TimelineFiltersProps = {
   onChange: (value: TimelineFilterValue) => void;
   viewMode?: TimelineViewMode;
   onViewModeChange?: (mode: TimelineViewMode) => void;
+  density?: TimelineDensity;
+  onDensityChange?: (density: TimelineDensity) => void;
+  hideHubLinks?: boolean;
 };
 
 const VIEW_MODE_OPTIONS: { label: string; value: TimelineViewMode }[] = [
@@ -21,9 +29,15 @@ export function TimelineFilters({
   onChange,
   viewMode = "primary",
   onViewModeChange,
+  density = "comfortable",
+  onDensityChange,
+  hideHubLinks = false,
 }: TimelineFiltersProps) {
   return (
     <div className="timeline-filters-stack">
+      {onDensityChange ? (
+        <TimelineDensityToggle value={density} onChange={onDensityChange} />
+      ) : null}
       {onViewModeChange ? (
         <div className="timeline-view-mode">
           <div
@@ -53,6 +67,16 @@ export function TimelineFilters({
         </div>
       ) : null}
       <div className="timeline-filters" role="tablist" aria-label="Filter events by category">
+        {!hideHubLinks ? (
+          <>
+            <Link href="/timeline/decisions" className="timeline-filter timeline-filter--link">
+              Decisions hub
+            </Link>
+            <Link href="/timeline/incidents" className="timeline-filter timeline-filter--link">
+              Incidents hub
+            </Link>
+          </>
+        ) : null}
         {FILTER_OPTIONS.map((option) => {
           const isActive = value === option.value;
           return (

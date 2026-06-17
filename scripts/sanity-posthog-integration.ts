@@ -4,36 +4,13 @@
  * Usage: npx tsx scripts/sanity-posthog-integration.ts
  */
 
-import fs from "node:fs";
-import path from "node:path";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
 import { exportJsonString } from "../src/lib/audits/exportJson";
+import { getConvexHttpUrl, loadEnvLocal } from "./lib/sanity-reliability-helpers.js";
 
 const PASSWORD = "SortiriSanity!posthog-integration-2026";
 const OWNER_EMAIL = "sortiri-sanity-posthog-owner@agentmail.to";
-
-function loadEnvLocal() {
-  const envPath = path.join(process.cwd(), ".env.local");
-  if (!fs.existsSync(envPath)) return;
-  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const index = trimmed.indexOf("=");
-    if (index === -1) continue;
-    const key = trimmed.slice(0, index);
-    let value = trimmed.slice(index + 1);
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
-  }
-}
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -127,7 +104,7 @@ async function postPostHogWebhook(
   payload: Record<string, unknown>,
 ) {
   const response = await fetch(
-    `${apiUrl}/api/integrations/posthog/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/posthog?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {
@@ -146,7 +123,7 @@ async function main() {
   loadEnvLocal();
   console.log("Sprint 29 PostHog integration sanity check\n");
 
-  const apiUrl = process.env.API_URL ?? "http://localhost:3000";
+  const apiUrl = getConvexHttpUrl();
 
   const ownerUserId = await ensureClerkUser(OWNER_EMAIL, "PostHogOwner");
   const ownerClient = client(await getConvexTokenForUser(ownerUserId));
@@ -237,7 +214,7 @@ async function main() {
   if (!process.env.KEEP_WEBHOOK_SECRET) {
     await ownerClient.mutation(api.integrations.posthog.revokeWebhookSecret, { workspaceId });
     const revokedResponse = await fetch(
-      `${apiUrl}/api/integrations/posthog/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+      `${apiUrl}/webhooks/posthog?workspaceId=${encodeURIComponent(workspaceId)}`,
       {
         method: "POST",
         headers: {

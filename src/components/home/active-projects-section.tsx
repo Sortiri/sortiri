@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { formatProjectLastActivity } from "@/lib/projects/format";
-import { getProjectHref } from "@/lib/projects/format";
+import { ProjectCard } from "@/components/platform";
 import type { ActiveProjectSummary } from "@/types/projects";
 import "./home.css";
 
@@ -33,21 +32,22 @@ export function ActiveProjectsSection({ workspaceId }: ActiveProjectsSectionProp
           No projects yet. Run sortiri init in a repo to register your first project.
         </p>
       ) : (
-        projectList.map((project) => (
-          <article key={project.projectId} className="home-workstream-card">
-            <h3 className="home-workstream-card__title">
-              <Link href={getProjectHref(project.projectId)}>{project.name}</Link>
-            </h3>
-            <p className="home-workstream-card__meta">
-              {project.eventsToday} event{project.eventsToday === 1 ? "" : "s"} today ·{" "}
-              {project.activeWorkstreams} active workstream
-              {project.activeWorkstreams === 1 ? "" : "s"}
-              {project.lastEventAt
-                ? ` · last seen ${formatProjectLastActivity(project.lastEventAt)}`
-                : ""}
-            </p>
-          </article>
-        ))
+        <div className="home-projects-grid">
+          {projectList.map((project) => (
+            <ProjectCard
+              key={project.projectId}
+              project={{
+                projectId: project.projectId,
+                name: project.name,
+                eventsToday: project.eventsToday,
+                activeWorkstreams: project.activeWorkstreams,
+                openIncidents: project.openIncidents,
+                connectedSources: project.connectedSources,
+                lastEventAt: project.lastEventAt,
+              }}
+            />
+          ))}
+        </div>
       )}
     </section>
   );

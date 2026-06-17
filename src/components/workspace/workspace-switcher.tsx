@@ -6,6 +6,7 @@ import { PenSquare } from "pixelarticons/react/PenSquare";
 import { Plus } from "pixelarticons/react/Plus";
 import { Trash } from "pixelarticons/react/Trash";
 import { useEffect, useId, useRef, useState } from "react";
+import { PixelLoader } from "@/components/ui/pixel-loader";
 import { cn } from "@/lib/utils";
 import { SidebarTooltip } from "@/components/dashboard/sidebar-tooltip";
 import { useSidebar } from "@/components/dashboard/sidebar-context";
@@ -123,11 +124,10 @@ export function WorkspaceSwitcher({
     }
   }
 
-  const label = loading
-    ? "Loading workspaces…"
-    : (activeWorkspace?.name ?? "My workspace");
+  const workspaceName = activeWorkspace?.name ?? "My workspace";
+  const ariaLabel = loading ? "Loading workspaces" : workspaceName;
 
-  const workspaceInitial = label.trim().charAt(0).toUpperCase() || "W";
+  const workspaceInitial = workspaceName.trim().charAt(0).toUpperCase() || "W";
 
   const trigger = (
     <button
@@ -135,17 +135,26 @@ export function WorkspaceSwitcher({
       className={cn(
         "workspace-switcher-trigger",
         variant === "context" && "workspace-switcher-trigger--context",
+        loading && "workspace-switcher-trigger--loading",
       )}
       aria-expanded={open}
       aria-controls={listId}
-      aria-label={label}
+      aria-label={ariaLabel}
       disabled={loading || busy}
       onClick={() => setOpen((value) => !value)}
     >
-      <span className="workspace-switcher-initial" aria-hidden>
-        {workspaceInitial}
-      </span>
-      <span className="workspace-switcher-label">{label}</span>
+      {loading ? (
+        <span className="workspace-switcher-loader" aria-hidden>
+          <PixelLoader size="sm" />
+        </span>
+      ) : (
+        <>
+          <span className="workspace-switcher-initial" aria-hidden>
+            {workspaceInitial}
+          </span>
+          <span className="workspace-switcher-label">{workspaceName}</span>
+        </>
+      )}
       <ChevronDown
         width={16}
         height={16}
@@ -161,7 +170,7 @@ export function WorkspaceSwitcher({
   return (
     <div ref={rootRef} className={cn("workspace-switcher", className)}>
       {collapsed ? (
-        <SidebarTooltip label={label}>{trigger}</SidebarTooltip>
+        <SidebarTooltip label={ariaLabel}>{trigger}</SidebarTooltip>
       ) : (
         trigger
       )}

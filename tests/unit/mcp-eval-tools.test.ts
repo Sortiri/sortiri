@@ -28,7 +28,7 @@ describe("mcp eval tools client", () => {
 
     const result = await client.listEvalSuites({ limit: 10 });
     expect(result.suites).toHaveLength(1);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/evals");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/mcp/evals");
   });
 
   it("generates eval suite from recommendation", async () => {
@@ -49,7 +49,7 @@ describe("mcp eval tools client", () => {
       entityId: "rec1",
     });
     expect(result.suiteId).toBe("suite1");
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/evals/generate");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/mcp/evals/generate");
   });
 
   it("queues eval run for suite", async () => {
@@ -85,6 +85,6 @@ describe("mcp eval tools client", () => {
 
     const result = await client.getEvalRun("run1");
     expect(result.run).toBeTruthy();
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/evals/runs/run1");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/mcp/evals/runs/run1");
   });
 });

@@ -1,0 +1,9 @@
+{
+  "source": "vercel",
+  "status": "ERROR",
+  "name": "sortiri-api",
+  "service": "api",
+  "environment": "production",
+  "id": "dpl_failed_1",
+  "url": "https://vercel.com/deploy/dpl_failed_1"
+}

@@ -3,13 +3,23 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { AuditReportCard } from "@/components/audits/audit-report-card";
 import { CreateAuditReportModal } from "@/components/audits/create-audit-report-modal";
+import {
+  PlatformEmptyState,
+  PlatformGrid,
+  PlatformPage,
+  PlatformPageActions,
+  PlatformPageHeader,
+  PlatformSection,
+  PlatformSectionHeader,
+} from "@/components/platform";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { AuditReportRecord } from "@/types/audit-reports";
+import { PageLoader } from "@/components/ui/page-loader";
 import "./audits.css";
 
 export function AuditsPage() {
@@ -27,46 +37,107 @@ export function AuditsPage() {
   const loading = wsLoading || (activeWorkspaceId !== null && reports === undefined);
   const reportList = (reports ?? []) as AuditReportRecord[];
 
-  return (
-    <div className="audits-page">
-      <header className="audits-page__header-row">
-        <div>
-          <h1 className="audits-page__title">Audits</h1>
-          <p className="audits-page__subtitle">
-            Curated evidence packages for external reviewers and compliance workflows.
-          </p>
-        </div>
-        {canManage && activeWorkspaceId ? (
-          <div className="audits-page__header-actions">
-            <Link href="/security/evidence" className="audits-page__create-action">
-              Evidence Review
-            </Link>
-            <button
-              type="button"
-              className="audits-page__create-action"
-              onClick={() => setShowCreate(true)}
-            >
-              New report
-            </button>
-          </div>
-        ) : null}
-      </header>
+  const grouped = useMemo(() => {
+    return {
+      draft: reportList.filter((r) => r.status === "draft"),
+      finalized: reportList.filter((r) => r.status === "finalized"),
+      archived: reportList.filter((r) => r.status === "archived"),
+    };
+  }, [reportList]);
 
-      {loading ? <p className="audits-page__subtitle">Loading audit reports…</p> : null}
+  return (
+    <PlatformPage className="audits-page">
+      <PlatformPageHeader
+        title="Audits"
+        subtitle="Curated evidence rooms for external reviewers, compliance workflows, incidents, and security reviews."
+        actions={
+          canManage && activeWorkspaceId ? (
+            <PlatformPageActions
+              secondary={[{ label: "Evidence Review", href: "/security/evidence" }]}
+              primary={{ label: "New report", onClick: () => setShowCreate(true) }}
+            />
+          ) : undefined
+        }
+      />
+
+      {loading ? <PageLoader variant="inline" /> : null}
 
       {!loading && reportList.length === 0 ? (
-        <p className="audits-page__subtitle">
-          {canManage
-            ? "No audit reports yet. Create a draft to collect evidence."
-            : "No audit reports have been shared with you yet."}
-        </p>
+        <PlatformEmptyState
+          title="No audit reports yet"
+          body="Create an evidence room from your company timeline. Include decisions, incidents, PRs, artifacts, evals, and redacted proof."
+          actions={
+            canManage
+              ? [
+                  { label: "New report", onClick: () => setShowCreate(true) },
+                  { label: "Review evidence", href: "/security/evidence" },
+                ]
+              : [{ label: "Review evidence", href: "/security/evidence" }]
+          }
+        />
       ) : null}
 
-      <div className="audits-grid">
-        {reportList.map((report) => (
-          <AuditReportCard key={report.id} report={report} />
-        ))}
-      </div>
+      {!loading && reportList.length > 0 ? (
+        <>
+          {grouped.draft.length > 0 ? (
+            <PlatformSection>
+              <PlatformSectionHeader title="Draft reports" />
+              <PlatformGrid columns={2}>
+                {grouped.draft.map((report) => (
+                  <AuditReportCard key={report.id} report={report} />
+                ))}
+              </PlatformGrid>
+            </PlatformSection>
+          ) : null}
+
+          {grouped.finalized.length > 0 ? (
+            <PlatformSection>
+              <PlatformSectionHeader title="Finalized reports" />
+              <PlatformGrid columns={2}>
+                {grouped.finalized.map((report) => (
+                  <AuditReportCard key={report.id} report={report} />
+                ))}
+              </PlatformGrid>
+            </PlatformSection>
+          ) : null}
+
+          {grouped.archived.length > 0 ? (
+            <PlatformSection>
+              <PlatformSectionHeader title="Shared reports" />
+              <PlatformGrid columns={2}>
+                {grouped.archived.map((report) => (
+                  <AuditReportCard key={report.id} report={report} />
+                ))}
+              </PlatformGrid>
+            </PlatformSection>
+          ) : null}
+
+          {grouped.draft.length === 0 &&
+          grouped.finalized.length === 0 &&
+          grouped.archived.length === 0 ? (
+            <PlatformSection>
+              <PlatformSectionHeader title="Audit reports" />
+              <PlatformGrid columns={2}>
+                {reportList.map((report) => (
+                  <AuditReportCard key={report.id} report={report} />
+                ))}
+              </PlatformGrid>
+            </PlatformSection>
+          ) : null}
+
+          <PlatformSection>
+            <PlatformSectionHeader
+              title="Evidence requiring review"
+              description="Review unsafe or unredacted evidence before sharing externally."
+              actions={
+                <Link href="/security/evidence" className="object-action-bar__secondary">
+                  Open evidence review
+                </Link>
+              }
+            />
+          </PlatformSection>
+        </>
+      ) : null}
 
       {showCreate && activeWorkspaceId ? (
         <CreateAuditReportModal
@@ -75,6 +146,6 @@ export function AuditsPage() {
           onCreated={(reportId) => router.push(`/audits/${reportId}`)}
         />
       ) : null}
-    </div>
+    </PlatformPage>
   );
 }

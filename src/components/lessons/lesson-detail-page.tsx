@@ -7,6 +7,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { GeneratePlaybookFromLessonsModal } from "@/components/playbooks/generate-playbook-from-lessons-modal";
 import { GenerateContextPackButton } from "@/components/context/generate-context-pack-button";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { LESSON_TYPE_LABELS, type LessonRecord } from "@/types/lessons";
@@ -88,7 +89,7 @@ export function LessonDetailPage({ lessonId }: LessonDetailPageProps) {
   }, [activeWorkspaceId, createAudit, lesson]);
 
   if (data === undefined) {
-    return <p className="lessons-page__subtitle">Loading lesson…</p>;
+    return <PageLoader />;
   }
 
   if (!lesson) {

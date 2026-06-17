@@ -149,7 +149,7 @@ async function postStripeWebhook(
   const rawBody = JSON.stringify(payload);
   const signature = buildStripeSignatureHeader(rawBody, TEST_STRIPE_WEBHOOK_SECRET);
   const response = await fetch(
-    `${apiUrl}/api/integrations/stripe/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/stripe?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {
@@ -238,7 +238,7 @@ async function main() {
   if (!process.env.KEEP_WEBHOOK_SECRET) {
     await ownerClient.mutation(api.integrations.stripe.revokeWebhookSecret, { workspaceId });
     const revokedResponse = await fetch(
-      `${apiUrl}/api/integrations/stripe/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+      `${apiUrl}/webhooks/stripe?workspaceId=${encodeURIComponent(workspaceId)}`,
       {
         method: "POST",
         headers: {

@@ -35,6 +35,8 @@ export type PlaybookInput = {
   evidenceEventIds?: Id<"events">[];
   evidenceWorkstreamIds?: Id<"workstreams">[];
   evidenceImpactAnalysisIds?: Id<"impactAnalyses">[];
+  evidenceDecisionIds?: Id<"decisions">[];
+  evidenceIncidentIds?: Id<"incidents">[];
   tags?: string[];
   createdBy?: Doc<"playbooks">["createdBy"];
 };
@@ -114,6 +116,8 @@ export async function createPlaybookDoc(
     evidenceEventIds: input.evidenceEventIds,
     evidenceWorkstreamIds: input.evidenceWorkstreamIds,
     evidenceImpactAnalysisIds: input.evidenceImpactAnalysisIds,
+    evidenceDecisionIds: input.evidenceDecisionIds,
+    evidenceIncidentIds: input.evidenceIncidentIds,
     tags: input.tags,
     createdBy: input.createdBy,
     createdAt: now,

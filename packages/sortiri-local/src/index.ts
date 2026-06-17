@@ -1,5 +1,13 @@
-export type { SortiriConfig, SortiriSession } from "./types.js";
-export { EMPTY_SESSION, sortiriConfigSchema, sortiriSessionSchema } from "./types.js";
+export type { SortiriConfig, SortiriMode, SortiriSession, CloudSortiriConfig } from "./types.js";
+export {
+  EMPTY_SESSION,
+  asCloudConfig,
+  isCloudMode,
+  isLocalMode,
+  sortiriConfigSchema,
+  sortiriModeSchema,
+  sortiriSessionSchema,
+} from "./types.js";
 export {
   findRepoRoot,
   getConfigPath,
@@ -7,7 +15,19 @@ export {
   getSortiriDir,
   resolveConfigPath,
 } from "./paths.js";
-export { ensureConfig, loadConfig, saveConfig } from "./config.js";
+export { ensureConfig, loadConfig, loadCloudConfig, saveConfig, tryLoadConfig } from "./config.js";
+export {
+  appendEvent,
+  createEventId,
+  createWorkstreamId,
+  ensureEventsJournal,
+  exportEvents,
+  EVENTS_FILE_NAME,
+  getEventsPath,
+  readEvents,
+  timelineEventSchema,
+  type TimelineEvent,
+} from "./events.js";
 export {
   clearSession,
   clearSessionSafe,

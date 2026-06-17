@@ -32,6 +32,8 @@ import {
 } from "./lib/impactAnalysesLib";
 import { computeMetricsWithDelta } from "./lib/impactMetrics";
 import { buildDeterministicImpactSummary } from "./lib/impactSummary";
+import { fetchDecisionContextForImpactWindow } from "./lib/decisionContext";
+import { fetchIncidentContextForImpactWindow } from "./lib/incidentContext";
 import {
   computeWindowFromAnchor,
   DEFAULT_AFTER_MS,
@@ -270,7 +272,7 @@ export const generate = mutation({
       "viewer",
     ]);
 
-    const { accessible } = await getMembershipAndAccessible(
+    const { membership, accessible } = await getMembershipAndAccessible(
       ctx,
       analysis.workspaceId,
       user.clerkUserId,
@@ -349,6 +351,28 @@ export const generate = mutation({
         metrics,
         findings,
         truncated,
+        decisionContext: await fetchDecisionContextForImpactWindow(
+          ctx,
+          analysis.workspaceId,
+          {
+            projectId: analysis.projectId,
+            windowStart: analysis.window.impactStart,
+            windowEnd: analysis.window.impactEnd,
+            accessible,
+            role: membership.role,
+          },
+        ),
+        incidentContext: await fetchIncidentContextForImpactWindow(
+          ctx,
+          analysis.workspaceId,
+          {
+            projectId: analysis.projectId,
+            windowStart: analysis.window.impactStart,
+            windowEnd: analysis.window.impactEnd,
+            accessible,
+            role: membership.role,
+          },
+        ),
       });
 
       await deleteFindingsForAnalysis(ctx, args.analysisId);

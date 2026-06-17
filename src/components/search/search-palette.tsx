@@ -10,6 +10,7 @@ import { SearchResultItem } from "@/components/search/search-result-item";
 import { useSearch } from "@/components/search/search-provider";
 import { SearchWorkstreamResultItem } from "@/components/search/search-workstream-result-item";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { PixelLoader } from "@/components/ui/pixel-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { EntityRecord } from "@/types/entities";
 import type { TimelineEvent, Workstream } from "@/types/events";
@@ -182,7 +183,9 @@ export function SearchPalette() {
           ) : null}
 
           {loading ? (
-            <p className="search-palette__loading">Searching…</p>
+            <div className="search-palette__loading">
+              <PixelLoader size="sm" />
+            </div>
           ) : !hasResults ? (
             <p className="search-palette__empty">
               {debouncedQuery.trim()

@@ -5,6 +5,8 @@ export const CATEGORY_LABELS: Record<EventCategory, string> = {
   code_change: "Code Change",
   product_event: "Product Event",
   company_decision: "Decision",
+  decision: "Decision",
+  observability: "Observability",
   revenue_event: "Revenue",
   system_event: "System",
 };
@@ -34,6 +36,7 @@ export const FILTER_OPTIONS: { label: string; value: TimelineFilterValue }[] = [
   { label: "Code Changes", value: "code_change" },
   { label: "Product Events", value: "product_event" },
   { label: "Decisions", value: "company_decision" },
+  { label: "Observability", value: "observability" },
   { label: "Revenue", value: "revenue_event" },
   { label: "System", value: "system_event" },
 ];

@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { formatPlaybookForCursor } from "@/lib/playbooks/copyForCursor";
@@ -73,7 +74,7 @@ export function PlaybookDetailPage({ playbookId }: PlaybookDetailPageProps) {
   }, [archivePlaybook, playbookId]);
 
   if (data === undefined) {
-    return <p className="playbooks-page__subtitle">Loading playbook…</p>;
+    return <PageLoader />;
   }
 
   if (!playbook) {

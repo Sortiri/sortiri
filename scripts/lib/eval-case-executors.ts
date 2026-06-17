@@ -168,7 +168,7 @@ async function executeContextQualityCheck(
 
   const params = new URLSearchParams({ workspaceId: ctx.workspaceId });
   const response = await fetch(
-    `${ctx.appUrl}/api/cli/context/packs/${contextPackId}?${params.toString()}`,
+    `${ctx.appUrl}/cli/context/packs/${contextPackId}?${params.toString()}`,
     { headers: { Authorization: `Bearer ${ctx.apiKey}` } },
   );
 

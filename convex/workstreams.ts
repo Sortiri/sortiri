@@ -9,8 +9,10 @@ import { workstreamStatusValidator, createdByValidator } from "./lib/validators"
 import {
   assertWorkstreamAccess,
   docToWorkstream,
+  listWorkstreamSummariesForWorkspace,
   listWorkstreamsForWorkspace,
   searchWorkstreamsForWorkspace,
+  type WorkstreamListSummary,
   type WorkstreamRecord,
 } from "./lib/workstreamsLib";
 import { assertProjectInWorkspace } from "./lib/projectsLib";
@@ -79,6 +81,29 @@ export const listByWorkspace = query({
       await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
     }
     return listWorkstreamsForWorkspace(ctx, workspace._id, {
+      status: args.status,
+      projectId: args.projectId,
+      limit: args.limit,
+      accessibleProjects: accessible,
+    });
+  },
+});
+
+export const listSummariesByWorkspace = query({
+  args: {
+    workspaceId: v.string(),
+    status: v.optional(workstreamStatusValidator),
+    projectId: v.optional(v.id("projects")),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<WorkstreamListSummary[]> => {
+    const userId = await requireUserId(ctx);
+    const workspace = await assertWorkspaceBrowseAccess(ctx, args.workspaceId, userId);
+    const { accessible } = await getMembershipAndAccessible(ctx, workspace._id, userId);
+    if (args.projectId) {
+      await requireProjectAccess(ctx, workspace._id, args.projectId, userId);
+    }
+    return listWorkstreamSummariesForWorkspace(ctx, workspace._id, {
       status: args.status,
       projectId: args.projectId,
       limit: args.limit,

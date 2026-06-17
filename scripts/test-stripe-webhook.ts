@@ -141,7 +141,7 @@ async function postEvent(
   const signature = buildStripeSignatureHeader(rawBody, webhookSecret);
 
   const response = await fetch(
-    `${apiUrl}/api/integrations/stripe/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/stripe?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {

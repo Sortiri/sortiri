@@ -17,6 +17,15 @@ import {
   mapHubSummaries,
 } from "@/components/intelligence/intelligence-summary-cards";
 import { IntelligenceTabs, useIntelligenceTab } from "@/components/intelligence/intelligence-tabs";
+import { IntelligenceIntentSections } from "@/components/intelligence/intelligence-intent-sections";
+import {
+  PlatformHubHeader,
+  PlatformPage,
+  PlatformSection,
+  PlatformSectionHeader,
+} from "@/components/platform";
+import { IntelligenceSubnav } from "@/components/intelligence/intelligence-subnav";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import "./intelligence.css";
 
@@ -33,9 +42,14 @@ function IntelligencePageContent() {
 
   if (loading) {
     return (
-      <div className="intelligence-page">
-        <p className="intelligence-page__loading">Loading intelligence…</p>
-      </div>
+      <PlatformPage className="intelligence-page">
+        <PlatformHubHeader
+          title="Intelligence"
+          subtitle="Understand what changed, what failed, what worked, and what to do next."
+          subnav={<IntelligenceSubnav />}
+        />
+        <PageLoader variant="inline" />
+      </PlatformPage>
     );
   }
 
@@ -44,19 +58,24 @@ function IntelligencePageContent() {
   const isEmpty = hub?.isEmpty ?? true;
 
   return (
-    <div className="intelligence-page">
-      <header className="intelligence-page__header">
-        <h1 className="intelligence-page__title">Intelligence</h1>
-        <p className="intelligence-page__subtitle">
-          Understand what changed, what worked, what failed, and what to do next.
-        </p>
-      </header>
+    <PlatformPage className="intelligence-page">
+      <PlatformHubHeader
+        title="Intelligence"
+        subtitle="Understand what changed, what failed, what worked, and what to do next."
+        subnav={<IntelligenceSubnav />}
+      />
 
       {isEmpty ? <IntelligenceEmptyState /> : null}
 
-      <IntelligenceSummaryCards summaries={summaries} activeTab={activeTab} />
-      <IntelligenceTabs activeTab={activeTab} />
-      <IntelligenceRecentActivity items={recentActivity} activeTab={activeTab} />
+      <IntelligenceIntentSections hub={hub} />
+
+      <PlatformSection>
+        <PlatformSectionHeader title="Recent intelligence" />
+        <IntelligenceSummaryCards summaries={summaries} activeTab={activeTab} />
+        <IntelligenceTabs activeTab={activeTab} />
+        <IntelligenceRecentActivity items={recentActivity} activeTab={activeTab} />
+      </PlatformSection>
+
       {activeWorkspaceId ? (
         <>
           <IntelligenceAutonomyQueueSection
@@ -85,7 +104,7 @@ function IntelligencePageContent() {
         </>
       ) : null}
       <IntelligenceQuickActions />
-    </div>
+    </PlatformPage>
   );
 }
 
@@ -93,9 +112,14 @@ export function IntelligencePage() {
   return (
     <Suspense
       fallback={
-        <div className="intelligence-page">
-          <p className="intelligence-page__loading">Loading intelligence…</p>
-        </div>
+        <PlatformPage className="intelligence-page">
+          <PlatformHubHeader
+            title="Intelligence"
+            subtitle="Understand what changed, what failed, what worked, and what to do next."
+            subnav={<IntelligenceSubnav />}
+          />
+          <PageLoader variant="inline" />
+        </PlatformPage>
       }
     >
       <IntelligencePageContent />

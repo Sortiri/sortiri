@@ -26,6 +26,8 @@ export type EventCategory =
   | "code_change"
   | "product_event"
   | "company_decision"
+  | "decision"
+  | "observability"
   | "revenue_event"
   | "system_event";
 

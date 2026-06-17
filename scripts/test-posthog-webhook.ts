@@ -61,7 +61,7 @@ async function postEvent(
   label: string,
 ) {
   const response = await fetch(
-    `${apiUrl}/api/integrations/posthog/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/posthog?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {
@@ -110,7 +110,7 @@ async function main() {
   }
 
   const invalidResponse = await fetch(
-    `${apiUrl}/api/integrations/posthog/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/posthog?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {

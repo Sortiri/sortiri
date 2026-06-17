@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { EntityCard } from "@/components/entities/entity-card";
 import { EntityFilters } from "@/components/entities/entity-filters";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { EntityRecord } from "@/types/entities";
 import type { EntityType } from "@/types/events";
@@ -46,7 +47,7 @@ export function EntitiesPage() {
       ) : null}
 
       {loading ? (
-        <p className="entities-page__loading">Loading entities…</p>
+        <PageLoader variant="inline" />
       ) : isEmpty ? (
         <p className="entities-page__empty">
           No entities yet. Events will create entities as they are recorded, or run

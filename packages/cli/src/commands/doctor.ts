@@ -1,12 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  appendEvent,
   findRepoRoot,
   getConfigPath,
+  getEventsPath,
+  isLocalMode,
   loadConfig,
   loadSession,
   saveSession,
 } from "@sortiri/local";
+import { canStartLocalViewer } from "../localViewer.js";
 import { startWatcher } from "../watcher.js";
 
 export type DoctorOptions = {
@@ -19,11 +23,13 @@ type CheckResult = {
   label: string;
   ok: boolean;
   detail?: string;
+  optional?: boolean;
 };
 
 function printCheck(result: CheckResult): void {
-  const icon = result.ok ? "✓" : "✕";
-  console.log(`${icon} ${result.label}${result.detail ? ` — ${result.detail}` : ""}`);
+  const icon = result.ok ? "✓" : result.optional ? "○" : "✕";
+  const suffix = result.optional && !result.ok ? " (optional)" : "";
+  console.log(`${icon} ${result.label}${result.detail ? ` — ${result.detail}` : ""}${suffix}`);
 }
 
 async function checkHealth(
@@ -32,7 +38,7 @@ async function checkHealth(
   projectId?: string | null,
 ): Promise<CheckResult[]> {
   const results: CheckResult[] = [];
-  const url = new URL(`${apiUrl.replace(/\/$/, "")}/api/cli/health`);
+  const url = new URL(`${apiUrl.replace(/\/$/, "")}/cli/health`);
   if (projectId) {
     url.searchParams.set("projectId", projectId);
   }
@@ -63,15 +69,21 @@ async function checkHealth(
     results.push({ label: "Project connected", ok: response.status === 200 });
   }
 
+  results.push({
+    label: "Convex HTTP URL configured",
+    ok: !/\/api(\/|$)/.test(apiUrl),
+    detail: apiUrl,
+  });
+
   return results;
 }
 
-async function recordDoctorEvent(
+async function recordDoctorCloudEvent(
   apiUrl: string,
   apiKey: string,
   projectId?: string | null,
 ): Promise<CheckResult> {
-  const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/ingest/events`, {
+  const response = await fetch(`${apiUrl.replace(/\/$/, "")}/ingest/events`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -92,24 +104,46 @@ async function recordDoctorEvent(
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
     return {
-      label: "Test event recorded",
+      label: "Test event recorded (cloud)",
       ok: false,
       detail: payload.error ?? `HTTP ${response.status}`,
     };
   }
 
-  return { label: "Test event recorded", ok: true };
+  return { label: "Test event recorded (cloud)", ok: true };
+}
+
+function recordDoctorLocalEvent(repoRoot: string): CheckResult {
+  try {
+    appendEvent(
+      {
+        source: "system",
+        type: "validation.passed",
+        title: "Sortiri doctor passed",
+        summary: "Local config, journal, MCP config, and timeline viewer validated.",
+        actor: { type: "system", name: "Sortiri CLI" },
+      },
+      repoRoot,
+    );
+    return { label: "Test event recorded (local)", ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { label: "Test event recorded (local)", ok: false, detail: message };
+  }
 }
 
 function checkWatcherCanStart(): CheckResult {
   try {
     const config = loadConfig();
+    if (isLocalMode(config)) {
+      return { label: "Watcher can start", ok: true, detail: "skipped (local mode)", optional: true };
+    }
     const watcher = startWatcher(config);
     watcher.close();
     return { label: "Watcher can start", ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { label: "Watcher can start", ok: false, detail: message };
+    return { label: "Watcher can start", ok: false, detail: message, optional: true };
   }
 }
 
@@ -128,7 +162,7 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
 
   if (!fs.existsSync(configPath)) {
     for (const result of results) printCheck(result);
-    console.log("\nRun `npx sortiri init` again or create a new setup token.");
+    console.log("\nRun `npx sortiri init --yes` to initialize local mode.");
     process.exit(1);
   }
 
@@ -142,24 +176,18 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
     process.exit(1);
   }
 
+  const local = isLocalMode(config);
   results.push({
-    label: "API key present",
-    ok: Boolean(config.apiKey),
+    label: "Mode",
+    ok: true,
+    detail: local ? "local" : "cloud",
   });
 
-  if (config.projectId) {
-    results.push({
-      label: "Project connected",
-      ok: true,
-      detail: config.projectName ?? config.projectId,
-    });
-  } else {
-    results.push({
-      label: "No project connected",
-      ok: false,
-      detail: "Run sortiri init again to register this repo.",
-    });
-  }
+  results.push({
+    label: "Events journal exists",
+    ok: fs.existsSync(getEventsPath(repoRoot)),
+    detail: getEventsPath(repoRoot),
+  });
 
   const mcpPath = path.join(repoRoot, ".cursor", "mcp.json");
   let mcpOk = false;
@@ -178,10 +206,54 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
   const rulePath = path.join(repoRoot, ".cursor", "rules", "sortiri.mdc");
   results.push({ label: "Cursor rule found", ok: fs.existsSync(rulePath) });
 
-  const healthChecks = await checkHealth(config.apiUrl, config.apiKey, config.projectId);
-  results.push(...healthChecks);
+  results.push({
+    label: "Local timeline viewer ready",
+    ok: canStartLocalViewer(),
+  });
 
-  results.push(checkWatcherCanStart());
+  if (local) {
+    if (config.apiKey) {
+      results.push({
+        label: "Cloud API key present",
+        ok: true,
+        detail: "optional cloud credentials detected",
+        optional: true,
+      });
+    } else {
+      results.push({
+        label: "Cloud credentials",
+        ok: true,
+        detail: "skipped (local mode)",
+        optional: true,
+      });
+    }
+  } else {
+    results.push({
+      label: "API key present",
+      ok: Boolean(config.apiKey),
+    });
+
+    if (config.projectId) {
+      results.push({
+        label: "Project connected",
+        ok: true,
+        detail: config.projectName ?? config.projectId,
+      });
+    } else {
+      results.push({
+        label: "No project connected",
+        ok: false,
+        detail: "Run sortiri init again to register this repo.",
+      });
+    }
+
+    if (config.apiUrl && config.apiKey) {
+      const healthChecks = await checkHealth(config.apiUrl, config.apiKey, config.projectId);
+      results.push(...healthChecks);
+    }
+
+    results.push(checkWatcherCanStart());
+  }
 
   const session = loadSession(repoRoot);
   const shouldRecord =
@@ -189,26 +261,35 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
     (!session.lastDoctorAt || Date.now() - session.lastDoctorAt > DOCTOR_DEBOUNCE_MS);
 
   if (shouldRecord) {
-    const eventCheck = await recordDoctorEvent(
-      config.apiUrl,
-      config.apiKey,
-      config.projectId,
-    );
-    results.push(eventCheck);
-    if (eventCheck.ok) {
+    if (local) {
+      results.push(recordDoctorLocalEvent(repoRoot));
+    } else if (config.apiUrl && config.apiKey) {
+      const eventCheck = await recordDoctorCloudEvent(
+        config.apiUrl,
+        config.apiKey,
+        config.projectId,
+      );
+      results.push(eventCheck);
+    }
+    if (results.some((r) => r.label.startsWith("Test event recorded") && r.ok)) {
       saveSession({ ...session, lastDoctorAt: Date.now() }, repoRoot);
     }
   } else {
-    results.push({ label: "Test event recorded", ok: true, detail: "skipped (debounced)" });
+    results.push({
+      label: "Test event recorded",
+      ok: true,
+      detail: "skipped (debounced)",
+      optional: true,
+    });
   }
 
   for (const result of results) {
     printCheck(result);
   }
 
-  const failed = results.some((r) => !r.ok);
+  const failed = results.some((r) => !r.ok && !r.optional);
   if (failed) {
-    console.log("\nRun `npx sortiri init` again or create a new setup token.");
+    console.log("\nRun `npx sortiri init --yes` or fix the issues above.");
     process.exit(1);
   }
 

@@ -34,7 +34,7 @@ describe("mcp context tools client", () => {
     const result = await client.createContextPack({ goal: "Fix checkout" });
     expect(result.contextPackId).toBe("pack1");
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.com/api/cli/context/packs",
+      "https://example.com/mcp/context/packs",
       expect.objectContaining({ method: "POST" }),
     );
   });
@@ -54,6 +54,6 @@ describe("mcp context tools client", () => {
 
     const result = await client.getContextPack("pack1");
     expect(result.text).toContain("CONTEXT PACK");
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/cli/context/packs/pack1");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/mcp/context/packs/pack1");
   });
 });

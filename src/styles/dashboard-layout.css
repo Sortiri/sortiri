@@ -98,3 +98,10 @@ html:has(.dashboard-shell) body {
     padding-block-end: var(--ca-space-2);
   }
 }
+
+/* Center constrained page columns in the main content area */
+.dashboard-app .dashboard-page [class$="-page"]:not(.dashboard-page) {
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}

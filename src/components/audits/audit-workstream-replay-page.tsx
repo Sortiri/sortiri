@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { ReplayTimeline } from "@/components/workstreams/replay-timeline";
 import type { TimelineEvent } from "@/types/events";
 import "./audits.css";
@@ -28,7 +29,7 @@ export function AuditWorkstreamReplayPage({
   const eventList = (events ?? []) as TimelineEvent[];
 
   if (report === undefined || events === undefined) {
-    return <p className="audits-page__subtitle">Loading workstream replay…</p>;
+    return <PageLoader />;
   }
 
   if (!report) {

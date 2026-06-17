@@ -11,6 +11,7 @@ import type {
   EvalRunRecord,
   EvalSuiteRecord,
 } from "@/types/evals";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { EvalRemediationPanel } from "@/components/evals/eval-remediation-panel";
@@ -62,7 +63,7 @@ export function EvalRunDetailPage({ evalRunId }: EvalRunDetailPageProps) {
   }, [results]);
 
   if (data === undefined) {
-    return <p className="evals-page__subtitle">Loading eval run…</p>;
+    return <PageLoader />;
   }
 
   if (!run) {

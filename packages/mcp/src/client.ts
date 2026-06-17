@@ -36,7 +36,7 @@ export class SortiriApiClient {
   }
 
   async startWorkstream(input: { title: string; summary?: string }) {
-    return this.request<{ workstreamId: string }>("/api/ingest/workstreams/start", {
+    return this.request<{ workstreamId: string }>("/ingest/workstreams/start", {
       body: {
         workspaceId: this.config.workspaceId,
         projectId: this.config.projectId || undefined,
@@ -66,7 +66,7 @@ export class SortiriApiClient {
     severity?: "info" | "warning" | "error" | "critical";
     tags?: string[];
   }) {
-    return this.request<{ eventId: string }>("/api/ingest/events", {
+    return this.request<{ eventId: string }>("/ingest/events", {
       body: {
         workspaceId: this.config.workspaceId,
         projectId: this.config.projectId || undefined,
@@ -122,7 +122,7 @@ export class SortiriApiClient {
         // Keep metadata as-is when not JSON-serializable.
       }
     }
-    return this.request<{ artifactId: string }>("/api/ingest/artifacts", {
+    return this.request<{ artifactId: string }>("/ingest/artifacts", {
       body: {
         workspaceId: this.config.workspaceId,
         projectId: this.config.projectId || undefined,
@@ -142,7 +142,7 @@ export class SortiriApiClient {
     outcome?: string;
     summary?: string;
   }) {
-    return this.request<{ success: true }>("/api/ingest/workstreams/finish", {
+    return this.request<{ success: true }>("/ingest/workstreams/finish", {
       body: {
         workspaceId: this.config.workspaceId,
         projectId: this.config.projectId || undefined,
@@ -167,7 +167,7 @@ export class SortiriApiClient {
       summary: string;
       text: string;
       counts: Record<string, number>;
-    }>("/api/cli/context/packs", {
+    }>("/mcp/context/packs", {
       body: {
         workspaceId: this.config.workspaceId,
         goal: input.goal,
@@ -189,7 +189,7 @@ export class SortiriApiClient {
       text: string;
       pack: Record<string, unknown>;
       items: unknown[];
-    }>(`/api/cli/context/packs/${contextPackId}?${params.toString()}`, {
+    }>(`/mcp/context/packs/${contextPackId}?${params.toString()}`, {
       method: "GET",
     });
   }
@@ -199,7 +199,7 @@ export class SortiriApiClient {
     projectId?: string;
     timeWindowDays?: number;
   }) {
-    return this.request<Record<string, unknown>>("/api/cli/context/project-memory", {
+    return this.request<Record<string, unknown>>("/mcp/context/project-memory", {
       body: {
         workspaceId: this.config.workspaceId,
         query: input.query,
@@ -210,7 +210,7 @@ export class SortiriApiClient {
   }
 
   async getEntityMemory(input: { entityKeyOrId: string; timeWindowDays?: number }) {
-    return this.request<Record<string, unknown>>("/api/cli/context/entity-memory", {
+    return this.request<Record<string, unknown>>("/mcp/context/entity-memory", {
       body: {
         workspaceId: this.config.workspaceId,
         entityKeyOrId: input.entityKeyOrId,
@@ -225,7 +225,7 @@ export class SortiriApiClient {
     projectId?: string;
     timeWindowDays?: number;
   }) {
-    return this.request<unknown[]>("/api/cli/context/known-failures", {
+    return this.request<unknown[]>("/mcp/context/known-failures", {
       body: {
         workspaceId: this.config.workspaceId,
         goal: input.goal,
@@ -241,7 +241,7 @@ export class SortiriApiClient {
     files?: string[];
     sources?: string[];
   }) {
-    return this.request<unknown[]>("/api/cli/context/validation-requirements", {
+    return this.request<unknown[]>("/mcp/context/validation-requirements", {
       body: {
         workspaceId: this.config.workspaceId,
         goal: input.goal,
@@ -252,7 +252,7 @@ export class SortiriApiClient {
   }
 
   async getRecommendedPlaybook(input: { goal: string; projectId?: string }) {
-    return this.request<Record<string, unknown> | null>("/api/cli/context/recommended-playbook", {
+    return this.request<Record<string, unknown> | null>("/mcp/context/recommended-playbook", {
       body: {
         workspaceId: this.config.workspaceId,
         goal: input.goal,
@@ -269,7 +269,7 @@ export class SortiriApiClient {
       params.set("limit", String(input.limit));
     }
     return this.request<{ recommendations: unknown[] }>(
-      `/api/cli/recommendations?${params.toString()}`,
+      `/mcp/recommendations?${params.toString()}`,
       { method: "GET" },
     );
   }
@@ -279,14 +279,14 @@ export class SortiriApiClient {
       workspaceId: this.config.workspaceId,
     });
     return this.request<{ recommendation: Record<string, unknown> }>(
-      `/api/cli/recommendations/${recommendationId}?${params.toString()}`,
+      `/mcp/recommendations/${recommendationId}?${params.toString()}`,
       { method: "GET" },
     );
   }
 
   async generateRecommendations() {
     return this.request<{ createdIds: string[]; count: number }>(
-      "/api/cli/recommendations/generate",
+      "/mcp/recommendations/generate",
       {
         body: { workspaceId: this.config.workspaceId },
       },
@@ -298,7 +298,7 @@ export class SortiriApiClient {
       workstreamId: string;
       contextPackId: string;
       recommendedPlaybookId?: string;
-    }>(`/api/cli/recommendations/${recommendationId}/convert`, {
+    }>(`/mcp/recommendations/${recommendationId}/convert`, {
       body: { workspaceId: this.config.workspaceId },
     });
   }
@@ -308,7 +308,7 @@ export class SortiriApiClient {
       contextPackId: string;
       summary?: string;
       counts?: Record<string, number>;
-    }>(`/api/cli/recommendations/${recommendationId}/context-pack`, {
+    }>(`/mcp/recommendations/${recommendationId}/context-pack`, {
       body: { workspaceId: this.config.workspaceId },
     });
   }
@@ -316,7 +316,7 @@ export class SortiriApiClient {
   async listEvalSuites(input: { limit?: number } = {}) {
     const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
     if (input.limit !== undefined) params.set("limit", String(input.limit));
-    return this.request<{ suites: unknown[] }>(`/api/cli/evals?${params.toString()}`, {
+    return this.request<{ suites: unknown[] }>(`/mcp/evals?${params.toString()}`, {
       method: "GET",
     });
   }
@@ -324,7 +324,7 @@ export class SortiriApiClient {
   async getEvalSuite(evalSuiteId: string) {
     const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
     return this.request<Record<string, unknown>>(
-      `/api/cli/evals/${evalSuiteId}?${params.toString()}`,
+      `/mcp/evals/${evalSuiteId}?${params.toString()}`,
       { method: "GET" },
     );
   }
@@ -333,7 +333,7 @@ export class SortiriApiClient {
     source: "playbook" | "lesson" | "recommendation" | "context_pack" | "known_failure";
     entityId: string;
   }) {
-    return this.request<{ suiteId: string; created: boolean }>("/api/cli/evals/generate", {
+    return this.request<{ suiteId: string; created: boolean }>("/mcp/evals/generate", {
       body: {
         workspaceId: this.config.workspaceId,
         source: input.source,
@@ -344,7 +344,7 @@ export class SortiriApiClient {
 
   async runEvalSuite(evalSuiteId: string) {
     return this.request<{ runId: string; cases?: unknown[] }>(
-      `/api/cli/evals/${evalSuiteId}/run`,
+      `/mcp/evals/${evalSuiteId}/run`,
       { body: { workspaceId: this.config.workspaceId } },
     );
   }
@@ -352,7 +352,7 @@ export class SortiriApiClient {
   async getEvalRun(evalRunId: string) {
     const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
     return this.request<Record<string, unknown>>(
-      `/api/cli/evals/runs/${evalRunId}?${params.toString()}`,
+      `/mcp/evals/runs/${evalRunId}?${params.toString()}`,
       { method: "GET" },
     );
   }
@@ -360,14 +360,14 @@ export class SortiriApiClient {
   async recommendEvalsForWorkstream(workstreamId: string) {
     const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
     return this.request<{ suites: unknown[] }>(
-      `/api/cli/evals/recommend/workstream/${workstreamId}?${params.toString()}`,
+      `/mcp/evals/recommend/workstream/${workstreamId}?${params.toString()}`,
       { method: "GET" },
     );
   }
 
   async generateRemediationFromEval(evalRunId: string) {
     return this.request<{ recommendationIds: string[]; count: number }>(
-      "/api/cli/evals/remediation/generate",
+      "/mcp/evals/remediation/generate",
       { body: { workspaceId: this.config.workspaceId, evalRunId } },
     );
   }
@@ -376,7 +376,7 @@ export class SortiriApiClient {
     const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
     if (input.limit !== undefined) params.set("limit", String(input.limit));
     return this.request<{ remediations: unknown[] }>(
-      `/api/cli/evals/remediation?${params.toString()}`,
+      `/mcp/evals/remediation?${params.toString()}`,
       { method: "GET" },
     );
   }
@@ -384,14 +384,14 @@ export class SortiriApiClient {
   async getEvalRemediation(recommendationId: string) {
     const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
     return this.request<Record<string, unknown>>(
-      `/api/cli/evals/remediation/${recommendationId}?${params.toString()}`,
+      `/mcp/evals/remediation/${recommendationId}?${params.toString()}`,
       { method: "GET" },
     );
   }
 
   async convertRemediationToWorkstream(recommendationId: string) {
     return this.request<Record<string, unknown>>(
-      `/api/cli/recommendations/${recommendationId}/convert`,
+      `/mcp/recommendations/${recommendationId}/convert`,
       { body: { workspaceId: this.config.workspaceId } },
     );
   }
@@ -403,12 +403,262 @@ export class SortiriApiClient {
       evalSuiteId = rec.evalSuiteId as string | undefined;
       if (!evalSuiteId) throw new Error("evalSuiteId not found on remediation recommendation");
     }
-    return this.request<Record<string, unknown>>("/api/cli/evals/remediation/rerun", {
+    return this.request<Record<string, unknown>>("/mcp/evals/remediation/rerun", {
       body: {
         workspaceId: this.config.workspaceId,
         recommendationId: input.recommendationId,
         evalSuiteId,
       },
     });
+  }
+
+  async listIngestDeliveries(input: {
+    status?: string;
+    source?: string;
+    limit?: number;
+  } = {}) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    if (input.status) params.set("status", input.status);
+    if (input.source) params.set("source", input.source);
+    if (input.limit !== undefined) params.set("limit", String(input.limit));
+    return this.request<{ deliveries: unknown[] }>(
+      `/mcp/reliability?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async getIngestDelivery(deliveryId: string) {
+    const params = new URLSearchParams({
+      workspaceId: this.config.workspaceId,
+      deliveryId,
+    });
+    return this.request<{ delivery: unknown }>(
+      `/mcp/reliability?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async listDeadLetters(input: { status?: string; limit?: number } = {}) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    if (input.status) params.set("status", input.status);
+    if (input.limit !== undefined) params.set("limit", String(input.limit));
+    return this.request<{ deadLetters: unknown[] }>(
+      `/mcp/reliability/dead-letters?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async replayIngestDelivery(input: {
+    deliveryId?: string;
+    deadLetterId?: string;
+    payload?: unknown;
+  }) {
+    return this.request<Record<string, unknown>>("/mcp/reliability/replay", {
+      body: {
+        workspaceId: this.config.workspaceId,
+        deliveryId: input.deliveryId,
+        deadLetterId: input.deadLetterId,
+        payload: input.payload,
+      },
+    });
+  }
+
+  async getSourceHealth() {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    return this.request<{ health: Record<string, unknown> }>(
+      `/mcp/reliability/health?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async recordDecision(input: {
+    title: string;
+    summary?: string;
+    decisionType?: string;
+    rationale?: string;
+    expectedOutcome?: string;
+    rollbackPlan?: string;
+    workstreamId?: string;
+  }) {
+    return this.request<Record<string, unknown>>("/mcp/decisions", {
+      body: { workspaceId: this.config.workspaceId, ...input },
+    });
+  }
+
+  async listDecisions(input: { limit?: number } = {}) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    if (input.limit !== undefined) params.set("limit", String(input.limit));
+    return this.request<{ decisions: unknown[] }>(
+      `/mcp/decisions?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async getDecision(decisionId: string) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    return this.request<Record<string, unknown>>(
+      `/mcp/decisions/${decisionId}?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async linkDecisionToWorkstream(input: { decisionId: string; workstreamId: string }) {
+    return this.request<Record<string, unknown>>(
+      `/mcp/decisions/${input.decisionId}/link`,
+      { body: {
+        workspaceId: this.config.workspaceId,
+        workstreamId: input.workstreamId,
+      } },
+    );
+  }
+
+  async createRollback(input: {
+    decisionId?: string;
+    title: string;
+    summary?: string;
+    reason?: string;
+  }) {
+    const path = input.decisionId
+      ? `/mcp/decisions/${input.decisionId}/rollback`
+      : "/mcp/decisions/rollback";
+    return this.request<Record<string, unknown>>(path, {
+      body: { workspaceId: this.config.workspaceId, ...input },
+    });
+  }
+
+  async listDecisionCandidates(input: { limit?: number } = {}) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    if (input.limit !== undefined) params.set("limit", String(input.limit));
+    return this.request<{ candidates: unknown[] }>(
+      `/mcp/decisions/candidates?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async confirmDecisionCandidate(candidateId: string) {
+    return this.request<Record<string, unknown>>(
+      `/mcp/decisions/candidates/${candidateId}/confirm`,
+      { body: { workspaceId: this.config.workspaceId } },
+    );
+  }
+
+  async dismissDecisionCandidate(candidateId: string) {
+    return this.request<Record<string, unknown>>(
+      `/mcp/decisions/candidates/${candidateId}/dismiss`,
+      { body: { workspaceId: this.config.workspaceId } },
+    );
+  }
+
+  async recordIncident(input: {
+    title: string;
+    summary?: string;
+    severity?: string;
+    workstreamId?: string;
+    service?: string;
+    environment?: string;
+  }) {
+    return this.request<Record<string, unknown>>("/mcp/incidents", {
+      body: { workspaceId: this.config.workspaceId, severity: "error", ...input },
+    });
+  }
+
+  async listIncidents(input: {
+    status?: string;
+    severity?: string;
+    limit?: number;
+  } = {}) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    if (input.limit !== undefined) params.set("limit", String(input.limit));
+    if (input.status) params.set("status", input.status);
+    if (input.severity) params.set("severity", input.severity);
+    return this.request<{ incidents: unknown[] }>(
+      `/mcp/incidents?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async getIncident(incidentId: string) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    return this.request<Record<string, unknown>>(
+      `/mcp/incidents/${incidentId}?${params.toString()}`,
+      { method: "GET" },
+    );
+  }
+
+  async resolveIncident(input: {
+    incidentId: string;
+    rootCause?: string;
+    mitigation?: string;
+    rollbackSummary?: string;
+  }) {
+    return this.request<Record<string, unknown>>(
+      `/mcp/incidents/${input.incidentId}/resolve`,
+      {
+        body: {
+          workspaceId: this.config.workspaceId,
+          rootCause: input.rootCause,
+          mitigation: input.mitigation,
+          rollbackSummary: input.rollbackSummary,
+        },
+      },
+    );
+  }
+
+  async createIncidentRollback(input: {
+    incidentId: string;
+    title: string;
+    summary?: string;
+    reason?: string;
+  }) {
+    return this.request<Record<string, unknown>>(
+      `/mcp/incidents/${input.incidentId}/rollback`,
+      {
+        body: {
+          workspaceId: this.config.workspaceId,
+          title: input.title,
+          summary: input.summary,
+          reason: input.reason,
+        },
+      },
+    );
+  }
+
+  async linkIncidentToWorkstream(input: { incidentId: string; workstreamId: string }) {
+    return this.request<Record<string, unknown>>(
+      `/mcp/incidents/${input.incidentId}/link`,
+      {
+        body: {
+          workspaceId: this.config.workspaceId,
+          workstreamId: input.workstreamId,
+        },
+      },
+    );
+  }
+
+  async linkIncidentToDecision(input: { incidentId: string; decisionId: string }) {
+    return this.request<Record<string, unknown>>(
+      `/mcp/incidents/${input.incidentId}/link`,
+      {
+        body: {
+          workspaceId: this.config.workspaceId,
+          decisionId: input.decisionId,
+        },
+      },
+    );
+  }
+
+  async listObservabilitySignals(input: {
+    incidentId?: string;
+    severity?: string;
+    limit?: number;
+  } = {}) {
+    const params = new URLSearchParams({ workspaceId: this.config.workspaceId });
+    if (input.limit !== undefined) params.set("limit", String(input.limit));
+    if (input.severity) params.set("severity", input.severity);
+    if (input.incidentId) params.set("incidentId", input.incidentId);
+    return this.request<{ signals: unknown[] }>(
+      `/mcp/incidents/signals?${params.toString()}`,
+      { method: "GET" },
+    );
   }
 }

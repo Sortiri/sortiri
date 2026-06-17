@@ -118,6 +118,7 @@ export type RecordEventBody = {
   severity?: "info" | "warning" | "error" | "critical";
   tags?: string[];
   occurredAt?: number;
+  sourceEventId?: string;
   importance?: "low" | "normal" | "high" | "critical";
   visibility?: "primary" | "debug" | "hidden";
   displayReason?: string;

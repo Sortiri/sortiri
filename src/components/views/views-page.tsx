@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { ViewCard } from "@/components/views/view-card";
 import { ViewForm } from "@/components/views/view-form";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { SavedViewRecord } from "@/types/saved-views";
@@ -116,7 +117,7 @@ export function ViewsPage() {
       ) : null}
 
       {loading ? (
-        <p className="projects-page__loading">Loading views…</p>
+        <PageLoader variant="inline" />
       ) : viewList.length === 0 ? (
         <p className="home-section__empty">
           No saved views yet. Create default views to get started.

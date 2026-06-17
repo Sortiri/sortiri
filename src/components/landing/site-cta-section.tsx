@@ -24,20 +24,22 @@ export function LandingSiteCtaSection() {
         <div className="relative z-10 flex flex-col items-center gap-6 text-center sm:gap-8">
           <h2 className={`${inter.className} max-w-2xl text-[clamp(1.75rem,3.5vw+0.5rem,2.75rem)] font-normal leading-[1.1] text-white`}>
             Every decision deserves a{" "}
-            <span className={`${ppMondwest.className} text-[#00E013] text-[clamp(2rem,4vw+0.75rem,3.25rem)]`}>replay</span>
+            <span className={`${ppMondwest.className} text-[#c490e8] text-[clamp(2rem,4vw+0.75rem,3.25rem)]`}>replay</span>
           </h2>
 
-          <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
-            <div className="flex items-center gap-1.5">
-              <Zap width={14} height={14} className="text-[#00E013]" />
-              <span className={`${inter.className} text-xs font-medium text-white`}>1 min setup</span>
-            </div>
+          <div className="flex w-full max-w-md flex-col items-center gap-4">
             <Link href={SIGN_UP_HREF} className={landing.buttonPrimary}>
               Start your company timeline
               <span aria-hidden className="ml-1">
                 →
               </span>
             </Link>
+            <div className="mt-1 flex items-center gap-1.5 sm:mt-2">
+              <Zap width={14} height={14} className="text-[#c490e8]" />
+              <span className={`${inter.className} text-xs font-medium text-white`}>
+                1 min setup
+              </span>
+            </div>
           </div>
 
           <CtaInstallCard />

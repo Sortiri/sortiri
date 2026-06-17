@@ -1,0 +1,9 @@
+{
+  "source": "generic",
+  "signalType": "rollback_completed",
+  "title": "Rollback complete: api production",
+  "severity": "info",
+  "service": "api",
+  "environment": "production",
+  "id": "obs-rollback-1"
+}

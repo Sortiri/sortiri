@@ -8,6 +8,7 @@ import { CreateContextPackModal } from "@/components/context/create-context-pack
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { ContextPackRecord } from "@/types/context-packs";
+import { PageLoader } from "@/components/ui/page-loader";
 import "./context.css";
 
 function formatDate(timestamp: number): string {
@@ -50,7 +51,7 @@ export function ContextPacksPage() {
         ) : null}
       </header>
 
-      {loading ? <p className="context-page__subtitle">Loading context packs…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
 
       {!loading && list.length === 0 ? (
         <p className="context-page__subtitle">No context packs yet.</p>

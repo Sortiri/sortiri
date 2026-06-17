@@ -24,6 +24,17 @@ import {
 import type { SavedViewFilters } from "./viewFilters";
 import { applyViewFilters } from "./viewFilters";
 import { isArtifactSafeForAudit, isEventSafeForAudit } from "./sensitiveContent";
+import { filterDecisionsByAccess } from "./decisionPermissions";
+import { safeDecisionPreviewForAudit } from "./decisionContext";
+import {
+  filterIncidentsByAccess,
+  filterObservabilitySignalsByAccess,
+} from "./incidentPermissions";
+import {
+  safeIncidentPreviewForAudit,
+  safeObservabilitySignalPreviewForAudit,
+} from "./incidentContext";
+import { getWorkspaceMembership } from "./authz";
 
 type DbReadCtx = Pick<QueryCtx, "db">;
 type DbWriteCtx = Pick<MutationCtx, "db">;
@@ -45,6 +56,11 @@ export type EvidenceCollectionResult = {
     impactAnalysisId?: Id<"impactAnalyses">;
     lessonId?: Id<"lessons">;
     playbookId?: Id<"playbooks">;
+    decisionId?: Id<"decisions">;
+    rollbackId?: Id<"rollbackEvents">;
+    decisionCandidateId?: Id<"decisionCandidates">;
+    incidentId?: Id<"incidents">;
+    observabilitySignalId?: Id<"observabilitySignals">;
     title: string;
     summary?: string;
     reason?: string;
@@ -117,6 +133,15 @@ export function docToAuditReportItem(
     impactAnalysisId: doc.impactAnalysisId ? String(doc.impactAnalysisId) : undefined,
     lessonId: doc.lessonId ? String(doc.lessonId) : undefined,
     playbookId: doc.playbookId ? String(doc.playbookId) : undefined,
+    decisionId: doc.decisionId ? String(doc.decisionId) : undefined,
+    rollbackId: doc.rollbackId ? String(doc.rollbackId) : undefined,
+    decisionCandidateId: doc.decisionCandidateId
+      ? String(doc.decisionCandidateId)
+      : undefined,
+    incidentId: doc.incidentId ? String(doc.incidentId) : undefined,
+    observabilitySignalId: doc.observabilitySignalId
+      ? String(doc.observabilitySignalId)
+      : undefined,
     title: doc.title,
     summary: doc.summary,
     reason: doc.reason,
@@ -732,6 +757,168 @@ export async function collectEvidenceFromScope(
     });
   }
 
+  const windowStart = scope.windowStart ?? 0;
+  const windowEnd = scope.windowEnd ?? Date.now();
+  const role = clerkUserId
+    ? ((await getWorkspaceMembership(ctx, workspaceId, clerkUserId))?.role ?? "member")
+    : "member";
+
+  const decisionDocs = await ctx.db
+    .query("decisions")
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+    .collect();
+
+  const scopedDecisions = filterDecisionsByAccess(
+    decisionDocs.filter((d) => {
+      if (d.status === "archived") return false;
+      if (d.decidedAt < windowStart || d.decidedAt > windowEnd) return false;
+      if (
+        scope.projectIds?.length &&
+        d.projectId &&
+        !scope.projectIds.includes(d.projectId)
+      ) {
+        return false;
+      }
+      return true;
+    }),
+    accessible,
+    role,
+  );
+
+  for (const decision of scopedDecisions.slice(0, 20)) {
+    const preview = safeDecisionPreviewForAudit(decision);
+    items.push({
+      itemType: "decision",
+      decisionId: decision._id,
+      title: preview.title,
+      summary: preview.summary,
+      reason: "Decision recorded within report scope and time window.",
+      order: order++,
+    });
+  }
+
+  const rollbackDocs = await ctx.db
+    .query("rollbackEvents")
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+    .collect();
+
+  for (const rollback of rollbackDocs.filter((r) => {
+    if (r.rolledBackAt < windowStart || r.rolledBackAt > windowEnd) return false;
+    if (
+      scope.projectIds?.length &&
+      r.projectId &&
+      !scope.projectIds.includes(r.projectId)
+    ) {
+      return false;
+    }
+    return true;
+  }).slice(0, 10)) {
+    items.push({
+      itemType: "rollback",
+      rollbackId: rollback._id,
+      title: rollback.title,
+      summary: rollback.summary ?? rollback.reason,
+      reason: "Rollback recorded within report scope and time window.",
+      order: order++,
+    });
+  }
+
+  const candidateDocs = await ctx.db
+    .query("decisionCandidates")
+    .withIndex("by_workspace_status", (q) =>
+      q.eq("workspaceId", workspaceId).eq("status", "pending"),
+    )
+    .collect();
+
+  for (const candidate of candidateDocs.filter((c) => {
+    if (c.createdAt < windowStart || c.createdAt > windowEnd) return false;
+    if (
+      scope.projectIds?.length &&
+      c.projectId &&
+      !scope.projectIds.includes(c.projectId)
+    ) {
+      return false;
+    }
+    return true;
+  }).slice(0, 10)) {
+    items.push({
+      itemType: "decision_candidate",
+      decisionCandidateId: candidate._id,
+      title: candidate.title,
+      summary: candidate.summary,
+      reason: "Pending decision candidate in scope (redacted preview only).",
+      order: order++,
+    });
+  }
+
+  const incidentDocs = await ctx.db
+    .query("incidents")
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+    .collect();
+
+  const scopedIncidents = filterIncidentsByAccess(
+    incidentDocs.filter((i) => {
+      if (i.status === "archived") return false;
+      if (i.startedAt < windowStart || i.startedAt > windowEnd) return false;
+      if (
+        scope.projectIds?.length &&
+        i.projectId &&
+        !scope.projectIds.includes(i.projectId)
+      ) {
+        return false;
+      }
+      return true;
+    }),
+    accessible,
+    role,
+  );
+
+  for (const incident of scopedIncidents.slice(0, 20)) {
+    const preview = safeIncidentPreviewForAudit(incident);
+    items.push({
+      itemType: "incident",
+      incidentId: incident._id,
+      title: preview.title,
+      summary: preview.summary,
+      reason: "Incident recorded within report scope and time window.",
+      order: order++,
+    });
+  }
+
+  const signalDocs = await ctx.db
+    .query("observabilitySignals")
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+    .collect();
+
+  const scopedSignals = filterObservabilitySignalsByAccess(
+    signalDocs.filter((s) => {
+      if (s.occurredAt < windowStart || s.occurredAt > windowEnd) return false;
+      if (
+        scope.projectIds?.length &&
+        s.projectId &&
+        !scope.projectIds.includes(s.projectId)
+      ) {
+        return false;
+      }
+      return true;
+    }),
+    accessible,
+    role,
+  );
+
+  for (const signal of scopedSignals.slice(0, 20)) {
+    const preview = safeObservabilitySignalPreviewForAudit(signal);
+    items.push({
+      itemType: "observability_signal",
+      observabilitySignalId: signal._id,
+      incidentId: signal.incidentId,
+      title: preview.title,
+      summary: preview.summary,
+      reason: "Observability signal in scope (redacted preview only).",
+      order: order++,
+    });
+  }
+
   const generatedSummary = buildDeterministicSummary({
     eventCount: eventIds.length,
     workstreamCount: workstreamIdSet.size,
@@ -802,6 +989,11 @@ export async function replaceReportItems(
       impactAnalysisId: item.impactAnalysisId,
       lessonId: item.lessonId,
       playbookId: item.playbookId,
+      decisionId: item.decisionId,
+      rollbackId: item.rollbackId,
+      decisionCandidateId: item.decisionCandidateId,
+      incidentId: item.incidentId,
+      observabilitySignalId: item.observabilitySignalId,
       title: item.title,
       summary: item.summary,
       reason: item.reason,

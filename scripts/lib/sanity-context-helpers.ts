@@ -175,7 +175,7 @@ export async function requireLocalApp(appUrl: string): Promise<void> {
     );
   }
   try {
-    const response = await fetch(`${appUrl}/api/cli/health`, { redirect: "manual" });
+    const response = await fetch(`${appUrl}/cli/health`, { redirect: "manual" });
     if (response.status >= 500) {
       throw new Error(`Local app unhealthy: HTTP ${response.status}`);
     }
@@ -211,7 +211,7 @@ export async function getContextPackRoute(
   rawKey: string,
 ): Promise<Response> {
   const params = new URLSearchParams({ workspaceId });
-  return fetch(`${appUrl}/api/cli/context/packs/${contextPackId}?${params.toString()}`, {
+  return fetch(`${appUrl}/cli/context/packs/${contextPackId}?${params.toString()}`, {
     headers: { Authorization: `Bearer ${rawKey}` },
   });
 }
@@ -226,7 +226,7 @@ export async function createContextPackViaHttp(
 ): Promise<HttpPackResponse> {
   const response = await postContextRoute(
     appUrl,
-    "/api/cli/context/packs",
+    "/cli/context/packs",
     {
       workspaceId,
       goal,

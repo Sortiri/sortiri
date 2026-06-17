@@ -54,7 +54,7 @@ async function main() {
     "sha256=" + createHmac("sha256", webhookSecret).update(rawBody, "utf8").digest("hex");
 
   const response = await fetch(
-    `${apiUrl}/api/integrations/github/webhook?workspaceId=${encodeURIComponent(workspaceId)}`,
+    `${apiUrl}/webhooks/github?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "POST",
       headers: {

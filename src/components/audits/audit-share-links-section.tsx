@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import type { AuditShareLinkRecord, ShareLinkExpiry } from "@/types/audit-sharing";
 import { SHARE_LINK_EXPIRY_OPTIONS } from "@/types/audit-sharing";
 
@@ -139,7 +140,7 @@ export function AuditShareLinksSection({
       {error ? <p className="audit-modal__error">{error}</p> : null}
 
       {links === undefined ? (
-        <p className="audit-detail__summary">Loading share links…</p>
+        <PageLoader variant="section" />
       ) : links.length === 0 ? (
         <p className="audit-detail__summary">No share links yet.</p>
       ) : (

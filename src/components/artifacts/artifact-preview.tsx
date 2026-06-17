@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useArtifactDrawer } from "@/components/artifacts/artifact-context";
 
 type ArtifactPreviewProps = {
@@ -25,7 +26,7 @@ export function ArtifactPreview({ artifactIds, compact = false }: ArtifactPrevie
   }
 
   if (artifacts === undefined) {
-    return <p className="artifact-preview artifact-preview--loading">Loading artifacts…</p>;
+    return <PageLoader variant="section" />;
   }
 
   if (artifacts.length === 0) {

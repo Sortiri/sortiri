@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
+import { PageLoader } from "@/components/ui/page-loader";
 import { WorkspaceRoleBadge } from "@/components/workspace/workspace-role-badge";
 import type { InviteRole } from "@/types/workspace-invites";
 import "../settings/team.css";
@@ -38,7 +39,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   if (!isLoaded || preview === undefined) {
     return (
       <div className="invite-accept-page">
-        <p className="team-loading">Loading invite…</p>
+        <PageLoader variant="inline" />
       </div>
     );
   }

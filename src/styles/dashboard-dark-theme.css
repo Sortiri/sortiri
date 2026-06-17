@@ -18,7 +18,15 @@
   --ca-surface-active: #242424;
   --ca-hairline: var(--ca-border);
   --ca-hairline-soft: var(--ca-border-soft);
-  --dashboard-content-max-width: 72rem;
+  --dashboard-content-max-width: 64rem;
+  --font-sans: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-departure-mono);
+
+  /* GitHub-like infra radii */
+  --ca-radius-xs: 0.25rem;
+  --ca-radius-sm: 0.375rem;
+  --ca-radius-md: 0.5rem;
+  --ca-radius-lg: 0.75rem;
 
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-synthesis: none;
@@ -26,8 +34,8 @@
 }
 
 .dashboard-app :where(h1, h2, h3, h4, h5, h6) {
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
-  font-weight: 400;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
   font-synthesis: none;
   letter-spacing: -0.02em;
 }
@@ -65,7 +73,7 @@
   margin: 0;
   padding: 0.25rem 0.375rem 0.25rem 0;
   border: none;
-  border-radius: 0;
+  border-radius: var(--ca-radius-sm);
   background: transparent;
   cursor: pointer;
 }
@@ -107,6 +115,7 @@
 .dashboard-app .dashboard-main::-webkit-scrollbar-thumb {
   background-color: var(--ca-border-strong);
   border: 2px solid var(--ca-main-bg);
+  border-radius: var(--ca-radius-sm);
   background-clip: padding-box;
 }
 

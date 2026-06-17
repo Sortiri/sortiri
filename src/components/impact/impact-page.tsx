@@ -10,6 +10,7 @@ import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { ImpactAnalysisRecord } from "@/types/impact-analysis";
 import { formatWindowLabel } from "@/lib/impact-window";
+import { PageLoader } from "@/components/ui/page-loader";
 import "./impact.css";
 
 function formatDate(timestamp: number): string {
@@ -54,7 +55,7 @@ export function ImpactPage() {
         ) : null}
       </header>
 
-      {loading ? <p className="impact-page__subtitle">Loading impact analyses…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
 
       {!loading && analysisList.length === 0 ? (
         <p className="impact-page__subtitle">

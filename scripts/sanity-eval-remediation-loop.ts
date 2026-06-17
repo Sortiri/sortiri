@@ -107,7 +107,7 @@ async function main() {
     failedEvalRunId: "",
     evalResultIds: [],
     maskedApiKey: "",
-    httpRouteTested: "/api/cli/evals/remediation/generate",
+    httpRouteTested: "/cli/evals/remediation/generate",
   };
 
   const appUrl = getAppUrl();
@@ -149,13 +149,13 @@ async function main() {
   evidence.maskedApiKey = maskApiKey(rawApiKey);
   console.log(`  [PASS] created dev API key ${evidence.maskedApiKey}`);
 
-  const missingAuth = await fetch(`${appUrl}/api/cli/evals/remediation?workspaceId=${story.workspaceId}`);
+  const missingAuth = await fetch(`${appUrl}/cli/evals/remediation?workspaceId=${story.workspaceId}`);
   if (missingAuth.status !== 401) throw new Error("Expected missing API key 401");
   console.log("  [PASS] missing API key rejected");
 
   const invalidKey = `${API_KEY_PREFIX}_00000000000000000000000000000000`;
   const invalidAuth = await fetch(
-    `${appUrl}/api/cli/evals/remediation?workspaceId=${story.workspaceId}`,
+    `${appUrl}/cli/evals/remediation?workspaceId=${story.workspaceId}`,
     { headers: { Authorization: `Bearer ${invalidKey}` } },
   );
   if (invalidAuth.status !== 401) throw new Error("Expected invalid API key 401");

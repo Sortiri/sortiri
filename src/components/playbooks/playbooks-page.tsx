@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { CreatePlaybookModal } from "@/components/playbooks/create-playbook-modal";
 import { GeneratePlaybookFromLessonsModal } from "@/components/playbooks/generate-playbook-from-lessons-modal";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import {
@@ -114,7 +115,7 @@ export function PlaybooksPage() {
         ))}
       </div>
 
-      {loading ? <p className="playbooks-page__subtitle">Loading playbooks…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
 
       {!loading && playbookList.length === 0 ? (
         <p className="playbooks-page__subtitle">

@@ -107,7 +107,7 @@ async function main() {
   const rawApiKey = apiKeyResult.rawKey;
   console.log(`  [PASS] Created dev API key ${maskApiKey(rawApiKey)}`);
 
-  const missingAuth = await postContextRoute(appUrl, "/api/cli/context/packs", {
+  const missingAuth = await postContextRoute(appUrl, "/cli/context/packs", {
     workspaceId: story.workspaceId,
     goal: CONTEXT_GOAL,
   });
@@ -119,7 +119,7 @@ async function main() {
   const invalidKey = `${API_KEY_PREFIX}_00000000000000000000000000000000`;
   const invalidAuth = await postContextRoute(
     appUrl,
-    "/api/cli/context/packs",
+    "/cli/context/packs",
     { workspaceId: story.workspaceId, goal: CONTEXT_GOAL },
     invalidKey,
   );
@@ -137,7 +137,7 @@ async function main() {
   });
   const revokedAuth = await postContextRoute(
     appUrl,
-    "/api/cli/context/packs",
+    "/cli/context/packs",
     { workspaceId: story.workspaceId, goal: CONTEXT_GOAL },
     revokedKeyResult.rawKey,
   );
@@ -217,7 +217,7 @@ async function main() {
   console.log(`CONTEXT_PACK_ID=${httpPack.contextPackId}`);
   console.log(`MCP_CONTEXT_PACK_ID=${mcpPackId}`);
   console.log(`MASKED_API_KEY=${maskApiKey(rawApiKey)}`);
-  console.log(`HTTP_ROUTE=${appUrl}/api/cli/context/packs`);
+  console.log(`HTTP_ROUTE=${appUrl}/cli/context/packs`);
 }
 
 main().catch((error) => {

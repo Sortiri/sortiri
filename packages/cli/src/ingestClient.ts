@@ -68,7 +68,7 @@ export class IngestClient {
     const projectId = input.projectId ?? this.config.projectId ?? undefined;
 
     try {
-      const response = await fetch(`${this.config.apiUrl}/api/ingest/artifacts`, {
+      const response = await fetch(`${this.config.apiUrl}/ingest/artifacts`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.config.apiKey}`,
@@ -115,7 +115,7 @@ export class IngestClient {
     const projectId = input.projectId ?? this.config.projectId ?? undefined;
 
     try {
-      const response = await fetch(`${this.config.apiUrl}/api/ingest/events`, {
+      const response = await fetch(`${this.config.apiUrl}/ingest/events`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.config.apiKey}`,

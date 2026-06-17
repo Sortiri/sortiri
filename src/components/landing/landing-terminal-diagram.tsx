@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { departureMono } from "@/lib/landing-fonts";
 
-const ACCENT = "text-[#00E013]";
+const ACCENT = "text-[#c490e8]";
 const MONO = departureMono.className;
 
 export type TerminalDiagramRowPart = {

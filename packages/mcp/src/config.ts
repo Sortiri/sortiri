@@ -1,8 +1,7 @@
-import type { SortiriConfig } from "@sortiri/local";
-import { loadConfig as loadLocalConfig } from "@sortiri/local";
+import { asCloudConfig, loadConfig as loadLocalConfig, type CloudSortiriConfig } from "@sortiri/local";
 
-export type SortiriMcpConfig = SortiriConfig;
+export type SortiriMcpConfig = CloudSortiriConfig;
 
 export function loadConfig(): SortiriMcpConfig {
-  return loadLocalConfig();
+  return asCloudConfig(loadLocalConfig());
 }

@@ -19,6 +19,15 @@ export type WorkstreamRecord = {
   updatedAt: number;
 };
 
+export type WorkstreamListSummary = WorkstreamRecord & {
+  eventCount: number;
+  artifactCount: number;
+  decisionCount: number;
+  incidentCount: number;
+  lastActivityAt?: number;
+  sourceLabel?: string;
+};
+
 type DbReadCtx = Pick<QueryCtx, "db">;
 
 type ListWorkstreamsOptions = {
@@ -88,6 +97,70 @@ export async function listWorkstreamsForWorkspace(
   }
 
   return records;
+}
+
+async function enrichWorkstreamSummary(
+  ctx: DbReadCtx,
+  record: WorkstreamRecord,
+): Promise<WorkstreamListSummary> {
+  const workstreamId = record.id as Id<"workstreams">;
+
+  const events = await ctx.db
+    .query("events")
+    .withIndex("by_workstream", (q) => q.eq("workstreamId", workstreamId))
+    .collect();
+
+  const artifacts = await ctx.db
+    .query("artifacts")
+    .withIndex("by_workstream", (q) => q.eq("workstreamId", workstreamId))
+    .collect();
+
+  const decisions = await ctx.db
+    .query("decisions")
+    .withIndex("by_workstream", (q) => q.eq("workstreamId", workstreamId))
+    .collect();
+
+  const incidentsAll = await ctx.db
+    .query("incidents")
+    .withIndex("by_workspace", (q) =>
+      q.eq("workspaceId", record.workspaceId as Id<"workspaces">),
+    )
+    .collect();
+  const incidents = incidentsAll.filter((i) => i.workstreamId === workstreamId);
+
+  const lastEventAt = events.reduce(
+    (max, e) => Math.max(max, e.occurredAt ?? 0),
+    0,
+  );
+  const lastActivityAt = lastEventAt > 0 ? lastEventAt : record.updatedAt;
+
+  const sourceLabel =
+    events.length > 0
+      ? [...new Set(events.map((e) => e.source))].slice(0, 2).join(" · ")
+      : record.createdBy?.type === "agent"
+        ? "Cursor Agent"
+        : record.createdBy?.type === "human"
+          ? "CLI"
+          : undefined;
+
+  return {
+    ...record,
+    eventCount: events.length,
+    artifactCount: artifacts.length,
+    decisionCount: decisions.length,
+    incidentCount: incidents.length,
+    lastActivityAt,
+    sourceLabel,
+  };
+}
+
+export async function listWorkstreamSummariesForWorkspace(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  options: ListWorkstreamsOptions = {},
+): Promise<WorkstreamListSummary[]> {
+  const records = await listWorkstreamsForWorkspace(ctx, workspaceDocId, options);
+  return Promise.all(records.map((record) => enrichWorkstreamSummary(ctx, record)));
 }
 
 type SearchWorkstreamsOptions = {

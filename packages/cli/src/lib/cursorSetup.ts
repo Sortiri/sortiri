@@ -1,46 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const SORTIRI_RULE_CONTENT = `# Sortiri Timeline Rule
+const RULE_RELATIVE = path.join("packages", "agent-rules", "cursor", "sortiri.mdc");
 
-Use Sortiri to record meaningful work.
+const RULE_CANDIDATES = [
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../templates/sortiri.mdc"),
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../agent-rules/cursor/sortiri.mdc"),
+];
 
-At the start of meaningful tasks, call \`start_workstream\`.
-
-During tasks, call \`record_event\` when you:
-- create a plan
-- make a decision
-- change code
-- create or modify an important file
-- find or fix an error
-- complete a major step
-- change direction
-
-When useful output is created, call \`attach_artifact\`.
-
-At the end of the task, call \`finish_workstream\`.
-
-When running validation commands such as build, lint, tests, typecheck, or smoke tests, prefer using:
-
-\`\`\`bash
-sortiri run -- <command>
-\`\`\`
-
-Examples:
-
-\`\`\`bash
-sortiri run -- npm run build
-sortiri run -- npm test
-sortiri run -- npx tsc --noEmit
-\`\`\`
-
-This records command output, failures, and validation results into the current Sortiri workstream.
-
-Keep event titles short and clear.
-Use summaries to explain why the action mattered.
-Do not record every tiny thought.
-Record meaningful work history.
-`;
+export function getSortiriRuleContent(): string {
+  for (const candidate of RULE_CANDIDATES) {
+    if (fs.existsSync(candidate)) {
+      return fs.readFileSync(candidate, "utf8");
+    }
+  }
+  return "# Sortiri\n\nRecord meaningful agent work with Sortiri MCP tools and `sortiri record`.\n";
+}
 
 export function mergeCursorMcpConfig(repoRoot: string): void {
   const cursorDir = path.join(repoRoot, ".cursor");
@@ -63,7 +39,7 @@ export function mergeCursorMcpConfig(repoRoot: string): void {
     ...(existing.mcpServers ?? {}),
     sortiri: {
       command: "npx",
-      args: ["tsx", "packages/mcp/src/server.ts"],
+      args: ["sortiri", "mcp"],
       env: {
         SORTIRI_CONFIG_PATH: ".sortiri/config.json",
       },
@@ -77,21 +53,21 @@ export function mergeCursorMcpConfig(repoRoot: string): void {
   );
 }
 
-export function ensureCursorSortiriRule(repoRoot: string): void {
+export function ensureCursorSortiriRule(repoRoot: string, force = false): void {
   const rulesDir = path.join(repoRoot, ".cursor", "rules");
   const rulePath = path.join(rulesDir, "sortiri.mdc");
 
-  if (fs.existsSync(rulePath)) {
+  if (fs.existsSync(rulePath) && !force) {
     return;
   }
 
   fs.mkdirSync(rulesDir, { recursive: true });
-  fs.writeFileSync(rulePath, SORTIRI_RULE_CONTENT, "utf8");
+  fs.writeFileSync(rulePath, getSortiriRuleContent(), "utf8");
 }
 
 export function ensureGitignore(repoRoot: string): void {
   const gitignorePath = path.join(repoRoot, ".gitignore");
-  const entries = [".sortiri/config.json", ".sortiri/session.json", ".sortiri/"];
+  const entries = [".sortiri/config.json", ".sortiri/session.json"];
 
   if (!fs.existsSync(gitignorePath)) {
     fs.writeFileSync(gitignorePath, `${entries.join("\n")}\n`, "utf8");
@@ -100,7 +76,7 @@ export function ensureGitignore(repoRoot: string): void {
 
   let contents = fs.readFileSync(gitignorePath, "utf8");
   for (const entry of entries) {
-    if (contents.includes(entry) || contents.includes(".sortiri")) {
+    if (contents.includes(entry)) {
       continue;
     }
     const separator = contents.endsWith("\n") ? "" : "\n";
@@ -109,3 +85,5 @@ export function ensureGitignore(repoRoot: string): void {
 
   fs.writeFileSync(gitignorePath, contents, "utf8");
 }
+
+export { RULE_RELATIVE };

@@ -1,0 +1,10 @@
+{
+  "type": "event_callback",
+  "event_id": "Ev_app_mention_1",
+  "event": {
+    "type": "app_mention",
+    "text": "Decision: capture Slack decisions in Sortiri",
+    "channel": "C01234567",
+    "user": "U01"
+  }
+}

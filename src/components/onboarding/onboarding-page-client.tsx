@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { api } from "../../../convex/_generated/api";
 import { ConvexAuthError } from "@/components/auth/convex-auth-error";
 import { OnboardingPageFrame } from "@/components/onboarding/onboarding-page-frame";
+import { PageLoader } from "@/components/ui/page-loader";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { useAppAuth } from "@/hooks/use-app-auth";
 import { redirectAfterAuth } from "@/lib/auth-redirect";
@@ -15,7 +16,7 @@ import { isOnboardingComplete } from "@/lib/onboarding/types";
 function OnboardingLoading() {
   return (
     <OnboardingPageFrame>
-      <p className="py-20 text-center text-[var(--ca-muted)]">Loading…</p>
+      <PageLoader variant="content" />
     </OnboardingPageFrame>
   );
 }

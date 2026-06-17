@@ -35,6 +35,10 @@ export const retrieveContext = internalQuery({
     recommendationId: v.optional(v.id("recommendations")),
     evalSuiteId: v.optional(v.id("evalSuites")),
     evalRunId: v.optional(v.id("evalRuns")),
+    deliveryId: v.optional(v.id("ingestDeliveries")),
+    deadLetterId: v.optional(v.id("ingestDeadLetters")),
+    decisionId: v.optional(v.id("decisions")),
+    incidentId: v.optional(v.id("incidents")),
   },
   handler: async (ctx, args) => {
     const workspace = await assertWorkspaceAccess(
@@ -55,6 +59,10 @@ export const retrieveContext = internalQuery({
       recommendationId: args.recommendationId,
       evalSuiteId: args.evalSuiteId,
       evalRunId: args.evalRunId,
+      deliveryId: args.deliveryId,
+      deadLetterId: args.deadLetterId,
+      decisionId: args.decisionId,
+      incidentId: args.incidentId,
       clerkUserId: args.userId,
     });
   },
@@ -153,6 +161,10 @@ export const ask = action({
     recommendationId: v.optional(v.id("recommendations")),
     evalSuiteId: v.optional(v.id("evalSuites")),
     evalRunId: v.optional(v.id("evalRuns")),
+    deliveryId: v.optional(v.id("ingestDeliveries")),
+    deadLetterId: v.optional(v.id("ingestDeadLetters")),
+    decisionId: v.optional(v.id("decisions")),
+    incidentId: v.optional(v.id("incidents")),
   },
   handler: async (ctx, args): Promise<{
     sessionId: Id<"askSessions">;
@@ -183,6 +195,10 @@ export const ask = action({
       recommendationId: args.recommendationId,
       evalSuiteId: args.evalSuiteId,
       evalRunId: args.evalRunId,
+      deliveryId: args.deliveryId,
+      deadLetterId: args.deadLetterId,
+      decisionId: args.decisionId,
+      incidentId: args.incidentId,
     });
 
     let threadId = args.threadId;
@@ -237,7 +253,21 @@ Lesson context:
 ${context.contextText}
 
 Answer using ONLY the lesson context above. Do not claim causation. Use cautious language. If there is not enough information, say what is missing.`
-          : args.playbookId
+          : args.decisionId
+            ? `Question: ${question}
+
+Decision context:
+${context.contextText}
+
+Answer using ONLY the decision context above. Do not claim causation without impact evidence. Do not include raw Slack payloads. Use cautious language. If there is not enough information, say what is missing.`
+            : args.incidentId
+              ? `Question: ${question}
+
+Incident context:
+${context.contextText}
+
+Answer using ONLY the incident context above. Do not claim causation without impact evidence. Do not include raw observability payloads or secrets. Use cautious language. If there is not enough information, say what is missing.`
+            : args.playbookId
             ? `Question: ${question}
 
 Playbook context:
@@ -272,7 +302,21 @@ Eval run context:
 ${context.contextText}
 
 Explain why this eval failed or what the agent should fix next. Do not claim causation.`
-                    : `Question: ${question}
+                    : args.deliveryId
+                      ? `Question: ${question}
+
+Ingest delivery context:
+${context.contextText}
+
+Explain what happened with this delivery and what to do next. Do not infer redacted secrets.`
+                      : args.deadLetterId
+                        ? `Question: ${question}
+
+Ingest dead letter context:
+${context.contextText}
+
+Explain why this delivery dead-lettered and how to replay or fix it. Do not infer redacted secrets.`
+                        : `Question: ${question}
 
 Company timeline context:
 ${context.contextText}

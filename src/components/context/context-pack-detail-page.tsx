@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { formatContextPackForCursor } from "@/lib/context/copyForCursor";
@@ -72,7 +73,7 @@ export function ContextPackDetailPage({ contextPackId }: ContextPackDetailPagePr
   }, [archivePack, contextPackId]);
 
   if (formatted === undefined) {
-    return <p className="context-page__subtitle">Loading context pack…</p>;
+    return <PageLoader />;
   }
 
   if (!pack) {

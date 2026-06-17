@@ -56,6 +56,24 @@ import {
   listEvalCasesForSuite,
   listEvalResultsForRun,
 } from "./evalLib";
+import {
+  docToDeadLetterSummary,
+  findDeadLetterById,
+} from "./ingestDeadLetterLib";
+import {
+  docToIngestDeliverySummary,
+  findDeliveryById,
+} from "./ingestDeliveryLib";
+import { assertDecisionRead } from "./decisionPermissions";
+import { docToDecision } from "./decisionsLib";
+import { docToRollback, listRollbacksForDecision } from "./rollbackEventsLib";
+import { assertIncidentRead } from "./incidentPermissions";
+import { docToIncident } from "./incidentsLib";
+import {
+  safeIncidentPreviewForAudit,
+  safeObservabilitySignalPreviewForAudit,
+} from "./incidentContext";
+import { docToObservabilitySignal } from "./observabilitySignalsLib";
 
 type DbReadCtx = Pick<QueryCtx, "db">;
 
@@ -72,6 +90,10 @@ type RetrieveAskContextOptions = {
   recommendationId?: Id<"recommendations">;
   evalSuiteId?: Id<"evalSuites">;
   evalRunId?: Id<"evalRuns">;
+  deliveryId?: Id<"ingestDeliveries">;
+  deadLetterId?: Id<"ingestDeadLetters">;
+  decisionId?: Id<"decisions">;
+  incidentId?: Id<"incidents">;
   clerkUserId?: string;
 };
 
@@ -767,6 +789,304 @@ async function retrieveEvalRunAskContext(
   };
 }
 
+async function retrieveDeliveryAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  deliveryId: Id<"ingestDeliveries">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const doc = await findDeliveryById(ctx, deliveryId);
+  if (!doc || doc.workspaceId !== workspaceDocId) {
+    throw new Error("Delivery not found");
+  }
+
+  const { membership } = await getMembershipAndAccessible(ctx, workspaceDocId, clerkUserId);
+  if (membership.role === "auditor") {
+    throw new Error("Access denied");
+  }
+
+  const delivery = docToIngestDeliverySummary(doc);
+  const lines = [
+    "INGEST DELIVERY",
+    `Source: ${delivery.source}`,
+    `Source event ID: ${delivery.sourceEventId}`,
+    `Status: ${delivery.status}`,
+    `Attempts: ${delivery.attempts}`,
+    delivery.lastError ? `Last error: ${delivery.lastError}` : "",
+    delivery.journalRef ? `Journal ref: ${delivery.journalRef}` : "",
+    delivery.redacted ? "Payload was redacted before journaling." : "",
+    "",
+    "Explain what happened with this ingest delivery and what to do next.",
+    "Do not infer or reconstruct redacted secrets.",
+    "Use cautious language about retries and replay.",
+  ].filter(Boolean);
+
+  const eventIds = delivery.eventId ? [delivery.eventId as Id<"events">] : [];
+
+  return {
+    contextText: lines.join("\n"),
+    eventIds,
+    workstreamIds: [],
+    events: [],
+    workstreams: [],
+  };
+}
+
+async function retrieveDeadLetterAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  deadLetterId: Id<"ingestDeadLetters">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const doc = await findDeadLetterById(ctx, deadLetterId);
+  if (!doc || doc.workspaceId !== workspaceDocId) {
+    throw new Error("Dead letter not found");
+  }
+
+  const { membership } = await getMembershipAndAccessible(ctx, workspaceDocId, clerkUserId);
+  if (membership.role === "auditor") {
+    throw new Error("Access denied");
+  }
+
+  const deadLetter = docToDeadLetterSummary(doc);
+  const lines = [
+    "INGEST DEAD LETTER",
+    `Source: ${deadLetter.source}`,
+    `Source event ID: ${deadLetter.sourceEventId}`,
+    `Reason: ${deadLetter.reason}`,
+    `Status: ${deadLetter.status}`,
+    `Attempts: ${deadLetter.attempts}`,
+    deadLetter.error ? `Error: ${deadLetter.error}` : "",
+    deadLetter.journalRef ? `Journal ref: ${deadLetter.journalRef}` : "",
+    deadLetter.payloadPreview ? `Payload preview: ${deadLetter.payloadPreview}` : "",
+    deadLetter.redacted ? "Payload was redacted before journaling." : "",
+    "",
+    "Explain why this delivery dead-lettered and how to replay or fix it.",
+    "Do not infer or reconstruct redacted secrets.",
+    "Use cautious language. Note when journal replay may be required.",
+  ].filter(Boolean);
+
+  const eventIds: Id<"events">[] = [];
+
+  return {
+    contextText: lines.join("\n"),
+    eventIds,
+    workstreamIds: [],
+    events: [],
+    workstreams: [],
+  };
+}
+
+async function retrieveDecisionAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  workspaceExternalId: string,
+  decisionId: Id<"decisions">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const decisionDoc = await ctx.db.get(decisionId);
+  if (!decisionDoc || decisionDoc.workspaceId !== workspaceDocId) {
+    throw new Error("Decision not found");
+  }
+
+  await assertDecisionRead(ctx, workspaceExternalId, clerkUserId, decisionDoc);
+  const decision = docToDecision(decisionDoc);
+  const rollbacks = await listRollbacksForDecision(ctx, decisionId);
+
+  const events: EventRecord[] = [];
+  for (const eventId of decision.linkedEventIds ?? []) {
+    const doc = await ctx.db.get(eventId as Id<"events">);
+    if (!doc || doc.workspaceId !== workspaceDocId) continue;
+    events.push(docToEvent(doc));
+  }
+
+  const workstreams: WorkstreamRecord[] = [];
+  if (decision.workstreamId) {
+    const wsDoc = await ctx.db.get(decision.workstreamId as Id<"workstreams">);
+    if (wsDoc) workstreams.push(docToWorkstream(wsDoc));
+  }
+  for (const wsId of decision.linkedWorkstreamIds ?? []) {
+    const doc = await ctx.db.get(wsId as Id<"workstreams">);
+    if (doc) workstreams.push(docToWorkstream(doc));
+  }
+
+  const contextText = [
+    "DECISION CONTEXT",
+    "You are answering about a recorded company decision.",
+    "Do not claim causation without impact evidence.",
+    "Do not include raw Slack payloads or secrets.",
+    "Use cautious language: possibly related, may correlate, not proved.",
+    "",
+    `Title: ${decision.title}`,
+    `Type: ${decision.decisionType}`,
+    `Status: ${decision.status}`,
+    `Source: ${decision.source}`,
+    decision.summary ? `Summary: ${decision.summary}` : "",
+    decision.rationale ? `Rationale: ${decision.rationale}` : "",
+    decision.expectedOutcome ? `Expected outcome: ${decision.expectedOutcome}` : "",
+    decision.rollbackPlan ? `Rollback plan: ${decision.rollbackPlan}` : "",
+    rollbacks.length
+      ? `Rollbacks: ${rollbacks.map((r) => r.title).join("; ")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    contextText,
+    eventIds: events.map((event) => event.id as Id<"events">),
+    workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
+    events: events.sort((a, b) => b.occurredAt - a.occurredAt),
+    workstreams: workstreams.sort((a, b) => b.startedAt - a.startedAt),
+  };
+}
+
+async function retrieveIncidentAskContext(
+  ctx: DbReadCtx,
+  workspaceDocId: Id<"workspaces">,
+  workspaceExternalId: string,
+  incidentId: Id<"incidents">,
+  clerkUserId: string,
+): Promise<AskContextResult> {
+  const incidentDoc = await ctx.db.get(incidentId);
+  if (!incidentDoc || incidentDoc.workspaceId !== workspaceDocId) {
+    throw new Error("Incident not found");
+  }
+
+  await assertIncidentRead(ctx, workspaceExternalId, clerkUserId, incidentDoc);
+  const incident = docToIncident(incidentDoc);
+  const preview = safeIncidentPreviewForAudit(incidentDoc);
+
+  const signals: Array<{ title: string; summary?: string; signalType: string; severity: string }> =
+    [];
+  const signalIds = new Set<string>(incident.linkedSignalIds ?? []);
+  for (const signalId of signalIds) {
+    const signalDoc = await ctx.db.get(signalId as Id<"observabilitySignals">);
+    if (!signalDoc || signalDoc.workspaceId !== workspaceDocId) continue;
+    const signalPreview = safeObservabilitySignalPreviewForAudit(signalDoc);
+    const record = docToObservabilitySignal(signalDoc);
+    signals.push({
+      title: signalPreview.title,
+      summary: signalPreview.summary,
+      signalType: record.signalType,
+      severity: record.severity,
+    });
+  }
+
+  const linkedSignals = await ctx.db
+    .query("observabilitySignals")
+    .withIndex("by_incident", (q) => q.eq("incidentId", incidentId))
+    .take(10);
+  for (const signalDoc of linkedSignals) {
+    if (signalIds.has(signalDoc._id)) continue;
+    const signalPreview = safeObservabilitySignalPreviewForAudit(signalDoc);
+    const record = docToObservabilitySignal(signalDoc);
+    signals.push({
+      title: signalPreview.title,
+      summary: signalPreview.summary,
+      signalType: record.signalType,
+      severity: record.severity,
+    });
+  }
+
+  const workstreams: WorkstreamRecord[] = [];
+  if (incident.workstreamId) {
+    const wsDoc = await ctx.db.get(incident.workstreamId as Id<"workstreams">);
+    if (wsDoc) workstreams.push(docToWorkstream(wsDoc));
+  }
+  for (const wsId of incident.linkedWorkstreamIds ?? []) {
+    const doc = await ctx.db.get(wsId as Id<"workstreams">);
+    if (doc) workstreams.push(docToWorkstream(doc));
+  }
+
+  const linkedDecisions: string[] = [];
+  for (const decisionId of incident.linkedDecisionIds ?? []) {
+    const decisionDoc = await ctx.db.get(decisionId as Id<"decisions">);
+    if (!decisionDoc) continue;
+    const decision = docToDecision(decisionDoc);
+    linkedDecisions.push(
+      `- ${decision.title}${decision.summary ? `: ${decision.summary}` : ""}`,
+    );
+  }
+
+  const linkedRollbacks: string[] = [];
+  for (const rollbackId of incident.linkedRollbackIds ?? []) {
+    const rollbackDoc = await ctx.db.get(rollbackId as Id<"rollbackEvents">);
+    if (!rollbackDoc) continue;
+    const rollback = docToRollback(rollbackDoc);
+    linkedRollbacks.push(
+      `- ${rollback.title}${rollback.summary ?? rollback.reason ? `: ${rollback.summary ?? rollback.reason}` : ""}`,
+    );
+  }
+
+  const events: EventRecord[] = [];
+  const linkedPullRequests: string[] = [];
+  for (const eventId of incident.linkedEventIds ?? []) {
+    const doc = await ctx.db.get(eventId as Id<"events">);
+    if (!doc || doc.workspaceId !== workspaceDocId) continue;
+    const event = docToEvent(doc);
+    events.push(event);
+    if (event.entity?.type === "pull_request") {
+      const prLabel =
+        event.entity.name ?? event.entity.id ?? event.title;
+      linkedPullRequests.push(`- ${prLabel}: ${event.title}`);
+    }
+  }
+
+  const contextText = [
+    "INCIDENT CONTEXT",
+    "You are answering about a recorded incident.",
+    "Do not claim causation without impact evidence.",
+    "Do not include raw observability payloads or secrets.",
+    "Use cautious language: possibly related, may correlate, not proved.",
+    "",
+    `Title: ${preview.title}`,
+    `Status: ${incident.status}`,
+    `Severity: ${incident.severity}`,
+    `Source: ${incident.source}`,
+    preview.summary ? `Summary: ${preview.summary}` : "",
+    incident.service ? `Service: ${incident.service}` : "",
+    incident.environment ? `Environment: ${incident.environment}` : "",
+    incident.rootCause ? `Root cause: ${incident.rootCause}` : "",
+    incident.mitigation ? `Mitigation: ${incident.mitigation}` : "",
+    incident.rollbackSummary ? `Rollback summary: ${incident.rollbackSummary}` : "",
+    "",
+    "OBSERVABILITY SIGNALS",
+    signals.length > 0
+      ? signals
+          .map(
+            (s) =>
+              `- [${s.severity}/${s.signalType}] ${s.title}${s.summary ? `: ${s.summary}` : ""}`,
+          )
+          .join("\n")
+      : "(none)",
+    "",
+    "LINKED WORKSTREAMS",
+    workstreams.length > 0
+      ? workstreams.map((ws) => `- ${ws.title}`).join("\n")
+      : "(none)",
+    "",
+    "LINKED PULL REQUESTS",
+    linkedPullRequests.length > 0 ? linkedPullRequests.join("\n") : "(none)",
+    "",
+    "LINKED DECISIONS",
+    linkedDecisions.length > 0 ? linkedDecisions.join("\n") : "(none)",
+    "",
+    "LINKED ROLLBACKS",
+    linkedRollbacks.length > 0 ? linkedRollbacks.join("\n") : "(none)",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+
+  return {
+    contextText,
+    eventIds: events.map((event) => event.id as Id<"events">),
+    workstreamIds: workstreams.map((ws) => ws.id as Id<"workstreams">),
+    events: events.sort((a, b) => b.occurredAt - a.occurredAt),
+    workstreams: workstreams.sort((a, b) => b.startedAt - a.startedAt),
+  };
+}
+
 export async function retrieveAskContext(
   ctx: DbReadCtx,
   workspaceDocId: Id<"workspaces">,
@@ -801,6 +1121,30 @@ export async function retrieveAskContext(
       ctx,
       workspaceDocId,
       options.impactAnalysisId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.decisionId && options.clerkUserId) {
+    const workspace = await ctx.db.get(workspaceDocId);
+    if (!workspace) throw new Error("Workspace not found");
+    return retrieveDecisionAskContext(
+      ctx,
+      workspaceDocId,
+      workspace.externalId,
+      options.decisionId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.incidentId && options.clerkUserId) {
+    const workspace = await ctx.db.get(workspaceDocId);
+    if (!workspace) throw new Error("Workspace not found");
+    return retrieveIncidentAskContext(
+      ctx,
+      workspaceDocId,
+      workspace.externalId,
+      options.incidentId,
       options.clerkUserId,
     );
   }
@@ -855,6 +1199,24 @@ export async function retrieveAskContext(
       ctx,
       workspaceDocId,
       options.evalRunId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.deliveryId && options.clerkUserId) {
+    return retrieveDeliveryAskContext(
+      ctx,
+      workspaceDocId,
+      options.deliveryId,
+      options.clerkUserId,
+    );
+  }
+
+  if (options.deadLetterId && options.clerkUserId) {
+    return retrieveDeadLetterAskContext(
+      ctx,
+      workspaceDocId,
+      options.deadLetterId,
       options.clerkUserId,
     );
   }

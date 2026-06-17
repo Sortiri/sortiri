@@ -27,7 +27,7 @@ describeE2E("stripe source", () => {
     const card = stripeCard(page);
     await expect(card.getByRole("heading", { name: "Stripe", exact: true })).toBeVisible();
     await expect(card.getByRole("button", { name: "Webhook URL" })).toBeVisible();
-    await expect(card.getByText(/api\/integrations\/stripe\/webhook/i)).toBeVisible();
+    await expect(card.getByText(/webhooks\/stripe/i)).toBeVisible();
 
     await card.getByPlaceholder("whsec_...").fill(TEST_STRIPE_WEBHOOK_SECRET);
     await card.getByRole("button", { name: "Save webhook secret" }).click();

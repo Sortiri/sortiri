@@ -4,11 +4,12 @@
  */
 :root {
   /* Brand */
-  --ca-brand: #00e013;
-  --ca-brand-hover: #00c810;
-  --ca-brand-text: #00e013;
-  --ca-brand-text-muted: #00a60e;
-  --ca-on-brand: #041204;
+  --ca-brand: #c490e8;
+  --ca-brand-hover: #d2a4f0;
+  --ca-brand-text: #c490e8;
+  --ca-brand-text-muted: #9a78b8;
+  --ca-brand-rgb: 196, 144, 232;
+  --ca-on-brand: #0c0c0c;
 
   /* Ink */
   --ca-ink: #fafafa;
@@ -32,7 +33,7 @@
   --ca-danger-muted: #ff8a8a;
   --ca-warning: #f5a524;
   --ca-success: var(--ca-brand);
-  --ca-focus-ring: rgb(0 224 19 / 0.4);
+  --ca-focus-ring: rgb(196 144 232 / 0.38);
 
   /* Spacing — 4px grid */
   --ca-space-1: 0.25rem;

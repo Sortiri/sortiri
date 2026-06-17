@@ -6,9 +6,11 @@ import { useCallback, useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { AskAnswer } from "@/components/ask/ask-answer";
+import { AskContextPanel } from "@/components/ask/ask-context-panel";
 import { AskEmptyState } from "@/components/ask/ask-empty-state";
-import { AskHistory } from "@/components/ask/ask-history";
 import { AskInput } from "@/components/ask/ask-input";
+import { PlatformPage, PlatformPageHeader } from "@/components/platform";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { AskSessionDetail } from "@/types/ask";
 import "./ask.css";
@@ -34,6 +36,8 @@ export function AskPage() {
   const recommendationIdParam = searchParams.get("recommendationId");
   const evalSuiteIdParam = searchParams.get("evalSuiteId");
   const evalRunIdParam = searchParams.get("evalRunId");
+  const decisionIdParam = searchParams.get("decisionId");
+  const incidentIdParam = searchParams.get("incidentId");
 
   const [questionDraft, setQuestionDraft] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -77,6 +81,8 @@ export function AskPage() {
     ? (evalSuiteIdParam as Id<"evalSuites">)
     : undefined;
   const evalRunId = evalRunIdParam ? (evalRunIdParam as Id<"evalRuns">) : undefined;
+  const decisionId = decisionIdParam ? (decisionIdParam as Id<"decisions">) : undefined;
+  const incidentId = incidentIdParam ? (incidentIdParam as Id<"incidents">) : undefined;
 
   const selectedView = useQuery(
     api.savedViews.getById,
@@ -132,6 +138,20 @@ export function AskPage() {
     evalRunId ? { evalRunId } : "skip",
   );
 
+  const selectedDecision = useQuery(
+    api.decisions.getDecision,
+    activeWorkspaceId && decisionId
+      ? { workspaceId: activeWorkspaceId, decisionId }
+      : "skip",
+  );
+
+  const selectedIncident = useQuery(
+    api.incidents.getIncident,
+    activeWorkspaceId && incidentId
+      ? { workspaceId: activeWorkspaceId, incidentId }
+      : "skip",
+  );
+
   const suggestedQuestion = useMemo(() => {
     if (initialQuestion) return initialQuestion;
     if (impactAnalysisIdParam) {
@@ -139,6 +159,12 @@ export function AskPage() {
     }
     if (lessonIdParam) {
       return `What should we remember from ${selectedLesson?.lesson.title ?? "this lesson"}?`;
+    }
+    if (decisionIdParam) {
+      return `What is the rationale and expected outcome for ${selectedDecision?.decision.title ?? "this decision"}?`;
+    }
+    if (incidentIdParam) {
+      return `What happened during ${selectedIncident?.incident.title ?? "this incident"} and what evidence is linked?`;
     }
     if (playbookIdParam) {
       return `How should I use the ${selectedPlaybook?.playbook.title ?? "playbook"}?`;
@@ -170,6 +196,10 @@ export function AskPage() {
     selectedImpactAnalysis?.analysis.title,
     lessonIdParam,
     selectedLesson?.lesson.title,
+    decisionIdParam,
+    selectedDecision?.decision.title,
+    incidentIdParam,
+    selectedIncident?.incident.title,
     playbookIdParam,
     selectedPlaybook?.playbook.title,
     contextPackIdParam,
@@ -187,7 +217,7 @@ export function AskPage() {
     selectedView?.name,
   ]);
 
-  const focusKey = `${initialQuestion}|${viewIdParam}|${projectIdParam}|${workstreamIdParam}|${auditReportIdParam}|${impactAnalysisIdParam}|${lessonIdParam}|${playbookIdParam}|${contextPackIdParam}|${recommendationIdParam}|${evalSuiteIdParam}|${evalRunIdParam}|${selectedView?.name ?? ""}|${selectedAuditReport?.title ?? ""}|${selectedImpactAnalysis?.analysis.title ?? ""}|${selectedLesson?.lesson.title ?? ""}|${selectedPlaybook?.playbook.title ?? ""}|${selectedContextPack?.pack.title ?? ""}|${selectedRecommendation?.title ?? ""}|${selectedEvalSuite?.suite.title ?? ""}|${selectedEvalRun?.run.status ?? ""}`;
+  const focusKey = `${initialQuestion}|${viewIdParam}|${projectIdParam}|${workstreamIdParam}|${auditReportIdParam}|${impactAnalysisIdParam}|${lessonIdParam}|${decisionIdParam}|${incidentIdParam}|${playbookIdParam}|${contextPackIdParam}|${recommendationIdParam}|${evalSuiteIdParam}|${evalRunIdParam}|${selectedView?.name ?? ""}|${selectedAuditReport?.title ?? ""}|${selectedImpactAnalysis?.analysis.title ?? ""}|${selectedLesson?.lesson.title ?? ""}|${selectedDecision?.decision.title ?? ""}|${selectedIncident?.incident.title ?? ""}|${selectedPlaybook?.playbook.title ?? ""}|${selectedContextPack?.pack.title ?? ""}|${selectedRecommendation?.title ?? ""}|${selectedEvalSuite?.suite.title ?? ""}|${selectedEvalRun?.run.status ?? ""}`;
   const [lastFocusKey, setLastFocusKey] = useState(focusKey);
   if (focusKey !== lastFocusKey) {
     setLastFocusKey(focusKey);
@@ -200,14 +230,14 @@ export function AskPage() {
 
   const sessions = useQuery(
     api.ask.listSessions,
-    activeWorkspaceId && !auditReportId && !impactAnalysisId && !lessonId && !playbookId && !contextPackId && !recommendationId && !evalSuiteId && !evalRunId
+    activeWorkspaceId && !auditReportId && !impactAnalysisId && !lessonId && !decisionId && !incidentId && !playbookId && !contextPackId && !recommendationId && !evalSuiteId && !evalRunId
       ? { workspaceId: activeWorkspaceId, limit: 20 }
       : "skip",
   );
 
   const timelineProbe = useQuery(
     api.events.listByWorkspace,
-    activeWorkspaceId && !auditReportId && !impactAnalysisId && !lessonId && !playbookId && !contextPackId && !recommendationId && !evalSuiteId && !evalRunId
+    activeWorkspaceId && !auditReportId && !impactAnalysisId && !lessonId && !decisionId && !incidentId && !playbookId && !contextPackId && !recommendationId && !evalSuiteId && !evalRunId
       ? { workspaceId: activeWorkspaceId, limit: 1 }
       : "skip",
   );
@@ -246,6 +276,8 @@ export function AskPage() {
         recommendationId,
         evalSuiteId,
         evalRunId,
+        decisionId,
+        incidentId,
       });
       setActiveSessionId(result.sessionId);
       setLocalAnswer(result.answer);
@@ -256,7 +288,7 @@ export function AskPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [activeWorkspaceId, askAction, question, workstreamId, entityId, projectId, viewId, auditReportId, impactAnalysisId, lessonId, playbookId, contextPackId, recommendationId, evalSuiteId, evalRunId]);
+  }, [activeWorkspaceId, askAction, question, workstreamId, entityId, projectId, viewId, auditReportId, impactAnalysisId, lessonId, decisionId, incidentId, playbookId, contextPackId, recommendationId, evalSuiteId, evalRunId]);
 
   const handleSelectSession = useCallback(
     (sessionId: string) => {
@@ -297,10 +329,12 @@ export function AskPage() {
 
   const loading =
     wsLoading ||
-    (activeWorkspaceId !== null && !auditReportId && !impactAnalysisId && !lessonId && !playbookId && sessions === undefined) ||
+    (activeWorkspaceId !== null && !auditReportId && !impactAnalysisId && !lessonId && !decisionId && !incidentId && !playbookId && sessions === undefined) ||
     (auditReportId !== undefined && selectedAuditReport === undefined) ||
     (impactAnalysisId !== undefined && selectedImpactAnalysis === undefined) ||
     (lessonId !== undefined && selectedLesson === undefined) ||
+    (decisionId !== undefined && selectedDecision === undefined) ||
+    (incidentId !== undefined && selectedIncident === undefined) ||
     (playbookId !== undefined && selectedPlaybook === undefined) ||
     (contextPackId !== undefined && selectedContextPack === undefined) ||
     (recommendationId !== undefined && selectedRecommendation === undefined) ||
@@ -312,6 +346,10 @@ export function AskPage() {
       ? selectedImpactAnalysis?.analysis.status === "generated"
       : lessonId
         ? selectedLesson?.lesson !== undefined
+        : decisionId
+          ? selectedDecision?.decision !== undefined
+          : incidentId
+            ? selectedIncident?.incident !== undefined
         : playbookId
           ? selectedPlaybook?.playbook !== undefined
           : contextPackId
@@ -325,80 +363,70 @@ export function AskPage() {
             : (timelineProbe?.length ?? 0) > 0;
   const showEmptyState = !loading && !hasTimelineData && !display && !submitting;
 
+  const defaultSubtitle =
+    "Ask your company timeline and get answers grounded in events, workstreams, decisions, incidents, and evidence.";
+
+  const subtitle = auditReportId
+    ? "Ask questions about evidence included in this audit report only."
+    : impactAnalysisId
+      ? "Ask questions about this impact analysis. Answers use cautious, non-causal language."
+      : lessonId
+        ? "Ask questions about this lesson. Answers use cautious, non-causal language."
+        : decisionId
+          ? "Ask questions about this decision. Answers use cautious, non-causal language and exclude raw Slack payloads."
+          : incidentId
+            ? "Ask questions about this incident. Answers use cautious, non-causal language and exclude raw observability payloads."
+            : playbookId
+              ? "Ask questions about this playbook and its validation steps."
+              : contextPackId
+                ? "Ask questions about this context pack. Answers prioritize lessons, failures, and validation."
+                : recommendationId
+                  ? "Ask questions about this recommendation. Answers use recommendation evidence first with cautious language."
+                  : evalSuiteId
+                    ? "Ask what this private eval suite checks and which cases matter most."
+                    : evalRunId
+                      ? "Ask why this eval failed and what the agent should fix next."
+                      : defaultSubtitle;
+
+  const contextOptions = useMemo(
+    () => [
+      { id: "all", label: "All company history", href: "/ask", active: !projectId && !workstreamId && !decisionId && !incidentId && !auditReportId },
+      ...(projectId
+        ? [{ id: "project", label: "Current project", href: `/ask?projectId=${projectId}`, active: true }]
+        : [{ id: "project", label: "Current project", href: "/projects", active: false }]),
+      ...(workstreamId
+        ? [{ id: "workstream", label: "Current workstream", href: `/ask?workstreamId=${workstreamId}`, active: true }]
+        : [{ id: "workstream", label: "Current workstream", href: "/workstreams", active: false }]),
+      ...(decisionId
+        ? [{ id: "decision", label: "Decision", href: `/ask?decisionId=${decisionId}`, active: true }]
+        : [{ id: "decision", label: "Decision", href: "/timeline/decisions", active: false }]),
+      ...(incidentId
+        ? [{ id: "incident", label: "Incident", href: `/ask?incidentId=${incidentId}`, active: true }]
+        : [{ id: "incident", label: "Incident", href: "/timeline/incidents", active: false }]),
+      ...(auditReportId
+        ? [{ id: "audit", label: "Audit report", href: `/ask?auditReportId=${auditReportId}`, active: true }]
+        : [{ id: "audit", label: "Audit report", href: "/audits", active: false }]),
+    ],
+    [projectId, workstreamId, decisionId, incidentId, auditReportId],
+  );
+
+  const recentQuestions = useMemo(
+    () =>
+      (sessions ?? []).slice(0, 8).map((session) => ({
+        id: session.id,
+        question: session.question,
+        onSelect: () => handleSelectSession(session.id),
+      })),
+    [sessions, handleSelectSession],
+  );
+
   return (
-    <div className="ask-page">
-      <header className="ask-page__header">
-        <h1 className="ask-page__title">Ask Sortiri</h1>
-        <p className="ask-page__subtitle">
-          {auditReportId
-            ? "Ask questions about evidence included in this audit report only."
-            : impactAnalysisId
-              ? "Ask questions about this impact analysis. Answers use cautious, non-causal language."
-              : lessonId
-                ? "Ask questions about this lesson. Answers use cautious, non-causal language."
-                : playbookId
-                  ? "Ask questions about this playbook and its validation steps."
-                  : contextPackId
-                    ? "Ask questions about this context pack. Answers prioritize lessons, failures, and validation."
-                    : recommendationId
-                      ? "Ask questions about this recommendation. Answers use recommendation evidence first with cautious language."
-                      : evalSuiteId
-                        ? "Ask what this private eval suite checks and which cases matter most."
-                        : evalRunId
-                          ? "Ask why this eval failed and what the agent should fix next."
-                    : "Ask questions about your company timeline and get answers grounded in your events and workstreams."}
-        </p>
-        {selectedImpactAnalysis?.analysis ? (
-          <p className="ask-page__context project-chip">
-            Impact analysis: {selectedImpactAnalysis.analysis.title}
-          </p>
-        ) : null}
-        {selectedLesson?.lesson ? (
-          <p className="ask-page__context project-chip">
-            Lesson: {selectedLesson.lesson.title}
-          </p>
-        ) : null}
-        {selectedPlaybook?.playbook ? (
-          <p className="ask-page__context project-chip">
-            Playbook: {selectedPlaybook.playbook.title}
-          </p>
-        ) : null}
-        {selectedContextPack?.pack ? (
-          <p className="ask-page__context project-chip">
-            Context pack: {selectedContextPack.pack.title}
-          </p>
-        ) : null}
-        {selectedRecommendation ? (
-          <p className="ask-page__context project-chip">
-            Recommendation: {selectedRecommendation.title}
-          </p>
-        ) : null}
-        {selectedEvalSuite?.suite ? (
-          <p className="ask-page__context project-chip">
-            Eval suite: {selectedEvalSuite.suite.title}
-          </p>
-        ) : null}
-        {selectedEvalRun?.run ? (
-          <p className="ask-page__context project-chip">
-            Eval run: {selectedEvalRun.run.status}
-            {selectedEvalRun.suite ? ` — ${selectedEvalRun.suite.title}` : ""}
-          </p>
-        ) : null}
-        {selectedAuditReport ? (
-          <p className="ask-page__context project-chip">
-            Audit report: {selectedAuditReport.title}
-          </p>
-        ) : null}
-        {selectedProject ? (
-          <p className="ask-page__context project-chip">
-            Project: {selectedProject.name}
-          </p>
-        ) : null}
-      </header>
+    <PlatformPage className="ask-page">
+      <PlatformPageHeader title="Ask Sortiri" subtitle={subtitle} />
 
-      {loading ? <p className="ask-page__loading">Loading…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
 
-      <div className="ask-page__layout">
+      <div className="ask-page-layout">
         <div className="ask-page__main">
           {showEmptyState ? <AskEmptyState /> : null}
 
@@ -422,16 +450,8 @@ export function AskPage() {
           ) : null}
         </div>
 
-        {sessions && sessions.length > 0 ? (
-          <div className="ask-page__sidebar">
-            <AskHistory
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              onSelect={handleSelectSession}
-            />
-          </div>
-        ) : null}
+        <AskContextPanel options={contextOptions} recentQuestions={recentQuestions} />
       </div>
-    </div>
+    </PlatformPage>
   );
 }

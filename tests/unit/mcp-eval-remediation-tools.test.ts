@@ -26,7 +26,7 @@ describe("MCP eval remediation tools client", () => {
     const client = new SortiriApiClient(config);
     const result = await client.generateRemediationFromEval("run1");
     expect(result.count).toBe(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/cli/evals/remediation/generate");
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("/mcp/evals/remediation/generate");
   });
 
   it("listEvalRemediations fetches remediation list", async () => {

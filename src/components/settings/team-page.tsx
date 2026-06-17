@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { WorkspaceMemberRecord } from "@/types/workspace-members";
@@ -41,7 +42,7 @@ export function TeamPage() {
         </p>
       </header>
 
-      {loading ? <p className="team-loading">Loading team…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
 
       {!loading && members ? (
         <section className="team-section">

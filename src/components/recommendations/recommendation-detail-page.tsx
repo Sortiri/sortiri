@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { RecommendationRecord } from "@/types/recommendations";
@@ -62,7 +63,7 @@ export function RecommendationDetailPage({ recommendationId }: RecommendationDet
   );
 
   if (recommendation === undefined) {
-    return <p className="recommendations-page__subtitle">Loading recommendation…</p>;
+    return <PageLoader />;
   }
 
   if (!recommendation) {

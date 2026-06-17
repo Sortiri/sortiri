@@ -24,7 +24,7 @@ export function StepProgress({ current }: StepProgressProps) {
             <span
               className={`${departureMono.className} px-1.5 py-0.5 text-[0.625rem] font-normal tracking-[0.12em] uppercase sm:text-[0.6875rem] ${
                 isActive
-                  ? "bg-[#00E013] text-black"
+                  ? "bg-[var(--ca-brand)] text-white"
                   : isComplete
                     ? "bg-[var(--ca-surface-2)] text-white"
                     : "bg-[var(--ca-surface-1)] text-[var(--ca-muted)]"

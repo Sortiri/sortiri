@@ -50,6 +50,22 @@ export async function encryptSecret(rawSecret: string): Promise<string> {
   return btoa(String.fromCharCode(...packed));
 }
 
+export async function decryptSecret(encryptedSecret: string): Promise<string> {
+  const key = await importKey();
+  const data = Uint8Array.from(atob(encryptedSecret), (c) => c.charCodeAt(0));
+  if (data.length < IV_LENGTH + 16 + 1) {
+    throw new Error("Invalid encrypted secret payload");
+  }
+  const iv = data.subarray(0, IV_LENGTH);
+  const authTag = data.subarray(IV_LENGTH, IV_LENGTH + 16);
+  const ciphertext = data.subarray(IV_LENGTH + 16);
+  const combined = new Uint8Array(ciphertext.length + authTag.length);
+  combined.set(ciphertext, 0);
+  combined.set(authTag, ciphertext.length);
+  const decrypted = await crypto.subtle.decrypt({ name: ALGORITHM, iv }, key, combined);
+  return new TextDecoder().decode(decrypted);
+}
+
 export type MaskableIntegrationSource = "stripe" | "github" | "posthog";
 
 export function maskSecret(
@@ -75,6 +91,12 @@ export function maskSecretForSource(
   }
   if (source === "posthog") {
     return maskSecret(`placeholder_${secretLast4}`, "posthog");
+  }
+  if (source === "slack") {
+    return `slack_sign_••••${secretLast4}`;
+  }
+  if (source === "observability") {
+    return `obs_sign_••••${secretLast4}`;
   }
   return maskSecret(`placeholder_${secretLast4}`, "stripe");
 }

@@ -134,126 +134,140 @@ export function TimelineEventCard({
       id={getTimelineEventDomId(event.id)}
       className={`timeline-event-card${focused ? " timeline-event-card--focused" : ""}${isError ? " timeline-event-card--error" : ""}${muted ? " timeline-event-card--muted" : ""}`}
     >
-      <div className="timeline-event-card__header">
-        <div className="timeline-event-card__labels">
-          <p className="timeline-event-card__category">{getCategoryLabel(event.category)}</p>
-          {typeLabel ? (
-            <p className="timeline-event-card__type">{typeLabel}</p>
-          ) : null}
-          {visibilityLabel ? (
-            <span
-              className={`timeline-event-card__badge timeline-event-card__badge--${visibilityLabel.toLowerCase()}`}
-            >
-              {visibilityLabel}
-            </span>
-          ) : null}
-          {event.sensitivity && event.sensitivity !== "internal" ? (
-            <EvidenceSafetyBadges item={event} />
-          ) : redactionStatusLabel(event.redactionStatus) ? (
-            <EvidenceSafetyBadges item={event} />
-          ) : null}
+      <div className="timeline-event-card__layout">
+        <div className="timeline-event-card__marker" aria-hidden="true">
+          <span
+            className={`timeline-event-card__marker-dot${isError ? " timeline-event-card__marker-dot--error" : ""}`}
+          />
         </div>
-        <div className="timeline-event-card__actions">
-          {canWrite && !event.isUserPinned ? (
-            <button
-              type="button"
-              className="timeline-event-card__action"
-              disabled={acting}
-              onClick={() => void runAction("important")}
-            >
-              Mark important
-            </button>
-          ) : null}
-          {canWrite && !event.isUserHidden ? (
-            <button
-              type="button"
-              className="timeline-event-card__action"
-              disabled={acting}
-              onClick={() => void runAction("hide")}
-            >
-              Hide
-            </button>
-          ) : null}
-          {canWrite && (event.isUserPinned || event.isUserHidden) ? (
-            <button
-              type="button"
-              className="timeline-event-card__action"
-              disabled={acting}
-              onClick={() => void runAction("restore")}
-            >
-              Restore
-            </button>
-          ) : null}
-          {workspaceId && isImpactAnchorEligible(event) ? (
-            <AnalyzeImpactButton
-              workspaceId={workspaceId}
-              anchor={{
-                type: "event",
-                eventId: event.id,
-                title: event.title,
-                occurredAt: event.occurredAt,
-              }}
-              projectId={event.projectId}
-              className="timeline-event-card__action"
-              label="Analyze Impact"
+
+        <div className="timeline-event-card__content">
+          <div className="timeline-event-card__header">
+            <div className="timeline-event-card__labels">
+              <p className="timeline-event-card__category">{getCategoryLabel(event.category)}</p>
+              {typeLabel ? (
+                <p className="timeline-event-card__type">{typeLabel}</p>
+              ) : null}
+              {visibilityLabel ? (
+                <span
+                  className={`timeline-event-card__badge timeline-event-card__badge--${visibilityLabel.toLowerCase()}`}
+                >
+                  {visibilityLabel}
+                </span>
+              ) : null}
+              {event.sensitivity && event.sensitivity !== "internal" ? (
+                <EvidenceSafetyBadges item={event} />
+              ) : redactionStatusLabel(event.redactionStatus) ? (
+                <EvidenceSafetyBadges item={event} />
+              ) : null}
+            </div>
+          </div>
+          <h3 className="timeline-event-card__title">{event.title}</h3>
+          {event.entity ? (
+            <EntityLink
+              entity={event.entity}
+              entityId={resolvedEntityId}
+              label={event.entity.name ?? event.entity.id}
             />
           ) : null}
+          {event.projectId ? (
+            <p className="timeline-event-card__project-link">
+              <span className="entity-link__label">Project</span>
+              <ProjectLink projectId={event.projectId} />
+            </p>
+          ) : null}
+          {summary ? (
+            <p className="timeline-event-card__summary">{summary}</p>
+          ) : null}
+          {commandMetaLine ? (
+            <p className="timeline-event-card__command-meta">{commandMetaLine}</p>
+          ) : null}
+          {event.source === "stripe" && event.category === "revenue_event" ? (
+            <p className="timeline-event-card__command-meta">
+              {formatStripeRevenueMeta(event.data as Record<string, unknown> | undefined)}
+            </p>
+          ) : null}
+          {actionError ? <p className="timeline-event-card__action-error">{actionError}</p> : null}
+          {event.artifactIds && event.artifactIds.length > 0 ? (
+            <ArtifactPreview artifactIds={event.artifactIds} />
+          ) : null}
+          {event.source === "github" && event.entity?.url ? (
+            <p className="timeline-event-card__external-link">
+              <a href={event.entity.url} target="_blank" rel="noreferrer">
+                Open in GitHub
+              </a>
+            </p>
+          ) : null}
+          {event.source === "stripe" && event.entity?.url ? (
+            <p className="timeline-event-card__external-link">
+              <a href={event.entity.url} target="_blank" rel="noreferrer">
+                Open in Stripe
+              </a>
+            </p>
+          ) : null}
+          {event.workstreamId ? (
+            <p className="timeline-event-card__replay-link">
+              <Link href={`/workstreams/${event.workstreamId}`}>View Replay</Link>
+            </p>
+          ) : null}
+          {relatedCount > 0 ? (
+            <RelatedHistoryPanel eventId={event.id} relatedCount={relatedCount} />
+          ) : null}
+        </div>
+
+        <div className="timeline-event-card__meta-column">
+          <time className="timeline-event-card__time">{time}</time>
+          <p className="timeline-event-card__meta-source">
+            {actor} · {source}
+          </p>
+          <div className="timeline-event-card__actions">
+            {canWrite && !event.isUserPinned ? (
+              <button
+                type="button"
+                className="timeline-event-card__action"
+                disabled={acting}
+                onClick={() => void runAction("important")}
+              >
+                Mark important
+              </button>
+            ) : null}
+            {canWrite && !event.isUserHidden ? (
+              <button
+                type="button"
+                className="timeline-event-card__action"
+                disabled={acting}
+                onClick={() => void runAction("hide")}
+              >
+                Hide
+              </button>
+            ) : null}
+            {canWrite && (event.isUserPinned || event.isUserHidden) ? (
+              <button
+                type="button"
+                className="timeline-event-card__action"
+                disabled={acting}
+                onClick={() => void runAction("restore")}
+              >
+                Restore
+              </button>
+            ) : null}
+            {workspaceId && isImpactAnchorEligible(event) ? (
+              <AnalyzeImpactButton
+                workspaceId={workspaceId}
+                anchor={{
+                  type: "event",
+                  eventId: event.id,
+                  title: event.title,
+                  occurredAt: event.occurredAt,
+                }}
+                projectId={event.projectId}
+                className="timeline-event-card__action"
+                label="Analyze Impact"
+              />
+            ) : null}
+          </div>
         </div>
       </div>
-      <h3 className="timeline-event-card__title">{event.title}</h3>
-      {event.entity ? (
-        <EntityLink
-          entity={event.entity}
-          entityId={resolvedEntityId}
-          label={event.entity.name ?? event.entity.id}
-        />
-      ) : null}
-      {event.projectId ? (
-        <p className="timeline-event-card__project-link">
-          <span className="entity-link__label">Project</span>
-          <ProjectLink projectId={event.projectId} />
-        </p>
-      ) : null}
-      {summary ? (
-        <p className="timeline-event-card__summary">{summary}</p>
-      ) : null}
-      {commandMetaLine ? (
-        <p className="timeline-event-card__command-meta">{commandMetaLine}</p>
-      ) : null}
-      {event.source === "stripe" && event.category === "revenue_event" ? (
-        <p className="timeline-event-card__command-meta">
-          {formatStripeRevenueMeta(event.data as Record<string, unknown> | undefined)}
-        </p>
-      ) : null}
-      <p className="timeline-event-card__meta">
-        {actor} · {source} · {time}
-      </p>
-      {actionError ? <p className="timeline-event-card__action-error">{actionError}</p> : null}
-      {event.artifactIds && event.artifactIds.length > 0 ? (
-        <ArtifactPreview artifactIds={event.artifactIds} />
-      ) : null}
-      {event.source === "github" && event.entity?.url ? (
-        <p className="timeline-event-card__external-link">
-          <a href={event.entity.url} target="_blank" rel="noreferrer">
-            Open in GitHub
-          </a>
-        </p>
-      ) : null}
-      {event.source === "stripe" && event.entity?.url ? (
-        <p className="timeline-event-card__external-link">
-          <a href={event.entity.url} target="_blank" rel="noreferrer">
-            Open in Stripe
-          </a>
-        </p>
-      ) : null}
-      {event.workstreamId ? (
-        <p className="timeline-event-card__replay-link">
-          <Link href={`/workstreams/${event.workstreamId}`}>View Replay</Link>
-        </p>
-      ) : null}
-      {relatedCount > 0 ? (
-        <RelatedHistoryPanel eventId={event.id} relatedCount={relatedCount} />
-      ) : null}
     </article>
   );
 }

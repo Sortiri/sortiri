@@ -10,7 +10,8 @@
 }
 
 .onboarding-page h1 {
-  font-weight: 400;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 .onboarding-field-label {
@@ -68,7 +69,7 @@
 
 .onboarding-example__value {
   margin: 0;
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-family: var(--font-departure-mono), ui-monospace, monospace;
   font-size: 1.25rem;
   line-height: 1.2;
   color: var(--ca-brand);
@@ -99,7 +100,7 @@
 
 .onboarding-choice--selected {
   border-color: var(--ca-brand);
-  background: rgba(0, 224, 19, 0.12);
+  background: rgba(var(--ca-brand-rgb), 0.12);
 }
 
 .onboarding-choice:disabled {

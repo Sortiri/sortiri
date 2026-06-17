@@ -20,6 +20,8 @@ export const EVENT_CATEGORIES = {
   CODE_CHANGE: "code_change",
   PRODUCT_EVENT: "product_event",
   COMPANY_DECISION: "company_decision",
+  DECISION: "decision",
+  OBSERVABILITY: "observability",
   REVENUE_EVENT: "revenue_event",
   SYSTEM_EVENT: "system_event",
 } as const;
@@ -115,6 +117,12 @@ export const EVENT_TYPE_EXAMPLES = {
     "pricing.changed",
     "budget.approved",
     "feature.approved",
+  ],
+  [EVENT_CATEGORIES.OBSERVABILITY]: [
+    "observability.signal_received",
+    "observability.deploy_failed",
+    "observability.incident_opened",
+    "observability.incident_resolved",
   ],
   [EVENT_CATEGORIES.REVENUE_EVENT]: [
     "payment.received",

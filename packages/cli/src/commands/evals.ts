@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadConfig } from "@sortiri/local";
+import { loadCloudConfig as loadConfig } from "@sortiri/local";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -34,7 +34,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
   if (subcommand === "list") {
     const params = new URLSearchParams({ workspaceId: config.workspaceId });
     if (options.limit !== undefined) params.set("limit", String(options.limit));
-    const response = await fetch(`${config.apiUrl}/api/cli/evals?${params.toString()}`, {
+    const response = await fetch(`${config.apiUrl}/cli/evals?${params.toString()}`, {
       headers,
     });
     const payload = (await response.json().catch(() => null)) as
@@ -53,7 +53,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
       console.error("--from-* source and entity id are required for generate");
       process.exit(1);
     }
-    const response = await fetch(`${config.apiUrl}/api/cli/evals/generate`, {
+    const response = await fetch(`${config.apiUrl}/cli/evals/generate`, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -101,7 +101,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
     }
     const params = new URLSearchParams({ workspaceId: config.workspaceId });
     const response = await fetch(
-      `${config.apiUrl}/api/cli/evals/runs/${options.id}?${params.toString()}`,
+      `${config.apiUrl}/cli/evals/runs/${options.id}?${params.toString()}`,
       { headers },
     );
     const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
@@ -119,7 +119,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
       process.exit(1);
     }
     const suite = await fetch(
-      `${config.apiUrl}/api/cli/evals/${options.id}?workspaceId=${encodeURIComponent(config.workspaceId)}`,
+      `${config.apiUrl}/cli/evals/${options.id}?workspaceId=${encodeURIComponent(config.workspaceId)}`,
       { headers },
     );
     const payload = (await suite.json().catch(() => null)) as
@@ -136,7 +136,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
   if (subcommand === "remediation-list") {
     const params = new URLSearchParams({ workspaceId: config.workspaceId });
     if (options.limit !== undefined) params.set("limit", String(options.limit));
-    const response = await fetch(`${config.apiUrl}/api/cli/evals/remediation?${params.toString()}`, {
+    const response = await fetch(`${config.apiUrl}/cli/evals/remediation?${params.toString()}`, {
       headers,
     });
     const payload = (await response.json().catch(() => null)) as
@@ -156,7 +156,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
       console.error("--run <evalRunId> is required for remediation generate");
       process.exit(1);
     }
-    const response = await fetch(`${config.apiUrl}/api/cli/evals/remediation/generate`, {
+    const response = await fetch(`${config.apiUrl}/cli/evals/remediation/generate`, {
       method: "POST",
       headers,
       body: JSON.stringify({ workspaceId: config.workspaceId, evalRunId }),
@@ -176,7 +176,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
       process.exit(1);
     }
     const response = await fetch(
-      `${config.apiUrl}/api/cli/recommendations/${options.id}/convert`,
+      `${config.apiUrl}/cli/recommendations/${options.id}/convert`,
       {
         method: "POST",
         headers,
@@ -198,7 +198,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
       process.exit(1);
     }
     const recResponse = await fetch(
-      `${config.apiUrl}/api/cli/evals/remediation/${options.id}?workspaceId=${encodeURIComponent(config.workspaceId)}`,
+      `${config.apiUrl}/cli/evals/remediation/${options.id}?workspaceId=${encodeURIComponent(config.workspaceId)}`,
       { headers },
     );
     const rec = (await recResponse.json().catch(() => null)) as
@@ -208,7 +208,7 @@ export async function runEvals(options: EvalsCommandOptions): Promise<void> {
       console.error(rec?.error ?? "Failed to load remediation recommendation");
       process.exit(1);
     }
-    const response = await fetch(`${config.apiUrl}/api/cli/evals/remediation/rerun`, {
+    const response = await fetch(`${config.apiUrl}/cli/evals/remediation/rerun`, {
       method: "POST",
       headers,
       body: JSON.stringify({

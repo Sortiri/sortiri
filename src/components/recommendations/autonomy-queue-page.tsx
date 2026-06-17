@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { RecommendationCard } from "@/components/recommendations/recommendation-card";
 import { RecommendationFilters } from "@/components/recommendations/recommendation-filters";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type {
@@ -82,7 +83,7 @@ export function AutonomyQueuePage() {
 
       <RecommendationFilters filters={filters} onChange={setFilters} />
 
-      {loading ? <p className="recommendations-page__subtitle">Loading queue…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
       {!loading && filtered.length === 0 ? (
         <p className="recommendations-page__subtitle">No recommendations match these filters.</p>
       ) : null}

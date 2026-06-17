@@ -6,14 +6,19 @@ import {
 } from "../../src/config/dashboard-nav";
 
 describe("sidebar navigation", () => {
-  it("includes Intelligence in primary nav after Views", () => {
+  it("includes Intelligence and Sources before Audits and Ask Sortiri", () => {
     const labels = dashboardPrimaryNavItems.map((item) => item.label);
     expect(labels).toContain("Intelligence");
-    const viewsIndex = labels.indexOf("Views");
+    expect(labels).toContain("Sources");
+    const workstreamsIndex = labels.indexOf("Workstreams");
     const intelligenceIndex = labels.indexOf("Intelligence");
+    const sourcesIndex = labels.indexOf("Sources");
+    const auditsIndex = labels.indexOf("Audits");
     const askIndex = labels.indexOf("Ask Sortiri");
-    expect(intelligenceIndex).toBe(viewsIndex + 1);
-    expect(askIndex).toBe(intelligenceIndex + 1);
+    expect(intelligenceIndex).toBe(workstreamsIndex + 1);
+    expect(sourcesIndex).toBe(intelligenceIndex + 1);
+    expect(auditsIndex).toBe(sourcesIndex + 1);
+    expect(askIndex).toBe(auditsIndex + 1);
   });
 
   it("does not include top-level Impact, Lessons, Playbooks, or Insights", () => {

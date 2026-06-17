@@ -31,6 +31,7 @@ export const integrationSourceValidator = v.union(
   v.literal("stripe"),
   v.literal("posthog"),
   v.literal("slack"),
+  v.literal("observability"),
   v.literal("linear"),
   v.literal("other"),
 );
@@ -128,9 +129,152 @@ export const eventCategoryValidator = v.union(
   v.literal("code_change"),
   v.literal("product_event"),
   v.literal("company_decision"),
+  v.literal("decision"),
+  v.literal("observability"),
   v.literal("revenue_event"),
   v.literal("system_event"),
 );
+
+export const decisionStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("superseded"),
+  v.literal("rolled_back"),
+  v.literal("archived"),
+);
+
+export const decisionTypeValidator = v.union(
+  v.literal("product"),
+  v.literal("engineering"),
+  v.literal("design"),
+  v.literal("pricing"),
+  v.literal("go_to_market"),
+  v.literal("security"),
+  v.literal("audit"),
+  v.literal("ops"),
+  v.literal("model"),
+  v.literal("other"),
+);
+
+export const decisionSourceValidator = v.union(
+  v.literal("manual"),
+  v.literal("slack"),
+  v.literal("mcp"),
+  v.literal("cli"),
+  v.literal("system"),
+);
+
+export const decisionCandidateStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("confirmed"),
+  v.literal("dismissed"),
+  v.literal("archived"),
+);
+
+export const decisionCandidateConfidenceValidator = v.union(
+  v.literal("possible"),
+  v.literal("likely"),
+  v.literal("strong"),
+);
+
+export const rollbackSourceValidator = v.union(
+  v.literal("manual"),
+  v.literal("slack"),
+  v.literal("github"),
+  v.literal("cli"),
+  v.literal("system"),
+);
+
+export const decisionSourceRefValidator = v.object({
+  provider: v.optional(v.string()),
+  channelId: v.optional(v.string()),
+  channelName: v.optional(v.string()),
+  messageTs: v.optional(v.string()),
+  threadTs: v.optional(v.string()),
+  permalink: v.optional(v.string()),
+  sourceEventId: v.optional(v.string()),
+});
+
+export const decidedByValidator = v.object({
+  name: v.optional(v.string()),
+  email: v.optional(v.string()),
+  slackUserId: v.optional(v.string()),
+  clerkUserId: v.optional(v.string()),
+  type: v.optional(v.string()),
+});
+
+export const slackCaptureModeValidator = v.union(
+  v.literal("manual_mentions_only"),
+  v.literal("decision_keywords"),
+  v.literal("selected_channels"),
+);
+
+export const observabilitySourceValidator = v.union(
+  v.literal("generic"),
+  v.literal("sentry"),
+  v.literal("datadog"),
+  v.literal("vercel"),
+  v.literal("railway"),
+  v.literal("render"),
+  v.literal("aws"),
+  v.literal("gcp"),
+  v.literal("azure"),
+  v.literal("manual"),
+  v.literal("cli"),
+  v.literal("mcp"),
+  v.literal("system"),
+);
+
+export const observabilitySignalTypeValidator = v.union(
+  v.literal("error"),
+  v.literal("alert"),
+  v.literal("incident_opened"),
+  v.literal("incident_updated"),
+  v.literal("incident_resolved"),
+  v.literal("deploy_started"),
+  v.literal("deploy_succeeded"),
+  v.literal("deploy_failed"),
+  v.literal("rollback_started"),
+  v.literal("rollback_completed"),
+  v.literal("service_degraded"),
+  v.literal("service_recovered"),
+  v.literal("latency_spike"),
+  v.literal("traffic_drop"),
+  v.literal("other"),
+);
+
+export const incidentStatusValidator = v.union(
+  v.literal("open"),
+  v.literal("investigating"),
+  v.literal("mitigated"),
+  v.literal("resolved"),
+  v.literal("rolled_back"),
+  v.literal("archived"),
+);
+
+export const incidentSeverityValidator = v.union(
+  v.literal("info"),
+  v.literal("warning"),
+  v.literal("error"),
+  v.literal("critical"),
+);
+
+export const incidentSourceValidator = v.union(
+  v.literal("generic"),
+  v.literal("sentry"),
+  v.literal("datadog"),
+  v.literal("manual"),
+  v.literal("cli"),
+  v.literal("mcp"),
+  v.literal("system"),
+);
+
+export const incidentSourceRefValidator = v.object({
+  provider: v.optional(v.string()),
+  sourceIncidentId: v.optional(v.string()),
+  sourceUrl: v.optional(v.string()),
+  alertId: v.optional(v.string()),
+  fingerprint: v.optional(v.string()),
+});
 
 export const artifactTypeValidator = v.union(
   v.literal("diff"),
@@ -420,6 +564,11 @@ export const auditReportItemTypeValidator = v.union(
   v.literal("lesson"),
   v.literal("playbook"),
   v.literal("note"),
+  v.literal("decision"),
+  v.literal("rollback"),
+  v.literal("decision_candidate"),
+  v.literal("incident"),
+  v.literal("observability_signal"),
 );
 
 export const auditReportAccessLevelValidator = v.union(

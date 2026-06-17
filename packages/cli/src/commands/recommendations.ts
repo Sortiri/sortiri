@@ -1,4 +1,4 @@
-import { loadConfig } from "@sortiri/local";
+import { loadCloudConfig as loadConfig } from "@sortiri/local";
 
 export type RecommendationsCommandOptions = {
   subcommand?: string;
@@ -29,7 +29,7 @@ export async function runRecommendations(
     if (options.limit !== undefined) {
       params.set("limit", String(options.limit));
     }
-    const response = await fetch(`${config.apiUrl}/api/cli/recommendations?${params.toString()}`, {
+    const response = await fetch(`${config.apiUrl}/cli/recommendations?${params.toString()}`, {
       headers,
     });
     const payload = (await response.json().catch(() => null)) as
@@ -44,7 +44,7 @@ export async function runRecommendations(
   }
 
   if (subcommand === "generate") {
-    const response = await fetch(`${config.apiUrl}/api/cli/recommendations/generate`, {
+    const response = await fetch(`${config.apiUrl}/cli/recommendations/generate`, {
       method: "POST",
       headers,
       body: JSON.stringify({ workspaceId: config.workspaceId }),
@@ -67,7 +67,7 @@ export async function runRecommendations(
     }
     const params = new URLSearchParams({ workspaceId: config.workspaceId });
     const response = await fetch(
-      `${config.apiUrl}/api/cli/recommendations/${options.id}?${params.toString()}`,
+      `${config.apiUrl}/cli/recommendations/${options.id}?${params.toString()}`,
       { headers },
     );
     const payload = (await response.json().catch(() => null)) as
@@ -87,7 +87,7 @@ export async function runRecommendations(
       process.exit(1);
     }
     const response = await fetch(
-      `${config.apiUrl}/api/cli/recommendations/${options.id}/convert`,
+      `${config.apiUrl}/cli/recommendations/${options.id}/convert`,
       {
         method: "POST",
         headers,

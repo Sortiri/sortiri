@@ -1,43 +1,6 @@
-import {
-  authenticateIngest,
-  isIngestAuthResponse,
-  resolveIngestWorkspaceId,
-} from "@/lib/sortiri/ingestAuth";
-import { getValidationRequirementsViaIngest } from "@/lib/sortiri/contextApi";
-import { jsonError, parseJsonBody } from "@/lib/sortiri/ingestApi";
+import { goneResponse } from "@/lib/api/compatGone";
 
 export async function POST(req: Request) {
-  const auth = await authenticateIngest(req);
-  if (isIngestAuthResponse(auth)) {
-    return auth;
-  }
-
-  const body = await parseJsonBody<{
-    workspaceId?: string;
-    goal?: string;
-    files?: string[];
-    sources?: string[];
-  }>(req);
-
-  if (!body?.goal?.trim()) {
-    return jsonError("goal is required");
-  }
-
-  const workspaceResult = resolveIngestWorkspaceId(auth, body.workspaceId);
-  if ("error" in workspaceResult) {
-    return jsonError(workspaceResult.error, workspaceResult.status);
-  }
-
-  try {
-    const result = await getValidationRequirementsViaIngest(auth, workspaceResult.workspaceId, {
-      goal: body.goal,
-      files: body.files,
-      sources: body.sources,
-    });
-    return Response.json(result);
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to load validation requirements";
-    return jsonError(message, 500);
-  }
+  void req;
+  return goneResponse("cli/context/validation-requirements");
 }

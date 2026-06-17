@@ -1,10 +1,10 @@
+import { EmptyState } from "@/components/platform";
+
 export function TimelineSearchEmptyState() {
   return (
-    <div className="timeline-search-empty-state">
-      <p className="timeline-search-empty-state__title">No matching events.</p>
-      <p className="timeline-search-empty-state__body">
-        Try searching for an agent, file, decision, product event, or source.
-      </p>
-    </div>
+    <EmptyState
+      title="No matching events"
+      body="Try adjusting filters or search terms to find events in your timeline."
+    />
   );
 }

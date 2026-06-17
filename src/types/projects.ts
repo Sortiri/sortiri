@@ -21,6 +21,10 @@ export type ProjectPulseCounts = {
   codeChanges: number;
   productEvents: number;
   decisions: number;
+  decisionCandidates?: number;
+  incidents?: number;
+  deployFailures?: number;
+  rollbacks?: number;
   revenueEvents: number;
   systemEvents: number;
   activeWorkstreams: number;
@@ -31,5 +35,7 @@ export type ActiveProjectSummary = {
   name: string;
   eventsToday: number;
   activeWorkstreams: number;
+  openIncidents: number;
+  connectedSources: string[];
   lastEventAt?: number;
 };

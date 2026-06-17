@@ -1,5 +1,5 @@
-import { DashboardEmptyPage } from "@/components/dashboard/dashboard-empty-page";
+import { redirect } from "next/navigation";
 
-export default function DecisionsPage() {
-  return <DashboardEmptyPage />;
+export default function Page() {
+  redirect("/timeline/decisions");
 }

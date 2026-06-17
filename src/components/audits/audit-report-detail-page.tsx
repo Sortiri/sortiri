@@ -9,6 +9,7 @@ import { AuditAccessSection } from "@/components/audits/audit-access-section";
 import { AuditEvidenceSection } from "@/components/audits/audit-evidence-section";
 import { AuditExportSection } from "@/components/audits/audit-export-section";
 import { AuditShareLinksSection } from "@/components/audits/audit-share-links-section";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { AuditReportItemRecord, AuditReportRecord } from "@/types/audit-reports";
@@ -74,7 +75,7 @@ export function AuditReportDetailPage({ reportId }: AuditReportDetailPageProps) 
   }, [finalizeReport, reportId]);
 
   if (report === undefined || items === undefined) {
-    return <p className="audits-page__subtitle">Loading audit report…</p>;
+    return <PageLoader />;
   }
 
   if (!reportRecord) {

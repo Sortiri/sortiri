@@ -1,30 +1,7 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
-
-const EXAMPLE_PROMPTS = [
-  "What team changes happened recently?",
-  "What happened today?",
-  "What needs attention?",
-  "Which workstreams are still active?",
-  "What did the agent do yesterday?",
-  "Why did the homepage change?",
-  "What PRs were merged recently?",
-  "Show me recent code changes.",
-  "Did validation pass recently?",
-  "What commands failed?",
-  "What did we learn recently?",
-  "What playbook should I use for webhook work?",
-  "What validation should I run?",
-  "What tests did the agent run?",
-  "What revenue events happened recently?",
-  "Which Stripe customers had activity?",
-  "Did any payments fail?",
-  "What product events happened recently?",
-  "Which features are active?",
-  "Did any users complete onboarding?",
-  "What happened before recent Stripe payments?",
-] as const;
+import { AskSuggestionGroups } from "@/components/ask/ask-suggestion-groups";
 
 type AskInputProps = {
   value: string;
@@ -32,6 +9,7 @@ type AskInputProps = {
   onSubmit: () => void;
   disabled?: boolean;
   submitting?: boolean;
+  showSuggestions?: boolean;
 };
 
 export function AskInput({
@@ -40,6 +18,7 @@ export function AskInput({
   onSubmit,
   disabled = false,
   submitting = false,
+  showSuggestions = true,
 }: AskInputProps) {
   const canSubmit = value.trim().length > 0 && !disabled && !submitting;
 
@@ -62,21 +41,15 @@ export function AskInput({
         placeholder="Ask about your company timeline…"
         disabled={disabled || submitting}
         rows={4}
+        aria-label="Ask about your company timeline"
       />
       <div className="ask-input__actions">
-        <div className="ask-input__chips">
-          {EXAMPLE_PROMPTS.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              className="ask-input__chip"
-              onClick={() => onChange(prompt)}
-              disabled={disabled || submitting}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
+        {showSuggestions ? (
+          <AskSuggestionGroups
+            onSelect={onChange}
+            disabled={disabled || submitting}
+          />
+        ) : null}
         <button
           type="button"
           className="ask-input__submit"

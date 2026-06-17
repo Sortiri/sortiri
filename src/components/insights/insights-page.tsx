@@ -15,6 +15,7 @@ import { ProjectFilter } from "@/components/projects/project-filter";
 import { ViewFilter } from "@/components/views/view-filter";
 import { useProjectFilter } from "@/hooks/use-project-filter";
 import { useViewFilter } from "@/hooks/use-view-filter";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import type { InsightWindow } from "@/types/insights";
@@ -116,7 +117,7 @@ export function InsightsPage() {
         </div>
       </header>
 
-      {loading ? <p className="insights-page__loading">Loading insights…</p> : null}
+      {loading ? <PageLoader variant="inline" /> : null}
       {error ? <p className="insights-page__error">{error}</p> : null}
 
       <InsightsWindowFilter value={window} onChange={setWindow} />

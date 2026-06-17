@@ -119,7 +119,7 @@ export class Sortiri {
 
   private async postEvent(body: Record<string, unknown>): Promise<RecordEventResult> {
     const apiUrl = this.config.apiUrl.replace(/\/$/, "");
-    const response = await fetch(`${apiUrl}/api/ingest/events`, {
+    const response = await fetch(`${apiUrl}/ingest/events`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.config.apiKey}`,

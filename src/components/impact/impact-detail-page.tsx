@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { PageLoader } from "@/components/ui/page-loader";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useWorkspaceMembership } from "@/hooks/use-workspace-membership";
 import { GeneratePlaybookFromLessonsModal } from "@/components/playbooks/generate-playbook-from-lessons-modal";
@@ -163,7 +164,7 @@ export function ImpactDetailPage({ analysisId }: ImpactDetailPageProps) {
   const lessonList = (linkedLessons ?? []) as LessonRecord[];
 
   if (data === undefined) {
-    return <p className="impact-page__subtitle">Loading impact analysis…</p>;
+    return <PageLoader />;
   }
 
   if (!analysis) {

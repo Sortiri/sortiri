@@ -2,8 +2,7 @@
 .project-detail-page {
   display: flex;
   flex-direction: column;
-  gap: var(--ca-space-6);
-  max-width: 42rem;
+  gap: var(--ca-space-4);
 }
 
 .projects-page__header,
@@ -56,7 +55,7 @@
 .projects-page__title,
 .project-detail-header__title {
   margin: 0;
-  font-family: var(--font-pp-mondwest), ui-monospace, monospace;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.75rem;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -119,6 +118,74 @@
   display: flex;
   flex-direction: column;
   gap: var(--ca-space-2);
+}
+
+.projects-page__filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.projects-page__filter-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ca-ink-muted);
+}
+
+.projects-page__filter-select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--ca-border-soft);
+  border-radius: var(--ca-radius-sm);
+  background: var(--ca-surface-2);
+  color: var(--ca-ink);
+  font-size: 0.8125rem;
+}
+
+.platform-project-card-wrap {
+  border: 1px solid var(--ca-border-soft);
+  border-radius: var(--ca-radius-md);
+  background: var(--ca-surface-2);
+  overflow: hidden;
+}
+
+.platform-project-card-wrap .platform-project-card {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.platform-project-card__repo {
+  margin: 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ca-ink-muted);
+  word-break: break-all;
+}
+
+.platform-project-card__stats-line {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ca-ink-muted);
+}
+
+.platform-project-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ca-space-2);
+  padding: var(--ca-space-2) var(--ca-space-4);
+  border-block-start: 1px solid var(--ca-border-soft);
+  background: var(--ca-surface-1);
+}
+
+.platform-project-card__action {
+  font-size: 0.75rem;
+  color: var(--ca-brand-text);
+  text-decoration: none;
+}
+
+.platform-project-card__action:hover {
+  text-decoration: underline;
 }
 
 .project-card {
