@@ -144,14 +144,14 @@ export function WhySortiriInteractive() {
           return (
             <p
               key={line.text}
-              className={`${BASE_FONT_CLASS} text-center text-[clamp(1.5rem,3vw+0.5rem,2.5rem)] font-normal leading-[1.12] text-white`}
+              className={`${BASE_FONT_CLASS} text-center ${landing.sectionHeadline}`}
             >
               {tokens.map((token, index) => (
                 <motion.span
                   key={`${token.word}-${index}`}
                   className={`inline${
                     token.accent
-                      ? ` ${ACCENT_CLASS} ${ACCENT_FONT_CLASS} text-[clamp(1.625rem,3.2vw+0.5rem,2.75rem)]`
+                      ? ` ${ACCENT_CLASS} ${ACCENT_FONT_CLASS} ${landing.sectionHeadlineAccent}`
                       : ""
                   }`}
                   variants={wordVariants}

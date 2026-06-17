@@ -22,9 +22,9 @@ export function LandingSiteCtaSection() {
         </p>
 
         <div className="relative z-10 flex flex-col items-center gap-6 text-center sm:gap-8">
-          <h2 className={`${inter.className} max-w-2xl text-[clamp(1.75rem,3.5vw+0.5rem,2.75rem)] font-normal leading-[1.1] text-white`}>
+          <h2 className={`${inter.className} max-w-2xl ${landing.ctaHeadline}`}>
             Every decision deserves a{" "}
-            <span className={`${ppMondwest.className} text-[#c490e8] text-[clamp(2rem,4vw+0.75rem,3.25rem)]`}>replay</span>
+            <span className={`${ppMondwest.className} text-[#c490e8] ${landing.ctaHeadlineAccent}`}>replay</span>
           </h2>
 
           <div className="flex w-full max-w-md flex-col items-center gap-4">

@@ -11,6 +11,14 @@ export const landing = {
   copyBlockPaired: "pb-14 sm:pb-16",
   sectionKicker: "mx-auto mb-3 w-full max-w-2xl text-center sm:mb-4",
 
+  /** Inter lines paired with PP Mondwest — Inter clamped slightly smaller for optical match. */
+  heroHeadline: "text-[clamp(2rem,4.5vw+0.6rem,3.5rem)] font-normal leading-[1.08] text-white",
+  heroHeadlineAccent: "text-[clamp(2.5rem,5.5vw+0.75rem,4.25rem)]",
+  sectionHeadline: "text-[clamp(1.35rem,2.7vw+0.4rem,2.2rem)] font-normal leading-[1.12] text-white",
+  sectionHeadlineAccent: "text-[clamp(1.625rem,3.2vw+0.5rem,2.75rem)]",
+  ctaHeadline: "text-[clamp(1.55rem,3.1vw+0.4rem,2.4rem)] font-normal leading-[1.1] text-white",
+  ctaHeadlineAccent: "text-[clamp(2rem,4vw+0.75rem,3.25rem)]",
+
   displayHero: `${ppMondwest.className} text-[clamp(2.5rem,5.5vw+0.75rem,4.25rem)] font-normal tracking-[-0.02em] leading-[1.08] text-white`,
   display: `${ppMondwest.className} w-full text-center text-[clamp(2rem,4vw+0.75rem,3.25rem)] font-normal tracking-[-0.02em] leading-[1.1] text-white`,
   displayLine: `${ppMondwest.className} text-center text-[clamp(1.625rem,3.2vw+0.5rem,2.75rem)] font-normal tracking-[-0.02em] leading-[1.12] text-white`,

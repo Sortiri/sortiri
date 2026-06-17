@@ -11,6 +11,7 @@ import { ViewDocsButton } from "@/components/landing/view-docs-button";
 import { LandingHighlightsSection } from "@/components/landing/highlights-section";
 import { LandingUseCasesSection } from "@/components/landing/use-cases-section";
 import { LandingWhySection } from "@/components/landing/why-section";
+import { landing } from "@/components/landing/typography";
 import { inter } from "@/lib/inter";
 import { ppMondwest } from "@/lib/landing-fonts";
 import { Zap } from "pixelarticons/react/Zap";
@@ -26,9 +27,9 @@ export default function Home() {
         <main className="flex min-w-0 flex-1 flex-col overflow-x-clip px-6 pb-12 sm:px-8">
           <section className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-8 py-10 text-center sm:gap-10">
             <div className="flex flex-col items-center gap-6 sm:gap-8">
-              <h1 className={`${inter.className} max-w-3xl text-[clamp(2.25rem,5vw+0.75rem,4rem)] font-normal leading-[1.08] text-white`}>
+              <h1 className={`${inter.className} max-w-3xl ${landing.heroHeadline}`}>
                 The{" "}
-                <span className={`${ppMondwest.className} text-[#c490e8] text-[clamp(2.5rem,5.5vw+0.75rem,4.25rem)]`}>timeline layer</span> for
+                <span className={`${ppMondwest.className} text-[#c490e8] ${landing.heroHeadlineAccent}`}>timeline layer</span> for
                 AI-native companies
               </h1>
               <div className="flex w-full max-w-md flex-col items-center gap-4">
